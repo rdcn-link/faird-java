@@ -1,7 +1,7 @@
 package org.grapheco.server
 
 import org.apache.spark.sql.Row
-import org.grapheco.client.{DFOperation, FilterOp, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
+import org.grapheco.client.{Blob, DFOperation, FilterOp, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
 
 import java.nio.charset.StandardCharsets
 
@@ -47,7 +47,7 @@ case class RemoteDataFrameImpl(source: String, ops: List[DFOperation],remoteExec
     copy(ops = ops :+ LimitOp(n))
   }
 
-  override def foreach(f: Row => Unit): Unit = remoteExecutor.execute(source, ops).foreach(f)
+  def foreach(f: Row => Unit): Unit = remoteExecutor.execute(source, ops).foreach(f)
 
   override def collect(): List[Row] = remoteExecutor.execute(source, ops).toList
 
