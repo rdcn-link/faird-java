@@ -13,7 +13,7 @@ import org.grapheco.client.{Blob, DFOperation, FlightDataClient}
 
 class RemoteExecutor(url: String, port: Int) {
   private val client = new FlightDataClient(url, port)
-  def execute(source: String, ops: List[DFOperation]): Iterator[Row] = client.getBlobs(source, ops)
+  def execute(source: String, ops: List[DFOperation]): Iterator[Row] = client.getRows(source, ops)
   def open(dataSource: String): RemoteDataFrameImpl = {
     RemoteDataFrameImpl(dataSource, List.empty, this)
   }

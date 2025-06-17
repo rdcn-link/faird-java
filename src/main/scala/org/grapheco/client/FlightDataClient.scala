@@ -8,6 +8,7 @@ import org.apache.spark.sql.Row
 import org.grapheco.SimpleSerializer
 
 import java.util.UUID
+import java.io.ByteArrayOutputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -57,30 +58,108 @@ class FlightDataClient(url: String, port:Int) {
     //flightInfo 中可以获取schema
     println(s"Client (Get Metadata): $flightInfo")
     val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
-    new Iterator[Seq[Row]] {
+    val iter: Iterator[Seq[Seq[Any]]] = new Iterator[Seq[Seq[Any]]] {
       override def hasNext: Boolean = flightStream.next()
 
 
-      override def next(): Seq[Row] = {
+      override def next(): Seq[Seq[Any]] = {
         val vectorSchemaRootReceived = flightStream.getRoot
         val rowCount = vectorSchemaRootReceived.getRowCount
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+//        var it = Seq.range(0, rowCount).toIterator
         Seq.range(0, rowCount).map(index => {
           val rowMap = fieldVectors.map(vec => {
-            if(vec.isNull(index)) (vec.getName, null)
+            if (vec.isNull(index)) (vec.getName, null)
             else vec match {
-              case v: org.apache.arrow.vector.IntVector     => (vec.getName, v.get(index))
+              case v: org.apache.arrow.vector.IntVector => (vec.getName, v.get(index))
               case v: org.apache.arrow.vector.VarCharVector => (vec.getName, new String(v.get(index)))
-              case v: org.apache.arrow.vector.Float8Vector  => (vec.getName, v.get(index))
-              case v: org.apache.arrow.vector.BitVector     => (vec.getName, v.get(index) == 1)
-              case v: org.apache.arrow.vector.VarBinaryVector =>(vec.getName, v.get(index))
+              case v: org.apache.arrow.vector.Float8Vector => (vec.getName, v.get(index))
+              case v: org.apache.arrow.vector.BitVector => (vec.getName, v.get(index) == 1)
+              case v: org.apache.arrow.vector.VarBinaryVector => (vec.getName, v.get(index))
               case _ => throw new UnsupportedOperationException(s"Unsupported vector type: ${vec.getClass}")
             }
           }).toMap
-          Row(rowMap.toSeq.map(x => x._2): _*)
+          val r: Seq[Any] = rowMap.toSeq.map(x => x._2)
+//                    Row(rowMap.toSeq.map(x => x._2): _*)
+          r
         })
       }
-    }.flatMap(rows => rows)
+    }
+    val flatIter: Iterator[Seq[Any]] = iter.flatMap(rows=>rows)
+    var currentChunk: Array[Byte] = Array[Byte]()
+    var isFirstChunk: Boolean = false
+    var cachedIndex: Int = Int.MinValue
+//    println(iter.next())
+    new Iterator[Row] {
+      override def hasNext: Boolean = flatIter.hasNext
+
+      override def next(): Row = {
+
+        val blobIter: Iterator[Array[Byte]] = new Iterator[Array[Byte]] {
+          private var currentIndex: Int = Int.MinValue  // 当前块的 index
+          private var isExhausted: Boolean = false  // flatIter 是否耗尽
+          // 预读取下一块的 index 和 data（如果存在）
+          private def readNextChunk(): Unit = {
+            if (flatIter.hasNext) {
+              if(!isFirstChunk){
+                val seq:Seq[Any] = flatIter.next()
+                val nextIndex:Int = seq(2).asInstanceOf[Int]
+                val nextChunk:Array[Byte] = seq(3).asInstanceOf[Array[Byte]]
+                if (nextIndex < currentIndex) {
+                  // index 变小，结束当前块
+                  isExhausted = true
+                  isFirstChunk=true
+                  cachedIndex=nextIndex
+                } else {
+                  // 如果 index 递增，新建块
+                  currentChunk=nextChunk
+
+                }
+                currentIndex = nextIndex
+              } else {
+                currentIndex=cachedIndex
+                isExhausted=false
+                isFirstChunk=false
+              }
+
+            } else {
+              // flatIter 耗尽
+              isExhausted = true
+            }
+          }
+          // hasNext: 检查是否还有块（可能预读取）
+          override def hasNext: Boolean = {
+            if (currentChunk.isEmpty && !isExhausted) {
+              readNextChunk() // 如果当前块为空且迭代器未结束，尝试预读取
+            }
+            !isExhausted || currentChunk.nonEmpty
+          }
+          // next: 返回当前块（已由 hasNext 预加载）
+          override def next(): Array[Byte] = {
+            val chunk = currentChunk
+            if(!isFirstChunk)
+              currentChunk = Array.empty[Byte]  // 手动清空！
+            chunk
+          }
+//          private var chunkIndex: Int = 0
+//          private var currentChunk: Array[Byte] = Array.empty[Byte]
+//          override def hasNext: Boolean = {
+//
+//          }
+//
+//          override def next(): Array[Byte] = {
+//            cnt+=1
+//            val data = currentChunk(3).asInstanceOf[Array[Byte]]
+////            println(data.mkString("Array(", ", ", ")"))
+//
+//
+//          }
+        }
+
+        Row(new Blob(blobIter))
+//          Row(iter.next())
+      }
+    }
   }
 
   def getBlobs(source: String, ops: List[DFOperation]): Iterator[Row] = {
@@ -116,7 +195,7 @@ class FlightDataClient(url: String, port:Int) {
       override def next(): Row = {
         val id = idsIterator.next()
         val chunks = blobMap.remove(id).get.toSeq
-        Row(new Blob(id, chunks))
+        Row(new Blob(chunks.toIterator))
       }
     }
   }
@@ -126,41 +205,41 @@ class FlightDataClient(url: String, port:Int) {
     // 在实际实现中，这里可以根据服务端的结束标记清除完整文件
   }
   /** 优化的流式分块处理器（处理大规模文件） */
-  def getBlobsStreaming(source: String, ops: List[DFOperation]): Iterator[Blob] = {
-    new BlobStreamIterator(source, ops)
-  }
+//  def getBlobsStreaming(source: String, ops: List[DFOperation]): Iterator[Blob] = {
+//    new BlobStreamIterator(source, ops)
+//  }
   /** 用于流式处理BLOB的迭代器实现 */
-  private class BlobStreamIterator(source: String, ops: List[DFOperation])
-    extends Iterator[Blob] {
-
-    private val rowIterator = getRows(source, ops).buffered
-    private val idVectorName = "id"
-    private val chunkVectorName = "chunk"
-    private var currentId: String = _
-    private var chunksBuffer = ArrayBuffer[Array[Byte]]()
-
-    override def hasNext: Boolean = rowIterator.hasNext
-
-    override def next(): Blob = {
-      if (!rowIterator.hasNext)
-        throw new NoSuchElementException("No more blobs available")
-
-      // 清空前一个Blob的缓冲区
-      chunksBuffer.clear()
-
-      // 获取第一个分块
-      val firstRow = rowIterator.next()
-      currentId = firstRow.getAs[String](idVectorName)
-      chunksBuffer += firstRow.getAs[Array[Byte]](chunkVectorName)
-
-      // 收集同一ID的所有分块
-      while (rowIterator.hasNext && rowIterator.head.getAs[String](idVectorName) == currentId) {
-        chunksBuffer += rowIterator.next().getAs[Array[Byte]](chunkVectorName)
-      }
-
-      new Blob(currentId, chunksBuffer.toSeq)
-    }
-  }
+//  private class BlobStreamIterator(source: String, ops: List[DFOperation])
+//    extends Iterator[Blob] {
+//
+//    private val rowIterator = getRows(source, ops).buffered
+//    private val idVectorName = "id"
+//    private val chunkVectorName = "chunk"
+//    private var currentId: String = _
+//    private var chunksBuffer = ArrayBuffer[Array[Byte]]()
+//
+//    override def hasNext: Boolean = rowIterator.hasNext
+//
+//    override def next(): Blob = {
+//      if (!rowIterator.hasNext)
+//        throw new NoSuchElementException("No more blobs available")
+//
+//      // 清空前一个Blob的缓冲区
+//      chunksBuffer.clear()
+//
+//      // 获取第一个分块
+//      val firstRow = rowIterator.next()
+//      currentId = firstRow.getAs[String](idVectorName)
+//      chunksBuffer += firstRow.getAs[Array[Byte]](chunkVectorName)
+//
+//      // 收集同一ID的所有分块
+//      while (rowIterator.hasNext && rowIterator.head.getAs[String](idVectorName) == currentId) {
+//        chunksBuffer += rowIterator.next().getAs[Array[Byte]](chunkVectorName)
+//      }
+//
+//      new Blob(currentId, chunksBuffer.toSeq)
+//    }
+//  }
 
 
   def close(): Unit = {
@@ -170,18 +249,59 @@ class FlightDataClient(url: String, port:Int) {
 }
 
 // 表示完整的二进制文件
-class Blob(val id: String, val chunks: Seq[Array[Byte]]) extends Serializable {
+class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
+  // 缓存加载后的完整数据
+  private var _content: Option[Array[Byte]] = None
+  // 缓存文件大小（独立于_content，避免获取大数组长度）
+  private var _size: Option[Int] = None
+
+  private var _chunkCount: Option[Int] = None
+
+  private def loadLazily(): Unit = {
+//    println("loadLazily")
+    if (_content.isEmpty && _size.isEmpty && _chunkCount.isEmpty) {
+      val byteStream = new ByteArrayOutputStream()
+      var totalSize = 0
+      var chunkCount = 0
+
+      while (chunkIterator.hasNext) {
+        val chunk = chunkIterator.next()
+//        println(chunk.mkString("Array(", ", ", ")"))
+        totalSize += chunk.length
+        chunkCount+=1
+        byteStream.write(chunk)
+
+      }
+//      println("loaded Lazily")
+      _content = Some(byteStream.toByteArray)
+      _size = Some(totalSize)
+      _chunkCount = Some(chunkCount)
+      byteStream.close()
+    }
+  }
+
+
   /** 获取完整的文件内容 */
-  def content: Array[Byte] = chunks.foldLeft(Array[Byte]())((acc, chunk) => acc ++ chunk)
+  def content: Array[Byte] = {
+    if (_content.isEmpty) loadLazily()
+    _content.get
+  }
+
 
   /** 获取文件大小 */
-  def size: Int = chunks.map(_.length).sum
+  def size: Int = {
+    if (_size.isEmpty) loadLazily()
+    _size.get
+  }
 
   /** 获取分块数量 */
-  def chunkCount: Int = chunks.size
+  def chunkCount: Int = {
+    if (_chunkCount.isEmpty) loadLazily()
+    _chunkCount.get
+  }
 
   /** 获取分块迭代器 */
-  def chunkIterator: Iterator[Array[Byte]] = chunks.iterator
+//  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
 
-  override def toString: String = s"Blob(id=$id, size=$size, chunks=$chunkCount)"
+  override def toString: String = s"Blob()"
 }
