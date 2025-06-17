@@ -8,6 +8,7 @@ import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vec
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.grapheco.SimpleSerializer
 import org.grapheco.client.DFOperation
+import org.grapheco.provider.{DataFrameSource, MockDataFrameProvider, SimpleDataFrameSourceFactory}
 
 import java.io.{File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
@@ -78,52 +79,40 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
     val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
+
+    /***
+     * request 包含
+     * 1、user 信息
+     * 2、访问 DataFrame位置，DataFrame名称所属DataSet
+     * 3、DataFrame的转换操作
+     * 4、访问 DataFrame的schema？如果是结构化数据分隔符？
+     */
     val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
 
-//    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
-      val fields: List[Field] = List(
-        new Field("id", FieldType.nullable(new ArrowType.Int(32,true)), null),
-        new Field("name", FieldType.nullable(new ArrowType.Binary()), null)
-      )
-
+    //应从request中获取信息进行创建
+    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
     val schema = new Schema(fields.asJava)
+    val provider = new MockDataFrameProvider
+    val factory = new SimpleDataFrameSourceFactory
+    val df: DataFrameSource = provider.getDataFrameSource("part-00000", factory)
 
     val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
     val root = VectorSchemaRoot.create(schema, childAllocator)
+
     try{
-      val loader = new VectorLoader(root)
-      listener.start(root)
-      //每1000条row为一批进行传输,将DataFrame转化成Iterator，不会一次性加载到内存
-
-      //      读取文件为 stream 流传输数据
-//      groupedLines("C:\\Users\\Yomi\\Downloads\\数据\\1.csv", 1000).foreach(lines => {
-//        val batch = createFileBatch(root, lines)
-//        try {
-//          loader.load(batch)
-//          while (!listener.isReady()) {
-////            Thread.onSpinWait()
-//            LockSupport.parkNanos(1)
-//          }
-//          listener.putNext()
-//        }finally {
-//          batch.close()
-//        }
-//      })
-
-
-              val batch = createFileChunkBatch(root)
-              try {
-                loader.load(batch)
-                while (!listener.isReady()) {
-//                  Thread.onSpinWait()
-                  LockSupport.parkNanos(1)
-                }
-                listener.putNext()
-              }finally {
-                batch.close()
-              }
-
-
+      df.getArrowRecordBatch(root).foreach(batch => {
+        val loader = new VectorLoader(root)
+        listener.start(root)
+        try {
+          loader.load(batch)
+          while (!listener.isReady()) {
+            Thread.onSpinWait()
+          }
+          listener.putNext()
+        }finally {
+          batch.close()
+        }
+      })
       listener.completed()
     } catch {
       case e: Throwable => listener.error(e)

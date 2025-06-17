@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- 注入配置Bean -->
+    <bean id="fairdConfig" class="org.grapheco.FairdConfig">
+        <property name="hostName" value="cerndc"/>
+        <property name="hostTitle" value="国家生态科学数据中心"/>
+        <property name="hostPosition" value="39.98,116.39"/>
+        <property name="hostDomain" value="cern.ac.cn"/>
+        <property name="hostPort" value="3101"/>
+        <property name="logPath" value="./access.log"/>
+        <property name="catdbPort" value="3102"/>
+    </bean>
+
+</beans>

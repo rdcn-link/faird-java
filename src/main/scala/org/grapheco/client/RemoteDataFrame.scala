@@ -47,7 +47,7 @@ case class RemoteDataFrameImpl(source: String, ops: List[DFOperation],remoteExec
     copy(ops = ops :+ LimitOp(n))
   }
 
-  def foreach(f: Row => Unit): Unit = remoteExecutor.execute(source, ops).foreach(f)
+  override def foreach(f: Row => Unit): Unit = remoteExecutor.execute(source, ops).foreach(f)
 
   override def collect(): List[Row] = remoteExecutor.execute(source, ops).toList
 
