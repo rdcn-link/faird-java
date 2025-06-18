@@ -54,20 +54,21 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val batchLen = 1000
   private val numOfBatch = 50000
+
   override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
 
     new Runnable {
       override def run(): Unit = {
-        while (flightStream.next()){
+        while (flightStream.next()) {
           val root = flightStream.getRoot
           val rowCount = root.getRowCount
           val source = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
           val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
             val bytes = root.getFieldVectors.get(1).asInstanceOf[VarBinaryVector].get(index)
-            if(bytes==null) null else
+            if (bytes == null) null else
               SimpleSerializer.deserialize(bytes).asInstanceOf[DFOperation]
           })
-          val remoteDataFrameImpl = if(dfOperations.contains(null)) RemoteDataFrameImpl(source = source, List.empty)
+          val remoteDataFrameImpl = if (dfOperations.contains(null)) RemoteDataFrameImpl(source = source, List.empty)
           else RemoteDataFrameImpl(source = source, ops = dfOperations)
           requestMap.put(flightStream.getDescriptor, remoteDataFrameImpl)
           flightStream.getRoot.clear()
@@ -89,8 +90,16 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
      */
     val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
 
+    //    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
+    val fields: List[Field] = List(
+      new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null),
+      new Field("name", FieldType.nullable(new ArrowType.Utf8()), null),
+      new Field("chunkIndex", FieldType.nullable(new ArrowType.Int(32, true)), null),
+    new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
+    )
+
     //应从request中获取信息进行创建
-    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
+//    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
     val schema = new Schema(fields.asJava)
     val provider = new MockDataFrameProvider
     val factory = new SimpleDataFrameSourceFactory
@@ -117,7 +126,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     } catch {
       case e: Throwable => listener.error(e)
         throw e
-    }finally {
+    } finally {
       if (root != null) root.close()
       if (childAllocator != null) childAllocator.close()
       requestMap.remove(flightDescriptor)
@@ -130,7 +139,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
   }
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
-    requestMap.forEach{
+    requestMap.forEach {
       (k, v) => listener.onNext(getFlightInfo(null, k))
     }
     listener.onCompleted()
@@ -145,7 +154,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     arrowRoot.allocateNew()
     val vec = arrowRoot.getVector("name").asInstanceOf[VarBinaryVector]
     val rowCount = batchLen
-    for (i <- 0 to (rowCount -1)){
+    for (i <- 0 to (rowCount - 1)) {
       val ss =
         """
           |5e1c88487133410c80a73378c1013463 a8f7ec6584bf4d40a99e898df710a2cc-754190e62b3849c18b1fcc23e4eb2fa6
@@ -157,22 +166,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     unloader.getRecordBatch
   }
 
-  private def createFileChunkBatch(arrowRoot: VectorSchemaRoot): ArrowRecordBatch = {
-    arrowRoot.allocateNew()
-    var index = 0
-    val idVec = arrowRoot.getVector("id").asInstanceOf[IntVector]
-    val contentVec = arrowRoot.getVector("name").asInstanceOf[VarBinaryVector]
-    for (i <- 0 to 5-1){
-      readFileInChunks("C:\\Users\\Yomi\\Downloads\\数据\\1.csv").foreach(bytes => {
-        idVec.setSafe(index,i)
-        contentVec.setSafe(index, bytes)
-        index += 1
-      })
-    }
-    arrowRoot.setRowCount(index)
-    val unloader = new VectorUnloader(arrowRoot)
-    unloader.getRecordBatch
-  }
   //结构化文件分批传输
   private def createFileBatch(arrowRoot: VectorSchemaRoot, seq: Seq[String]): ArrowRecordBatch = {
     arrowRoot.allocateNew()
@@ -209,28 +202,5 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
   import java.io.{File, FileInputStream}
 
-  private def readFileInChunks(filePath: String, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
-    val file = new File(filePath)
-    val inputStream = new FileInputStream(file)
 
-    new Iterator[Array[Byte]] {
-      override def hasNext: Boolean = inputStream.available() > 0
-
-      override def next(): Array[Byte] = {
-        val bufferSize = Math.min(chunkSize, inputStream.available())
-        val buffer = new Array[Byte](bufferSize)
-        val bytesRead = inputStream.read(buffer)
-        if (bytesRead == -1) {
-          inputStream.close()
-          Iterator.empty.next()
-        } else if (bytesRead < buffer.length) {
-          inputStream.close()
-          buffer.take(bytesRead)
-        } else {
-          buffer
-        }
-      }
-    }
-
-  }
 }

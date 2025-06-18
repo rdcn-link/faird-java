@@ -6,11 +6,12 @@ package org.grapheco.provider
  * @Data 2025/6/16 17:46
  * @Modified By:
  */
-import org.apache.arrow.vector.{VarBinaryVector, VectorSchemaRoot, VectorUnloader}
+import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.jena.rdf.model.Model
 
-import scala.collection.immutable.Seq
+import java.io.{File, FileInputStream}
+import scala.collection.Seq
 import scala.io.Source
 
 trait DataFrameProvider {
@@ -35,9 +36,11 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
 
   //处理结构化数据,row -> 一行数据
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
-    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
+//    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
+      Iterator.single(createFileChunkBatch(root))
   }
   //TODO 处理非结构化数据，row -> 对应一个文件
+
 
 
 
@@ -56,6 +59,57 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
     arrowRoot.setRowCount(i)
     val unloader = new VectorUnloader(arrowRoot)
     unloader.getRecordBatch
+  }
+
+  private def createFileChunkBatch(arrowRoot: VectorSchemaRoot): ArrowRecordBatch = {
+    arrowRoot.allocateNew()
+    var index = 0
+    val path = s"C:\\Users\\Yomi\\Downloads\\数据\\1.csv"
+    val idVec = arrowRoot.getVector("id").asInstanceOf[IntVector]
+    val nameVec = arrowRoot.getVector("name").asInstanceOf[VarCharVector]
+    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
+    val contentVec = arrowRoot.getVector("bin").asInstanceOf[VarBinaryVector]
+    for (i <- 0 to 5 - 1) {
+      val file = new File(path)
+      val fileName = file.getName
+      var chunkCount = 0
+      readFileInChunks(file).foreach(bytes => {
+        idVec.setSafe(index, i)
+        nameVec.setSafe(index, fileName.getBytes())
+        indexVec.setSafe(index,chunkCount)
+        contentVec.setSafe(index, bytes)
+        index += 1
+        chunkCount += 1
+      })
+    }
+    arrowRoot.setRowCount(index)
+    val unloader = new VectorUnloader(arrowRoot)
+    unloader.getRecordBatch
+  }
+
+  private def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
+
+    val inputStream = new FileInputStream(file)
+
+    new Iterator[Array[Byte]] {
+      override def hasNext: Boolean = inputStream.available() > 0
+
+      override def next(): Array[Byte] = {
+        val bufferSize = Math.min(chunkSize, inputStream.available())
+        val buffer = new Array[Byte](bufferSize)
+        val bytesRead = inputStream.read(buffer)
+        if (bytesRead == -1) {
+          inputStream.close()
+          Iterator.empty.next()
+        } else if (bytesRead < buffer.length) {
+          inputStream.close()
+          buffer.take(bytesRead)
+        } else {
+          buffer
+        }
+      }
+    }
+
   }
 
   private def groupedLines(filePath: String, batchSize: Int): Iterator[Seq[String]] = {
