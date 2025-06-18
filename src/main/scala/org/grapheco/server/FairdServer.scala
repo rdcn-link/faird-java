@@ -94,8 +94,8 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     val fields: List[Field] = List(
       new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null),
       new Field("name", FieldType.nullable(new ArrowType.Utf8()), null),
-      new Field("chunkIndex", FieldType.nullable(new ArrowType.Int(32, true)), null),
-    new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
+//      new Field("chunkIndex", FieldType.nullable(new ArrowType.Int(32, true)), null),
+      new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
     )
 
     //应从request中获取信息进行创建
@@ -107,11 +107,11 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
     val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
     val root = VectorSchemaRoot.create(schema, childAllocator)
-
+    val loader = new VectorLoader(root)
+    listener.start(root)
     try{
-      df.getArrowRecordBatch(root).foreach(batch => {
-        val loader = new VectorLoader(root)
-        listener.start(root)
+      df.getFilesArrowRecordBatch(root).foreach(batch => {
+
         try {
           loader.load(batch)
           while (!listener.isReady()) {
@@ -125,6 +125,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
       listener.completed()
     } catch {
       case e: Throwable => listener.error(e)
+        e.printStackTrace()
         throw e
     } finally {
       if (root != null) root.close()
