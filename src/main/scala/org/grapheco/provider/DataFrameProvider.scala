@@ -25,6 +25,7 @@ trait DataFrameProvider {
 trait DataFrameSource {
   def sourceUri: String
   def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+  def getFilesArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
 }
 
 trait DataFrameSourceFactory {
@@ -36,13 +37,34 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
 
   //处理结构化数据,row -> 一行数据
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
-//    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
-      Iterator.single(createFileChunkBatch(root))
+    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
   }
   //TODO 处理非结构化数据，row -> 对应一个文件
 
+  override def getFilesArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
+//      Seq.range(0,10).toIterator.map(_=>createFileChunkBatch(root))
+// 将文件转换为迭代器：(文件名, 5MB chunk数据)
+    val files = listFiles("C:\\Users\\Yomi\\Downloads\\数据\\others")
+    val chunkIterators = files.iterator.zipWithIndex.map { case (file,index) =>
+      (index, file.getName, readFileInChunks(file, chunkSize = 5 * 1024 * 1024))
+    }
+    val allChunks = chunkIterators.flatMap { case (index, filename, chunks) =>
+        chunks.map(chunk => (index, filename, chunk))
+      }
+
+    createFileChunkBatch(allChunks,root)
+  }
 
 
+  // 列出目录下所有文件
+  private def listFiles(directoryPath: String): Seq[File] = {
+    val dir = new File(directoryPath)
+    if (dir.exists() && dir.isDirectory) {
+      dir.listFiles().filter(_.isFile).toSeq
+    } else {
+      Seq.empty
+    }
+  }
 
   //结构化文件分批传输
   private def createFileBatch(arrowRoot: VectorSchemaRoot, seq: Seq[String]): ArrowRecordBatch = {
@@ -61,33 +83,28 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
     unloader.getRecordBatch
   }
 
-  private def createFileChunkBatch(arrowRoot: VectorSchemaRoot): ArrowRecordBatch = {
-    arrowRoot.allocateNew()
-    var index = 0
-    val path = s"C:\\Users\\Yomi\\Downloads\\数据\\1.csv"
+  private def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot
+                                  ): Iterator[ArrowRecordBatch] = {
+
+
     val idVec = arrowRoot.getVector("id").asInstanceOf[IntVector]
     val nameVec = arrowRoot.getVector("name").asInstanceOf[VarCharVector]
-    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
+    //    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
     val contentVec = arrowRoot.getVector("bin").asInstanceOf[VarBinaryVector]
-    for (i <- 0 to 5 - 1) {
-      val file = new File(path)
-      val fileName = file.getName
-      var chunkCount = 0
-      readFileInChunks(file).foreach(bytes => {
-        idVec.setSafe(index, i)
-        nameVec.setSafe(index, fileName.getBytes())
-        indexVec.setSafe(index,chunkCount)
-        contentVec.setSafe(index, bytes)
-        index += 1
-        chunkCount += 1
-      })
+    chunks.grouped(10).map { chunkGroup =>
+      arrowRoot.allocateNew()
+      chunkGroup.zipWithIndex.foreach { case ((index, filename, chunkData), cnt) =>
+        idVec.setSafe(cnt, index) // 当前批次内的序号
+        nameVec.setSafe(cnt, filename.getBytes())
+        contentVec.setSafe(cnt, chunkData)
+      }
+      arrowRoot.setRowCount(chunkGroup.size)
+      val unloader = new VectorUnloader(arrowRoot)
+      unloader.getRecordBatch
     }
-    arrowRoot.setRowCount(index)
-    val unloader = new VectorUnloader(arrowRoot)
-    unloader.getRecordBatch
   }
 
-  private def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
+  private def readFileInChunks(file: File, chunkSize: Int = 5  * 1024 * 1024): Iterator[Array[Byte]] = {
 
     val inputStream = new FileInputStream(file)
 
