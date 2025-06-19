@@ -9,7 +9,9 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
 import org.grapheco.{Logging, SimpleSerializer}
 import org.grapheco.client.{DFOperation, DataAccessRequest}
-import org.grapheco.provider.{DataFrameSource, MockDataFrameProvider, SimpleDataFrameSourceFactory}
+import org.grapheco.provider.{DataFrameSource, DataFrameSourceFactoryImpl, MockDataFrameProvider}
+import org.grapheco.util.DataUtils
+import org.grapheco.util.DataUtils.sparkSchemaToArrowSchema
 
 import java.io.{File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
@@ -121,26 +123,27 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
         val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
 
         //    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
-            val fields: List[Field] = List(
-              new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null),
-              new Field("name", FieldType.nullable(new ArrowType.Utf8()), null),
-            new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
-            )
+        //    val fields: List[Field] = List(
+        //      new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null),
+        //      new Field("name", FieldType.nullable(new ArrowType.Utf8()), null),
+        //      new Field("chunkIndex", FieldType.nullable(new ArrowType.Int(32, true)), null),
+        //    new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
+        //    )
 
         //应从request中获取信息进行创建
 //        val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
-        val schema = new Schema(fields.asJava)
+//        val schema = new Schema(fields.asJava)
+        val schema = DataUtils.sparkSchemaToArrowSchema(request.source.expectedSchema)
         val provider = new MockDataFrameProvider
-        val factory = new SimpleDataFrameSourceFactory
-//        val df: DataFrameSource = provider.getDataFrameSource("part-00000", factory)
-        val df: DataFrameSource = provider.getDataFrameSource("1.csv", factory)
+        val factory = new DataFrameSourceFactoryImpl
+        val df: DataFrameSource = provider.getDataFrameSource(request, factory)
 
         val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
         val root = VectorSchemaRoot.create(schema, childAllocator)
         val loader = new VectorLoader(root)
         listener.start(root)
         try{
-          df.getFilesArrowRecordBatch(root).foreach(batch => {
+          df.getArrowRecordBatch(root).foreach(batch => {
             try {
               loader.load(batch)
               while (!listener.isReady()) {
@@ -232,32 +235,5 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
       override def next(): Seq[String] = iter.take(batchSize).toSeq
     }
   }
-  private def sparkSchemaToArrowSchema(sparkSchema: StructType): Schema = {
-    val fields: List[Field] = sparkSchema.fields.map { field =>
-      val arrowFieldType = field.dataType match {
-        case IntegerType =>
-          new FieldType(field.nullable, new ArrowType.Int(32, true), null)
-        case LongType =>
-          new FieldType(field.nullable, new ArrowType.Int(64, true), null)
-        case FloatType =>
-          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), null)
-        case DoubleType =>
-          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), null)
-        case StringType =>
-          new FieldType(field.nullable, ArrowType.Utf8.INSTANCE, null)
-        case BooleanType =>
-          new FieldType(field.nullable, ArrowType.Bool.INSTANCE, null)
-        case BinaryType =>
-          new FieldType(field.nullable, new ArrowType.Binary(), null)
-        case _ =>
-          throw new UnsupportedOperationException(s"Unsupported type: ${field.dataType}")
-      }
-
-      new Field(field.name, arrowFieldType, Collections.emptyList())
-    }.toList
-
-    new Schema(fields.asJava)
-  }
-
 
 }
