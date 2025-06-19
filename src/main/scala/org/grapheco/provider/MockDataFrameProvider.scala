@@ -46,7 +46,8 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
 
   override def getDataFrameSource(dataFrameName: String, factory: DataFrameSourceFactory): DataFrameSource = {
     // For demonstration, assume all files are in "/mock/data"
-    factory.createFileListDataFrameSource(s"/Users/renhao/Downloads", dataFrameName)
+//    factory.createFileListDataFrameSource(s"/Users/renhao/Downloads", dataFrameName)
+    factory.createFileListDataFrameSource(s"C:\\Users\\Yomi\\Downloads\\数据\\others", dataFrameName)
   }
 }
 

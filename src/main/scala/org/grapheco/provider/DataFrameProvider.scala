@@ -26,7 +26,7 @@ trait DataFrameProvider {
 trait DataFrameSource {
   def sourceUri: String
   def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
-  def getFilesArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+  def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch]
 }
 
 trait DataFrameSourceFactory {
