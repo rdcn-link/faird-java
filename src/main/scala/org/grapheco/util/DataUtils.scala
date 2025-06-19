@@ -62,6 +62,11 @@ object DataUtils {
     }
   }
 
+  def getFileLines(filePath: String): Iterator[String] = {
+    val source = Source.fromFile(filePath)
+    source.getLines()
+  }
+
   def createFileChunkBatch(arrowRoot: VectorSchemaRoot): ArrowRecordBatch = {
     arrowRoot.allocateNew()
     var index = 0

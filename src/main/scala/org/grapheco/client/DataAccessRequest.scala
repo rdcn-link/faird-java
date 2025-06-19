@@ -21,7 +21,7 @@ case class DataAccessRequest(
 
 sealed trait InputSource extends Serializable
 case class CSVSource(
-                      delimiter: Char = ','
+                      delimiter: String = ","
                     ) extends InputSource
 
 case class JSONSource(

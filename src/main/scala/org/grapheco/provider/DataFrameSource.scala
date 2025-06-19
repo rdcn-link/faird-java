@@ -36,15 +36,30 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
     iter.map(rows => createDummyBatch(root, rows))
   }
 
+  def createFileBatch(arrowRoot: VectorSchemaRoot, seq: Seq[Row]): ArrowRecordBatch = {
+    arrowRoot.allocateNew()
+
+    val vec = arrowRoot.getVector("name").asInstanceOf[VarBinaryVector]
+
+    var i = 0
+    seq.foreach(ss => {
+      vec.setSafe(i, ss.get(0).toString.getBytes("UTF-8"))
+      i += 1
+    })
+
+    arrowRoot.setRowCount(i)
+    val unloader = new VectorUnloader(arrowRoot)
+    unloader.getRecordBatch
+  }
+
   private def createDummyBatch(arrowRoot: VectorSchemaRoot, rows: Seq[Row]): ArrowRecordBatch = {
     arrowRoot.allocateNew()
     val fieldVectors = arrowRoot.getFieldVectors.asScala
-    for (i <- rows.indices) {
-      val row = rows(i)
-      for (j <- 0 until row.length) {
+    var i = 0
+    rows.foreach(row => {
+      var j = 0
+      fieldVectors.foreach(vec => {
         val value = row.get(j)
-        val vec = fieldVectors(j)
-        // 支持基本类型处理（可扩展）
         value match {
           case v: Int => vec.asInstanceOf[IntVector].setSafe(i, v)
           case v: Long => vec.asInstanceOf[BigIntVector].setSafe(i, v)
@@ -52,14 +67,35 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
           case v: Float => vec.asInstanceOf[Float4Vector].setSafe(i, v)
           case v: String =>
             val bytes = v.getBytes("UTF-8")
-            vec.asInstanceOf[VarBinaryVector].setSafe(i, bytes, 0, bytes.length)
+            vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
           case v: Boolean => vec.asInstanceOf[BitVector].setSafe(i, if (v) 1 else 0)
           case v: Array[Byte] => vec.asInstanceOf[VarBinaryVector].setSafe(i, v)
           case null => vec.setNull(i)
           case _ => throw new UnsupportedOperationException("Type not supported")
         }
-      }
-    }
+        i += 1
+        j += 1
+      })
+//      for (j <- 0 until row.length) {
+//        val value = row.get(j)
+//        val vec = fieldVectors(j)
+//        // 支持基本类型处理（可扩展）
+//        value match {
+//          case v: Int => vec.asInstanceOf[IntVector].setSafe(i, v)
+//          case v: Long => vec.asInstanceOf[BigIntVector].setSafe(i, v)
+//          case v: Double => vec.asInstanceOf[Float8Vector].setSafe(i, v)
+//          case v: Float => vec.asInstanceOf[Float4Vector].setSafe(i, v)
+//          case v: String =>
+//            val bytes = v.getBytes("UTF-8")
+//            vec.asInstanceOf[VarBinaryVector].setSafe(i, bytes, 0, bytes.length)
+//          case v: Boolean => vec.asInstanceOf[BitVector].setSafe(i, if (v) 1 else 0)
+//          case v: Array[Byte] => vec.asInstanceOf[VarBinaryVector].setSafe(i, v)
+//          case null => vec.setNull(i)
+//          case _ => throw new UnsupportedOperationException("Type not supported")
+//        }
+//        i += 1
+//      }
+    })
     arrowRoot.setRowCount(rows.length)
     val unloader = new VectorUnloader(arrowRoot)
     unloader.getRecordBatch
@@ -74,15 +110,15 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
     val dataFrameName = remoteDataFrame.source.dataFrames
     log.info(s"create dataFrame from $dataSet/$dataFrameName")
     //根据dataSet dataFrameName拉取数据，目前这里dataSet代表路径 dataFrameName代表文件名称
-    val stream: Iterator[Seq[Row]] = remoteDataFrame.source.inputSource match {
-      case CSVSource(delimiter) => DataUtils.groupedLines(s"$dataSet/$dataFrameName", 1000).map(seq => {
-        seq.map(ss => Row(ss.split(delimiter): _*))
+    val stream: Iterator[Row] = remoteDataFrame.source.inputSource match {
+      case CSVSource(delimiter) => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
+        Row(line.split(delimiter): _*)
       })
-      case StructuredSource() => DataUtils.groupedLines(s"$dataSet/$dataFrameName", 1000).map(seq => {
-        seq.map(ss => Row(ss))
+      case StructuredSource() => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
+        Row(line)
       })
     }
-    val result = applyOperations(stream.flatten, remoteDataFrame.ops)
+    val result = applyOperations(stream, remoteDataFrame.ops)
     DataFrameSourceImpl(result.grouped(batchSize))
   }
 

@@ -2,7 +2,8 @@ package org.grapheco
 
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.grapheco.client.FairdClient
+import org.apache.spark.sql.types.{StringType, StructType}
+import org.grapheco.client.{CSVSource, FairdClient}
 import org.grapheco.server.{FairdServer, FlightProducerImpl}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
@@ -22,7 +23,7 @@ object ClientTest extends Logging {
   @BeforeAll
   def startServer(): Unit = {
     flightServer.start()
-    log.info(s"Server (Location): Listening on port ${flightServer.getPort}")
+    println(s"Server (Location): Listening on port ${flightServer.getPort}")
   }
   @AfterAll
   def stopServer(): Unit = {
@@ -34,11 +35,11 @@ object ClientTest extends Logging {
 class ClientTest {
 
   @Test
-  def m1(): Unit = {
+  def bpsTest(): Unit = {
     import org.apache.spark.sql.types._
 
     val schema = new StructType()
-      .add("name", BinaryType)
+      .add("name", StringType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
     val df = dc.open("/Users/renhao/Downloads","part-00000", schema)
@@ -51,8 +52,8 @@ class ClientTest {
     df.foreach(row => {
       //      计算当前 row 占用的字节数（UTF-8 编码）
       val bytesLen =
-        row.get(0).asInstanceOf[Array[Byte]].length
-//              row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
+//        row.get(0).asInstanceOf[Array[Byte]].length
+              row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
 
       //          row.get(1).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
 
@@ -82,5 +83,16 @@ class ClientTest {
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
     dc.listDataSetNames().foreach(println)
     dc.listDataFrameNames("df").foreach(println)
+  }
+
+  @Test
+  def csvSourceTest(): Unit = {
+    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
+    val schema = new StructType()
+      .add("col1", StringType)
+      .add("col2", StringType)
+    val csvSource = CSVSource("\t")
+    val df = dc.open("/Users/renhao/Downloads","part-00000", schema, CSVSource("\t"))
+    df.limit(10).foreach(println)
   }
 }
