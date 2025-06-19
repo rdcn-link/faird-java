@@ -93,6 +93,8 @@ class ClientTest {
       .add("col2", StringType)
     val csvSource = CSVSource("\t")
     val df = dc.open("/Users/renhao/Downloads","part-00000", schema, CSVSource("\t"))
-    df.limit(10).foreach(println)
+    df.limit(10).foreach(row => {
+      println(row)
+    })
   }
 }

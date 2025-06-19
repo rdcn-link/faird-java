@@ -29,7 +29,6 @@ trait DataFrameSourceFactory {
 }
 
 case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource {
-  val batchSize = 1000
 
   //处理结构化数据,row -> 一行数据
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
@@ -73,28 +72,9 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
           case null => vec.setNull(i)
           case _ => throw new UnsupportedOperationException("Type not supported")
         }
-        i += 1
         j += 1
       })
-//      for (j <- 0 until row.length) {
-//        val value = row.get(j)
-//        val vec = fieldVectors(j)
-//        // 支持基本类型处理（可扩展）
-//        value match {
-//          case v: Int => vec.asInstanceOf[IntVector].setSafe(i, v)
-//          case v: Long => vec.asInstanceOf[BigIntVector].setSafe(i, v)
-//          case v: Double => vec.asInstanceOf[Float8Vector].setSafe(i, v)
-//          case v: Float => vec.asInstanceOf[Float4Vector].setSafe(i, v)
-//          case v: String =>
-//            val bytes = v.getBytes("UTF-8")
-//            vec.asInstanceOf[VarBinaryVector].setSafe(i, bytes, 0, bytes.length)
-//          case v: Boolean => vec.asInstanceOf[BitVector].setSafe(i, if (v) 1 else 0)
-//          case v: Array[Byte] => vec.asInstanceOf[VarBinaryVector].setSafe(i, v)
-//          case null => vec.setNull(i)
-//          case _ => throw new UnsupportedOperationException("Type not supported")
-//        }
-//        i += 1
-//      }
+      i += 1
     })
     arrowRoot.setRowCount(rows.length)
     val unloader = new VectorUnloader(arrowRoot)
