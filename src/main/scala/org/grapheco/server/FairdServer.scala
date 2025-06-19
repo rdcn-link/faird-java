@@ -6,6 +6,7 @@ import org.apache.arrow.vector.ipc.message.{ArrowFieldNode, ArrowRecordBatch}
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
+import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
 import org.grapheco.{Logging, SimpleSerializer}
 import org.grapheco.client.{DFOperation, DataAccessRequest}
 import org.grapheco.provider.{DataFrameSource, MockDataFrameProvider, SimpleDataFrameSourceFactory}
@@ -167,7 +168,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
     val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
-    new FlightInfo(new Schema(List.empty.asJava), descriptor, List(flightEndpoint).asJava, -1L, 0L)
+    new FlightInfo(sparkSchemaToArrowSchema(requestMap.get(descriptor).source.expectedSchema), descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
@@ -231,8 +232,32 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
       override def next(): Seq[String] = iter.take(batchSize).toSeq
     }
   }
+  private def sparkSchemaToArrowSchema(sparkSchema: StructType): Schema = {
+    val fields: List[Field] = sparkSchema.fields.map { field =>
+      val arrowFieldType = field.dataType match {
+        case IntegerType =>
+          new FieldType(field.nullable, new ArrowType.Int(32, true), null)
+        case LongType =>
+          new FieldType(field.nullable, new ArrowType.Int(64, true), null)
+        case FloatType =>
+          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), null)
+        case DoubleType =>
+          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), null)
+        case StringType =>
+          new FieldType(field.nullable, ArrowType.Utf8.INSTANCE, null)
+        case BooleanType =>
+          new FieldType(field.nullable, ArrowType.Bool.INSTANCE, null)
+        case BinaryType =>
+          new FieldType(field.nullable, new ArrowType.Binary(), null)
+        case _ =>
+          throw new UnsupportedOperationException(s"Unsupported type: ${field.dataType}")
+      }
 
-  import java.io.{File, FileInputStream}
+      new Field(field.name, arrowFieldType, Collections.emptyList())
+    }.toList
+
+    new Schema(fields.asJava)
+  }
 
 
 }

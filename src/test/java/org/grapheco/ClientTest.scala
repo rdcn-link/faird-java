@@ -39,7 +39,7 @@ class ClientTest {
       .add("id", IntegerType, nullable = false)
       .add("name", StringType)
       .add("age", IntegerType)
-      .add("created_at", TimestampType)
+      .add("created_at", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
     val df = dc.open("test","test", schema)
