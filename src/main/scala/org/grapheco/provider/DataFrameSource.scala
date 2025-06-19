@@ -39,8 +39,9 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
 
   override def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch] = {
     // 将文件转换为迭代器：(文件名, 5MB chunk数据)
-    val files = DataUtils.listFiles("C:\\Users\\Yomi\\Downloads\\数据\\cram")
-    val chunkIterators = files.iterator.zipWithIndex.map { case (file,index) =>
+//    val files = DataUtils.listFiles("C:\\Users\\Yomi\\Downloads\\数据\\cram")
+    val chunkIterators = iter.flatten.zipWithIndex.map { case (row,index) =>
+      val file = row(0).asInstanceOf[File]
       (index, file.getName, DataUtils.readFileInChunks(file, chunkSize))
     }
     val allChunks = chunkIterators.flatMap { case (index, filename, chunks) =>
@@ -133,6 +134,9 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
         Row(line.split(delimiter): _*)
       })
       case StructuredSource() => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
+        Row(line)
+      })
+      case DirectorySource(false) => DataUtils.listFiles(s"$dataSet").toIterator.map(line => {
         Row(line)
       })
     }

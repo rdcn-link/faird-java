@@ -2,9 +2,8 @@ package org.grapheco
 
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.grapheco.client.{Blob, FairdClient}
+import org.grapheco.client.{Blob, CSVSource, DirectorySource, FairdClient}
 import org.apache.spark.sql.types.{StringType, StructType}
-import org.grapheco.client.{CSVSource, FairdClient}
 import org.grapheco.server.{FairdServer, FlightProducerImpl}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
@@ -89,7 +88,7 @@ class ClientTest {
       .add("bin", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("C:\\Users\\Yomi\\Downloads\\数据\\others","1.csv", schema)
+    val df = dc.open("C:\\Users\\Yomi\\Downloads\\数据\\cram","", schema,DirectorySource(false))
     var totalBytes: Long = 0L
     var realBytes: Long = 0L
     var count: Int = 0
