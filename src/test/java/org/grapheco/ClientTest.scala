@@ -41,7 +41,7 @@ class ClientTest {
       .add("name", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("/Users/renhao/Downloads","part-00000", schema)
+    val df = dc.open("C:\\Users\\Yomi\\Downloads\\数据\\others","1.csv", schema)
     var totalBytes: Long = 0L
     var realBytes: Long = 0L
     var count: Int = 0
@@ -87,7 +87,7 @@ class ClientTest {
       .add("bin", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("test","test", schema)
+    val df = dc.open("C:\\Users\\Yomi\\Downloads\\数据\\others","1.csv", schema)
     var totalBytes: Long = 0L
     var realBytes: Long = 0L
     var count: Int = 0

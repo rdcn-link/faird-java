@@ -11,7 +11,7 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.spark.sql.Row
 import org.grapheco.Logging
-import org.grapheco.client.{CSVSource, DFOperation, StructuredSource}
+import org.grapheco.client.{CSVSource, DFOperation, DirectorySource, StructuredSource}
 import org.grapheco.server.RemoteDataFrame
 import org.grapheco.util.DataUtils
 
@@ -22,6 +22,7 @@ import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 trait DataFrameSource {
   def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+  def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch]
 }
 
 trait DataFrameSourceFactory {
@@ -35,6 +36,23 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
     iter.map(rows => createDummyBatch(root, rows))
   }
+
+  override def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch] = {
+    // 将文件转换为迭代器：(文件名, 5MB chunk数据)
+    val files = DataUtils.listFiles("C:\\Users\\Yomi\\Downloads\\数据\\cram")
+    val chunkIterators = files.iterator.zipWithIndex.map { case (file,index) =>
+      (index, file.getName, DataUtils.readFileInChunks(file, chunkSize))
+    }
+    val allChunks = chunkIterators.flatMap { case (index, filename, chunks) =>
+      chunks.map(chunk => (index, filename, chunk))
+    }
+
+    DataUtils.createFileChunkBatch(allChunks,root)
+  }
+
+
+  // 列出目录下所有文件
+
 
   private def createDummyBatch(arrowRoot: VectorSchemaRoot, rows: Seq[Row]): ArrowRecordBatch = {
     arrowRoot.allocateNew()
@@ -80,8 +98,14 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
       })
       case StructuredSource() => DataUtils.groupedLines(s"$dataSet/$dataFrameName", 1000).map(seq => {
         seq.map(ss => Row(ss))
+
+      })
+      case _ => DataUtils.groupedLines(s"$dataSet/$dataFrameName", 1000).map(seq => {
+        seq.map(ss => Row(ss))
+
       })
     }
+
     val result = applyOperations(stream.flatten, remoteDataFrame.ops)
     DataFrameSourceImpl(result.grouped(batchSize))
   }
