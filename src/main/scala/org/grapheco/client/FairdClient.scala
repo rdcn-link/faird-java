@@ -19,7 +19,7 @@ object FairdClient{
     var totalBytes: Long = 0L
     var realBytes: Long = 0L
     var count: Int = 0
-    val batchSize = 1
+    val batchSize = 20
     val startTime = System.currentTimeMillis()
     var start = System.currentTimeMillis()
 //    df.foreach(row => {
@@ -50,11 +50,12 @@ object FairdClient{
 //    })
     df.foreach(row => {
       //      计算当前 row 占用的字节数（UTF-8 编码）
-//      val blob = row.get(3).asInstanceOf[Array[Byte]]
-      val blob = row.get(0).asInstanceOf[Blob]
+      val index = row.get(0).asInstanceOf[Int]
+      val name = row.get(1).asInstanceOf[String]
+      val blob = row.get(2).asInstanceOf[Blob]
 //      val bytesLen = blob.length
       val bytesLen = blob.size
-      println(f"Received: ${blob.chunkCount} chunks")
+      println(f"Received: ${blob.chunkCount} chunks, index:$index, name:$name")
 
 
       //        row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length

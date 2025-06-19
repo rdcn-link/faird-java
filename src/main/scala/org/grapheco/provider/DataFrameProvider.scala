@@ -41,12 +41,11 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
   }
   //TODO 处理非结构化数据，row -> 对应一个文件
 
-  override def getFilesArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
-//      Seq.range(0,10).toIterator.map(_=>createFileChunkBatch(root))
+  override def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch] = {
 // 将文件转换为迭代器：(文件名, 5MB chunk数据)
-    val files = listFiles("C:\\Users\\Yomi\\Downloads\\数据\\others")
+    val files = listFiles("C:\\Users\\Yomi\\Downloads\\数据\\cram")
     val chunkIterators = files.iterator.zipWithIndex.map { case (file,index) =>
-      (index, file.getName, readFileInChunks(file, chunkSize = 5 * 1024 * 1024))
+      (index, file.getName, readFileInChunks(file, chunkSize))
     }
     val allChunks = chunkIterators.flatMap { case (index, filename, chunks) =>
         chunks.map(chunk => (index, filename, chunk))
@@ -83,7 +82,7 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
     unloader.getRecordBatch
   }
 
-  private def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot
+  private def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot, batchSize: Int = 10
                                   ): Iterator[ArrowRecordBatch] = {
 
 
@@ -91,7 +90,7 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
     val nameVec = arrowRoot.getVector("name").asInstanceOf[VarCharVector]
     //    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
     val contentVec = arrowRoot.getVector("bin").asInstanceOf[VarBinaryVector]
-    chunks.grouped(10).map { chunkGroup =>
+    chunks.grouped(batchSize).map { chunkGroup =>
       arrowRoot.allocateNew()
       chunkGroup.zipWithIndex.foreach { case ((index, filename, chunkData), cnt) =>
         idVec.setSafe(cnt, index) // 当前批次内的序号
