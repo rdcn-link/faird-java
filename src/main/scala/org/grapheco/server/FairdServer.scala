@@ -171,7 +171,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
     val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
-    new FlightInfo(sparkSchemaToArrowSchema(requestMap.get(descriptor).source.expectedSchema), descriptor, List(flightEndpoint).asJava, -1L, 0L)
+    val request = requestMap.getOrDefault(descriptor, null)
+    val schema = if(request!=null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
+    new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
