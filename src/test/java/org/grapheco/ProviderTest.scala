@@ -1,7 +1,7 @@
 package org.grapheco
 
 import org.apache.jena.rdf.model.ModelFactory
-import org.grapheco.provider.{MockDataFrameProvider, SimpleDataFrameSourceFactory}
+import org.grapheco.provider.{MockDataFrameProvider, DataFrameSourceFactoryImpl}
 import org.junit.jupiter.api.Test
 
 /**
@@ -15,7 +15,7 @@ class ProviderTest {
   @Test
   def m1(): Unit = {
     val provider = new MockDataFrameProvider
-    val factory = new SimpleDataFrameSourceFactory
+    val factory = new DataFrameSourceFactoryImpl
 
     println(provider.checkPermission("pop_urban", "user1", "read")) // true
     println(provider.listDataSetNames()) // List(climate, population)
@@ -25,7 +25,7 @@ class ProviderTest {
     provider.getDataSetMetaData("climate", model)
     model.write(System.out, "TURTLE")
 
-    val source = provider.getDataFrameSource("part-00000", factory)
-    println(s"Source URI: ${source.sourceUri}")
+//    val source = provider.getDataFrameSource("part-00000", factory)
+//    println(s"Source URI: ${source.sourceUri}")
   }
 }

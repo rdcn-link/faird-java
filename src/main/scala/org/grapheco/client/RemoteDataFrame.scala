@@ -12,6 +12,8 @@ import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FilterOp, Flig
 trait SerializableFunction[-T, +R] extends (T => R) with Serializable
 
 trait RemoteDataFrame extends Serializable {
+  val source: DataAccessRequest
+  val ops: List[DFOperation]
   def map(f: Row => Row): RemoteDataFrame
   def filter(f: Row => Boolean): RemoteDataFrame
   def select(columns: String*): RemoteDataFrame

@@ -6,6 +6,8 @@ import org.grapheco.client.FairdClient
 import org.grapheco.server.{FairdServer, FlightProducerImpl}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
+import java.nio.charset.StandardCharsets
+
 /**
  * @Author renhao
  * @Description:
@@ -36,13 +38,10 @@ class ClientTest {
     import org.apache.spark.sql.types._
 
     val schema = new StructType()
-      .add("id", IntegerType, nullable = false)
-      .add("name", StringType)
-      .add("age", IntegerType)
-      .add("created_at", BinaryType)
+      .add("name", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("test","test", schema)
+    val df = dc.open("/Users/renhao/Downloads","part-00000", schema)
     var totalBytes: Long = 0L
     var realBytes: Long = 0L
     var count: Int = 0
@@ -53,7 +52,7 @@ class ClientTest {
       //      计算当前 row 占用的字节数（UTF-8 编码）
       val bytesLen =
         row.get(0).asInstanceOf[Array[Byte]].length
-      //        row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
+//              row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
 
       //          row.get(1).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
 
