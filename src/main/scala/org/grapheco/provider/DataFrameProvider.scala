@@ -9,6 +9,7 @@ package org.grapheco.provider
 import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.jena.rdf.model.Model
+import org.grapheco.Logging
 
 import java.io.{File, FileInputStream}
 import scala.collection.Seq
@@ -36,13 +37,10 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
 
   //处理结构化数据,row -> 一行数据
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
-//    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
-      Iterator.single(createFileChunkBatch(root))
+    groupedLines(sourceUri, batchSize).map(lines => createFileBatch(root, lines))
   }
   //TODO 处理非结构化数据，row -> 对应一个文件
-
-
-
+  // 参数是目录、 目录/*.csv, Iterator[ArrowRecordBatch] 5mb batch size
 
   //结构化文件分批传输
   private def createFileBatch(arrowRoot: VectorSchemaRoot, seq: Seq[String]): ArrowRecordBatch = {
@@ -129,9 +127,10 @@ case class FileDataFrameSource(sourceUri: String) extends DataFrameSource {
   }
 }
 
-class SimpleDataFrameSourceFactory extends DataFrameSourceFactory {
+class SimpleDataFrameSourceFactory extends DataFrameSourceFactory with Logging{
   override def createFileListDataFrameSource(path: String, pattern: String): DataFrameSource = {
-    FileDataFrameSource(s"file://$path/$pattern")
+    log.info(s"create dataFrame from $path/$pattern")
+    FileDataFrameSource(s"$path/$pattern")
   }
 }
 

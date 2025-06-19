@@ -1,9 +1,7 @@
 package org.grapheco.server
 
 import org.apache.spark.sql.Row
-import org.grapheco.client.{Blob, DFOperation, FilterOp, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
-
-import java.nio.charset.StandardCharsets
+import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FilterOp, FlightDataClient, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
 
 /**
  * @Author renhao
@@ -27,12 +25,12 @@ trait RemoteDataFrame extends Serializable {
 
 case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl){
   def max(column: String): RemoteDataFrameImpl = {
-    RemoteDataFrameImpl(remoteDataFrameImpl.source, remoteDataFrameImpl.ops :+ MaxOp(column), remoteDataFrameImpl.remoteExecutor)
+    RemoteDataFrameImpl(remoteDataFrameImpl.source, remoteDataFrameImpl.ops :+ MaxOp(column), remoteDataFrameImpl.client)
   }
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(source: String, ops: List[DFOperation],remoteExecutor: RemoteExecutor = null) extends RemoteDataFrame {
+case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation],client: FlightDataClient = null) extends RemoteDataFrame {
   override def filter(f: Row => Boolean): RemoteDataFrame = {
     copy(ops = ops :+ FilterOp(new SerializableFunction[Row, Boolean] {
       override def apply(v1: Row): Boolean = f(v1)
@@ -47,9 +45,9 @@ case class RemoteDataFrameImpl(source: String, ops: List[DFOperation],remoteExec
     copy(ops = ops :+ LimitOp(n))
   }
 
-  override def foreach(f: Row => Unit): Unit = remoteExecutor.execute(source, ops).foreach(f)
+  override def foreach(f: Row => Unit): Unit = records.foreach(f)
 
-  override def collect(): List[Row] = remoteExecutor.execute(source, ops).toList
+  override def collect(): List[Row] = records.toList
 
   override def map(f: Row => Row): RemoteDataFrame = {
     copy(ops = ops :+ MapOp(new SerializableFunction[Row, Row] {
@@ -67,6 +65,8 @@ case class RemoteDataFrameImpl(source: String, ops: List[DFOperation],remoteExec
     copy(ops = ops :+ GroupByOp(column))
     GroupedDataFrame(this)
   }
+
+  private def records(): Iterator[Row] = client.getRows(source, ops)
 }
 
 

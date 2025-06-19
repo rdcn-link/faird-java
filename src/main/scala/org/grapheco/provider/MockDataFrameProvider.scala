@@ -1,6 +1,8 @@
 package org.grapheco.provider
 
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
+import org.grapheco.Logging
+
 import scala.collection.mutable
 
 /**
@@ -10,7 +12,7 @@ import scala.collection.mutable
  * @Modified By:
  */
 
-class MockDataFrameProvider extends DataFrameProvider {
+class MockDataFrameProvider extends DataFrameProvider with Logging{
 
   private val dataSets = Map(
     "climate" -> List("climate_temp", "climate_rain"),
