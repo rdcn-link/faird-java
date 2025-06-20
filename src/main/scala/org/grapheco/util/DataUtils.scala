@@ -46,6 +46,16 @@ object DataUtils {
     new Schema(fields.asJava)
   }
 
+  // 列出目录下所有文件
+  def listFiles(directoryPath: String): Seq[File] = {
+    val dir = new File(directoryPath)
+    if (dir.exists() && dir.isDirectory) {
+      dir.listFiles().filter(_.isFile).toSeq
+    } else {
+      Seq.empty
+    }
+  }
+
   def groupedLines(filePath: String, batchSize: Int): Iterator[Seq[String]] = {
     val source = Source.fromFile(filePath)
     val iter = source.getLines()
@@ -62,35 +72,31 @@ object DataUtils {
     }
   }
 
+
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
     source.getLines()
   }
 
-  def createFileChunkBatch(arrowRoot: VectorSchemaRoot): ArrowRecordBatch = {
-    arrowRoot.allocateNew()
-    var index = 0
-    val path = s"C:\\Users\\Yomi\\Downloads\\数据\\1.csv"
+  def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot, batchSize: Int = 10
+                          ): Iterator[ArrowRecordBatch] = {
+
+
     val idVec = arrowRoot.getVector("id").asInstanceOf[IntVector]
     val nameVec = arrowRoot.getVector("name").asInstanceOf[VarCharVector]
-    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
+    //    val indexVec = arrowRoot.getVector("chunkIndex").asInstanceOf[IntVector]
     val contentVec = arrowRoot.getVector("bin").asInstanceOf[VarBinaryVector]
-    for (i <- 0 to 5 - 1) {
-      val file = new File(path)
-      val fileName = file.getName
-      var chunkCount = 0
-      readFileInChunks(file).foreach(bytes => {
-        idVec.setSafe(index, i)
-        nameVec.setSafe(index, fileName.getBytes())
-        indexVec.setSafe(index,chunkCount)
-        contentVec.setSafe(index, bytes)
-        index += 1
-        chunkCount += 1
-      })
+    chunks.grouped(batchSize).map { chunkGroup =>
+      arrowRoot.allocateNew()
+      chunkGroup.zipWithIndex.foreach { case ((index, filename, chunkData), cnt) =>
+        idVec.setSafe(cnt, index) // 当前批次内的序号
+        nameVec.setSafe(cnt, filename.getBytes())
+        contentVec.setSafe(cnt, chunkData)
+      }
+      arrowRoot.setRowCount(chunkGroup.size)
+      val unloader = new VectorUnloader(arrowRoot)
+      unloader.getRecordBatch
     }
-    arrowRoot.setRowCount(index)
-    val unloader = new VectorUnloader(arrowRoot)
-    unloader.getRecordBatch
   }
 
   def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
