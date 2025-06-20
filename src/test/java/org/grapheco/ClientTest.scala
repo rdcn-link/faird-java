@@ -127,7 +127,16 @@ class ClientTest {
   @Test
   def listDataSetFrameTest(): Unit = {
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
+
     dc.listDataSetNames().foreach(println)
     dc.listDataFrameNames("df").foreach(println)
+    val schema = new StructType()
+      .add("col1", StringType)
+      .add("col2", StringType)
+    val csvSource = CSVSource("\t")
+    val df = dc.open("/Users/renhao/Downloads","part-00000", schema, CSVSource("\t"))
+    df.limit(10).foreach(row => {
+      println(row)
+    })
   }
 }
