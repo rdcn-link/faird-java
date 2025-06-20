@@ -197,3 +197,95 @@
 2025-06-19 18:32:12 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
 2025-06-19 18:32:12 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
 2025-06-19 18:32:14 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:37:25 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-19 18:37:25 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-19 18:37:25 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-19 18:37:27 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:37:27 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:40:12 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-19 18:40:12 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-19 18:40:12 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-19 18:40:14 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:40:14 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:40:56 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-19 18:40:56 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-19 18:40:57 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-19 18:40:58 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:40:58 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:41:47 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-19 18:41:47 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-19 18:41:47 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-19 18:41:49 [flight-server-default-executor-2] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:41:49 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:43:17 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-19 18:43:17 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-19 18:43:17 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-19 18:43:19 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:43:19 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-19 18:43:19 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-20 09:47:07 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 09:47:07 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 09:47:07 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 09:47:09 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-20 09:47:42 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 09:47:42 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 09:47:42 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 09:47:44 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/part-00000
+2025-06-20 10:32:59 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:32:59 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:32:59 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:35:06 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:35:06 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:35:06 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:35:36 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:35:36 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:35:36 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:36:30 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:36:30 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:36:30 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:39:09 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:39:10 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:39:10 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:39:32 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:39:32 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:39:32 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:42:23 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:42:23 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:42:24 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:42:25 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/zip
+2025-06-20 10:43:19 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:43:19 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:43:19 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:43:37 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/zip
+2025-06-20 10:44:30 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:44:30 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:44:30 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:44:31 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/zip
+2025-06-20 10:45:04 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:45:04 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:45:04 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:45:05 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/zip
+2025-06-20 10:46:26 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:46:26 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:46:26 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:46:27 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/zip
+2025-06-20 10:48:25 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:48:25 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:48:25 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:48:26 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/unstructured/zip
+2025-06-20 10:52:01 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:52:01 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:52:01 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:52:03 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/unstructured/zip
+2025-06-20 10:53:56 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:53:56 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:53:56 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:53:57 [flight-server-default-executor-1] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/hdfs/part-00000
+2025-06-20 10:59:12 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:59:12 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:59:12 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:59:14 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/ldbc/organisation.csv
+2025-06-20 10:59:39 [main] INFO  org.apache.arrow.memory.BaseAllocator - Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+2025-06-20 10:59:39 [main] INFO  org.apache.arrow.memory.DefaultAllocationManagerOption - allocation manager type not specified, using netty as the default type
+2025-06-20 10:59:39 [main] INFO  org.apache.arrow.memory.CheckAllocator - Using DefaultAllocationManager at memory-netty/13.0.0/arrow-memory-netty-13.0.0.jar!/org/apache/arrow/memory/DefaultAllocationManagerFactory.class
+2025-06-20 10:59:40 [flight-server-default-executor-0] INFO  org.grapheco.provider.DataFrameSourceFactoryImpl - create dataFrame from /Users/renhao/Downloads/MockData/ldbc/organisation.csv

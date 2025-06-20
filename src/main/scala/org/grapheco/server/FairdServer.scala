@@ -104,11 +104,28 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     }
   }
 
+  def listFiles(dirPath: String): List[String] = {
+    val dir = new File(dirPath)
+    if (dir.exists && dir.isDirectory) {
+      dir.listFiles
+        .map(_.getName)
+        .filter(x => x!=".DS_Store")
+        .toList
+    } else {
+      List.empty
+    }
+  }
+
+  //读取配置文件，通过DataFrameProvider提供
+  private val datasets = listFiles("/Users/renhao/Downloads/MockData")
+  private val dataFrames: Map[String, List[String]] = datasets.map(x => (x,listFiles("/Users/renhao/Downloads/MockData/"+x))).toMap
+
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
     new String(ticket.getBytes, StandardCharsets.UTF_8) match {
-      case "listDataSetNames" => getListStrStream(Seq("dataSet1","dataSet2","dataSet3"), listener)
+      case "listDataSetNames" => getListStrStream(datasets, listener)
       case ss if ss.startsWith("listDataFrameNames") => {
-        getListStrStream(Seq("df1","df2","df3"), listener)
+
+        getListStrStream(dataFrames.get(ss.split("\\.")(1)).getOrElse(List.empty), listener)
       }
       case _ => {
         val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
