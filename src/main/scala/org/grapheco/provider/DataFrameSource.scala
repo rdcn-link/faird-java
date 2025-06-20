@@ -66,7 +66,7 @@ case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource
 }
 
 class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
-  val batchSize = 1000
+  val batchSize = 10
   override def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource = {
 //    /Users/renhao/Downloads
     val dataSet = remoteDataFrame.source.datasetId

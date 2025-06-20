@@ -150,7 +150,8 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
         //应从request中获取信息进行创建
 //        val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
 //        val schema = new Schema(fields.asJava)
-        val schema = DataUtils.sparkSchemaToArrowSchema(request.source.expectedSchema)
+//        val schema = DataUtils.sparkSchemaToArrowSchema(request.source.expectedSchema)
+          val schema = DataUtils.toArrowSchema(request.source.expectedSchema,"UTC",false)
         val provider = new MockDataFrameProvider
         val factory = new DataFrameSourceFactoryImpl
         val df: DataFrameSource = provider.getDataFrameSource(request, factory)
@@ -160,7 +161,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
         val loader = new VectorLoader(root)
         listener.start(root)
         try{
-          df.getFilesArrowRecordBatch(root).foreach(batch => {
+          df.getArrowRecordBatch(root).foreach(batch => {
             try {
               loader.load(batch)
               while (!listener.isReady()) {
