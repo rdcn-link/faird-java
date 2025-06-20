@@ -22,7 +22,6 @@ import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 trait DataFrameSource {
   def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
-  def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch]
 }
 
 trait DataFrameSourceFactory {
@@ -31,43 +30,8 @@ trait DataFrameSourceFactory {
 
 case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource {
 
-  //处理结构化数据,row -> 一行数据
   override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
     iter.map(rows => createDummyBatch(root, rows))
-  }
-
-  override def getFilesArrowRecordBatch(root: VectorSchemaRoot, chunkSize: Int  = 5 * 1024 * 1024, batchSize: Int = 10): Iterator[ArrowRecordBatch] = {
-    // 将文件转换为迭代器：(文件名, 5MB chunk数据)
-//    val files = DataUtils.listFiles("C:\\Users\\Yomi\\Downloads\\数据\\cram")
-    val chunkIterators = iter.flatten.zipWithIndex.map { case (row,index) =>
-      val file = row(0).asInstanceOf[File]
-      (index, file.getName, DataUtils.readFileInChunks(file, chunkSize))
-    }
-    val allChunks = chunkIterators.flatMap { case (index, filename, chunks) =>
-      chunks.map(chunk => (index, filename, chunk))
-    }
-
-    DataUtils.createFileChunkBatch(allChunks,root)
-  }
-
-
-  // 列出目录下所有文件
-
-
-  def createFileBatch(arrowRoot: VectorSchemaRoot, seq: Seq[Row]): ArrowRecordBatch = {
-    arrowRoot.allocateNew()
-
-    val vec = arrowRoot.getVector("name").asInstanceOf[VarBinaryVector]
-
-    var i = 0
-    seq.foreach(ss => {
-      vec.setSafe(i, ss.get(0).toString.getBytes("UTF-8"))
-      i += 1
-    })
-
-    arrowRoot.setRowCount(i)
-    val unloader = new VectorUnloader(arrowRoot)
-    unloader.getRecordBatch
   }
 
   private def createDummyBatch(arrowRoot: VectorSchemaRoot, rows: Seq[Row]): ArrowRecordBatch = {
@@ -116,10 +80,14 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
       case StructuredSource() => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
         Row(line)
       })
-
-      case DirectorySource(false) => DataUtils.listFiles(s"$dataSet").toIterator.map(line => {
-        Row(line)
-      })
+      case DirectorySource(false) =>
+        val chunkSize: Int  = 5 * 1024 * 1024
+        DataUtils.listFiles(s"$dataSet/$dataFrameName").toIterator.zipWithIndex.map {
+          case (file,index) =>
+            (index, file.getName, DataUtils.readFileInChunks(file, chunkSize))
+        }.flatMap { case (index, filename, chunks) =>
+          chunks.map(chunk => (index, filename, chunk))
+        }.map(Row.fromTuple(_))
     }
     val result = applyOperations(stream, remoteDataFrame.ops)
     DataFrameSourceImpl(result.grouped(batchSize))
