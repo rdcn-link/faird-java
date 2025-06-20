@@ -136,6 +136,7 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging{
       case StructuredSource() => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
         Row(line)
       })
+
       case DirectorySource(false) => DataUtils.listFiles(s"$dataSet").toIterator.map(line => {
         Row(line)
       })

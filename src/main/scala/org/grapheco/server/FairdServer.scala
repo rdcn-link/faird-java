@@ -137,13 +137,13 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
         val provider = new MockDataFrameProvider
         val factory = new DataFrameSourceFactoryImpl
         val df: DataFrameSource = provider.getDataFrameSource(request, factory)
-
+        //能否支持并发
         val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
         val root = VectorSchemaRoot.create(schema, childAllocator)
         val loader = new VectorLoader(root)
         listener.start(root)
         try{
-          df.getArrowRecordBatch(root).foreach(batch => {
+          df.getFilesArrowRecordBatch(root).foreach(batch => {
             try {
               loader.load(batch)
               while (!listener.isReady()) {

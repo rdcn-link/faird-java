@@ -18,7 +18,7 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
  * @Modified By:
  */
 object DataUtils {
-
+  //建议使用org.apache.spark.sql.util.ArrowUtils.toArrowSchema(Schema, "UTC")
   def sparkSchemaToArrowSchema(sparkSchema: StructType): Schema = {
     val fields: List[Field] = sparkSchema.fields.map { field =>
       val arrowFieldType = field.dataType match {
