@@ -36,6 +36,21 @@ class FlightDataClient(url: String, port:Int) {
     getListStrByFlightInfo(flightInfo)
   }
 
+  def getSchema(dataFrameName: String): String = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
+    getStrByFlightInfo(flightInfo)
+  }
+
+  def getMetaData(dataFrameName: String): String = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getMetaData.$dataFrameName"))
+    getStrByFlightInfo(flightInfo)
+  }
+
+  def getSchemaURI(dataFrameName: String): String = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchemaURI.$dataFrameName"))
+    getStrByFlightInfo(flightInfo)
+  }
+
 
   def close(): Unit = {
     flightClient.close()
@@ -75,7 +90,7 @@ class FlightDataClient(url: String, port:Int) {
     println(s"Client (Get Metadata): $flightInfo")
     val flightInfoSchema = flightInfo.getSchema
     val isBinaryColumn = if (flightInfoSchema.getFields.size() <= 2) false
-    else flightInfoSchema.getFields.get(2).getType match {
+    else flightInfoSchema.getFields.get(6).getType match {
       case _: ArrowType.Binary => true
       case _ => false
     }
@@ -113,14 +128,14 @@ class FlightDataClient(url: String, port:Int) {
       // 第三列不是binary类型，直接返回Row(Seq[Any])
       flatIter.map(seq => Row.fromSeq(seq))
     } else {
-      val seq: Seq[Any] = flatIter.next()
-      var currentChunk: Array[Byte] = Array[Byte]()
-      var cachedChunk: Array[Byte] = seq(2).asInstanceOf[Array[Byte]]
+
       var isFirstChunk: Boolean = true
-      var cachedIndex: Int = seq(0).asInstanceOf[Int]
-      var cachedName: String = seq(1).asInstanceOf[String]
-      var currentIndex: Int = 0 // 当前块的 index
-      var currentName: String = seq(1).asInstanceOf[String]
+      var currentSeq: Seq[Any] = flatIter.next()
+      var cachedSeq: Seq[Any] = flatIter.next()
+      var currentChunk: Array[Byte] = Array[Byte]()
+      var cachedChunk: Array[Byte] = currentSeq(6).asInstanceOf[Array[Byte]]
+      var cachedName: String = currentSeq(0).asInstanceOf[String]
+      var currentName: String = currentSeq(0).asInstanceOf[String]
       new Iterator[Row] {
         override def hasNext: Boolean = flatIter.hasNext || cachedChunk.nonEmpty
 
@@ -134,15 +149,14 @@ class FlightDataClient(url: String, port:Int) {
             private def readNextChunk(): Unit = {
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {
-                  val seq: Seq[Any] = flatIter.next()
-                  val nextIndex: Int = seq(0).asInstanceOf[Int]
-                  val nextName: String = seq(1).asInstanceOf[String]
-                  val nextChunk: Array[Byte] = seq(2).asInstanceOf[Array[Byte]]
-                  if (nextIndex != currentIndex) {
+                  val nextSeq: Seq[Any] = flatIter.next()
+                  val nextName: String = nextSeq(0).asInstanceOf[String]
+                  val nextChunk: Array[Byte] = nextSeq(6).asInstanceOf[Array[Byte]]
+                  if (nextName != currentName) {
                     // index 变化，结束当前块
                     isExhausted = true
                     isFirstChunk = true
-                    cachedIndex = nextIndex
+                    cachedSeq = nextSeq
                     cachedName = nextName
                     cachedChunk = nextChunk
                   } else {
@@ -150,10 +164,10 @@ class FlightDataClient(url: String, port:Int) {
                     currentChunk = nextChunk
                     currentName = nextName
                   }
-                  currentIndex = nextIndex
+                  currentSeq = nextSeq
                   currentName = nextName
                 } else {
-                  currentIndex = cachedIndex
+                  currentSeq = cachedSeq
                   currentName = cachedName
                   currentChunk = cachedChunk
                   isExhausted = false
@@ -196,7 +210,7 @@ class FlightDataClient(url: String, port:Int) {
 
             }
           }
-          Row(currentIndex + 1, currentName, new Blob(blobIter))
+          Row((currentSeq:+new Blob(blobIter)): _*)
           //          Row(iter.next())
         }
       }
@@ -217,6 +231,17 @@ class FlightDataClient(url: String, port:Int) {
       })
     }else Seq.empty
   }
+
+    private def getStrByFlightInfo(flightInfo: FlightInfo): String = {
+      val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
+      if(flightStream.next()){
+        val vectorSchemaRootReceived = flightStream.getRoot
+        val rowCount = vectorSchemaRootReceived.getRowCount
+        val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+        fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
+      }else ""
+    }
+
 }
 
 // 表示完整的二进制文件

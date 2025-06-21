@@ -17,8 +17,8 @@ import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FlightDataClie
 class DacpClient(url: String, port: Int, user: String = null, password: String = null) {
   private val client = new FlightDataClient(url, port)
 //  def execute(source: String, ops: List[DFOperation]): Iterator[Row] = client.getRows(source, ops)
-  def open(dataSet: String,dataFrame: String, schema: StructType, inputSource: InputSource = StructuredSource()): RemoteDataFrameImpl = {
-    val source = DataAccessRequest(dataSet, dataFrame, UsernamePassword(user, password), schema, inputSource)
+  def open(dataFrameName: String): RemoteDataFrameImpl = {
+    val source = DataAccessRequest(dataFrameName, UsernamePassword(user, password))
     RemoteDataFrameImpl(source, List.empty, client)
   }
   def listDataSetNames(): Seq[String] = client.listDataSetNames
