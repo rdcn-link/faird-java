@@ -108,19 +108,19 @@ case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation]
   private def records(): Iterator[Row] = client.getRows(source, ops)
 
   override def getSchema: String = {
-    if(_schema.isEmpty)
+    if(_schema == null)
       _schema=client.getSchema(source.datasetId)
     _schema
   }
 
   override def getMetaData: String = {
-    if(_metaData.isEmpty)
+    if(_metaData == null)
       _metaData=client.getMetaData(source.datasetId)
     _metaData
   }
 
   override def getSchemaURI: String = {
-    if(_schemaURI.isEmpty)
+    if(_schemaURI == null)
       _schemaURI=client.getSchemaURI(source.datasetId)
     _schemaURI
   }

@@ -24,6 +24,7 @@ trait DataFrameProvider {
   def mockDataSetMetaData(): Map[String, Model]
   def getSchema(remoteDataFrame: RemoteDataFrame): StructType
   def getMetaData(remoteDataFrame: RemoteDataFrame): String
+  def getSchemaURI(remoteDataFrame: RemoteDataFrame): String
   def getPath(remoteDataFrame: RemoteDataFrame):String
 }
 
@@ -69,6 +70,7 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
     rdfModel.add(resource, rdfModel.createProperty(ns + "dataFormat"), "bin")
     rdfModel.add(resource, rdfModel.createProperty(ns + "contains"),
     dataSets.getOrElse(dataSetName, Nil).mkString(", "))
+    remoteDataFrame.setRDFModel(rdfModel)
     val structType =
             new StructType()
               .add("name", StringType)
@@ -89,6 +91,7 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
   }
 
   override def getSchema(remoteDataFrame: RemoteDataFrame): StructType = {
+    getRDFModel(remoteDataFrame)
     val model = remoteDataFrame.getRDFModel
     val subject = model.getResource(ns+remoteDataFrame.source.datasetId)
     val schemaJson = subject.getProperty(model.getProperty(ns+"schema"))
@@ -118,6 +121,11 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
 
   override def getPath(remoteDataFrame: RemoteDataFrame): String = {
     dataSetsPath.getOrElse(remoteDataFrame.source.datasetId,"")
+  }
+
+  override def getSchemaURI(remoteDataFrame: RemoteDataFrame): String = {
+    remoteDataFrame.setSchemaURI("http://rdcn.link/schema/"+remoteDataFrame.source.datasetId)
+    remoteDataFrame.getSchemaURI
   }
 }
 

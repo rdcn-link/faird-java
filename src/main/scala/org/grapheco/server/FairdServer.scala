@@ -156,14 +156,14 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
         getListStrStream(dataFrames.get(ss.split("\\.")(1)).getOrElse(List.empty), listener)
       }
       case ss if ss.startsWith("getSchema") => {
-        getStrStream(request.getSchema.toString,listener)
+        getStrStream(provider.getSchema(request).toString,listener)
       }
       case ss if ss.startsWith("getMetaData") => {
-        getStrStream(request.getMetaData,listener)
+        getStrStream(provider.getMetaData(request),listener)
 
       }
       case ss if ss.startsWith("getSchemaURI") => {
-        getStrStream(request.getSchemaURI,listener)
+        getStrStream(provider.getSchemaURI(request),listener)
 
       }
       case _ => {
@@ -209,11 +209,45 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
   }
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
-    val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
-    val request = requestMap.getOrDefault(descriptor, null)
-//    val schema = if (request != null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
-    val schema = new Schema(List.empty.asJava)
-    new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
+    try {
+      // 添加路径有效性检查
+      val path = descriptor.getPath
+      if (path == null || path.isEmpty) {
+        throw CallStatus.INVALID_ARGUMENT  // 明确错误类型
+          .withDescription("FlightDescriptor.path 不能为空")
+          .toRuntimeException()
+      }
+      val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
+      val request = requestMap.getOrDefault(descriptor, null)
+      //    val schema = if (request != null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
+      val schema = new Schema(List.empty.asJava)
+      new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
+    } catch {
+      case e: NullPointerException =>{
+        e.printStackTrace()
+        throw CallStatus.INTERNAL
+          .withDescription(s"FlightInfo构建失败: 缺少必要参数")
+          .withCause(e)
+          .toRuntimeException()
+      }
+
+      case e: IllegalArgumentException =>{
+        e.printStackTrace()
+        throw CallStatus.INVALID_ARGUMENT
+          .withDescription(s"无效的FlightInfo参数: ${e.getMessage}")
+          .withCause(e)
+          .toRuntimeException()
+      }
+
+      case e: Exception =>{
+        e.printStackTrace()
+        throw CallStatus.INTERNAL
+          .withDescription(s"FlightInfo创建失败: ${e.getMessage}")
+          .withCause(e)
+          .toRuntimeException()
+      }
+
+    }
   }
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
