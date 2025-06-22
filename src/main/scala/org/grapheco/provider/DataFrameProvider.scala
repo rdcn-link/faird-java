@@ -115,7 +115,7 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
     remoteDataFrame.setMetaData(getMetaData(dataSetName))
     remoteDataFrame.setSchemaURI("http://rdcn.link/schema/"+dataSetName)
     remoteDataFrame.setPropertiesMap
-    log.info("getting DataFrameSource...")
+//    log.info("getting DataFrameSource...")
     factory.createFileListDataFrameSource(remoteDataFrame)
   }
 

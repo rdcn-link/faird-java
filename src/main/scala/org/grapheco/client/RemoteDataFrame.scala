@@ -4,6 +4,7 @@ import org.apache.hadoop.shaded.com.sun.jersey.core.header.MatchingEntityTag
 import org.apache.jena.rdf.model.{Literal, Model, Resource}
 import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.{BinaryType, IntegerType, StringType, StructType}
+import org.grapheco.Logging
 import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FilterOp, FlightDataClient, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
 
 import scala.collection.mutable
@@ -38,7 +39,7 @@ trait RemoteDataFrame extends Serializable {
 
   def getRDFModel: Model
 
-  def getPropertiesMap: Map[String ,Any]
+  def getPropertiesMap: Map[String ,String]
 
   def map(f: Row => Row): RemoteDataFrame
 
@@ -62,13 +63,13 @@ case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl) {
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation], client: FlightDataClient = null) extends RemoteDataFrame {
+case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation], client: FlightDataClient = null) extends RemoteDataFrame with Logging {
   private var _schema: String = _
   private var _format: String = _
   private var _metaData: String = _
   private var _schemaURI: String = _
   private var _rdfModel: Model = _
-  private val _propertiesMap: Map[String, Any] = Map.empty[String, Any]
+  private var _propertiesMap: Map[String, String] = Map.empty[String, String]
 
   override def filter(f: Row => Boolean): RemoteDataFrame = {
     copy(ops = ops :+ FilterOp(new SerializableFunction[Row, Boolean] {
@@ -164,7 +165,7 @@ case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation]
   override def setPropertiesMap: Unit = {
     val resourceUri = "http://example.org/dataset/"  + source.datasetId
     val subject: Resource = _rdfModel.getResource(resourceUri)
-    val properties = mutable.LinkedHashMap[String, Any]()  // 保持属性顺序（可选）
+    val properties = mutable.LinkedHashMap[String, String]()  // 保持属性顺序（可选）
     // 遍历该资源的所有 Statement（三元组）
     val statements = _rdfModel.listStatements(subject, null, null)
     while (statements.hasNext) {
@@ -177,13 +178,14 @@ case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation]
         case res: Resource if res.isURIResource => res.getURI  // 其他资源（URI）
         case _ => obj.toString  // 回退方案
       }
-
+//      log.info(s"$propName->$propValue")
       properties += (propName -> propValue)
     }
-    properties.toMap
+//    log.info(s"${properties("dataFormat").asInstanceOf[String]}")
+    _propertiesMap = properties.toMap
   }
 
-  override def getPropertiesMap: Map[String, Any] = _propertiesMap
+  override def getPropertiesMap: Map[String, String] = _propertiesMap
 }
 
 

@@ -110,7 +110,7 @@ class DynamicDataFrameSourceFactory(provider: DataFrameProvider) extends DataFra
     val propertiesMap: Map[String, String] = remoteDataFrame.getPropertiesMap
 
     val dataFormat: String = propertiesMap("dataFormat").asInstanceOf[String]
-    log.info(s"propertiesMap is null? ${dataFormat}")
+//    log.info(s"propertiesMap is null? ${dataFormat}")
     dataFormat match {
       case "csv" => new CSVSource(remoteDataFrame,provider)
       case "structured" => new StructuredSource(remoteDataFrame,provider)
