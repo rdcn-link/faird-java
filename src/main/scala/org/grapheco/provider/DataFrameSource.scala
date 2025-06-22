@@ -103,12 +103,15 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging {
 
 }
 
-class DynamicDataFrameSourceFactory(provider: DataFrameProvider) extends DataFrameSourceFactory {
+class DynamicDataFrameSourceFactory(provider: DataFrameProvider) extends DataFrameSourceFactory with Logging {
 
 
   override def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource = {
-    val propertiesMap: Map[String, Any] = remoteDataFrame.getPropertiesMap
-    propertiesMap("http://example.org/dataset/"+"format") match {
+    val propertiesMap: Map[String, String] = remoteDataFrame.getPropertiesMap
+
+    val dataFormat: String = propertiesMap("dataFormat").asInstanceOf[String]
+    log.info(s"propertiesMap is null? ${dataFormat}")
+    dataFormat match {
       case "csv" => new CSVSource(remoteDataFrame,provider)
       case "structured" => new StructuredSource(remoteDataFrame,provider)
       case _ => new DirectorySource(remoteDataFrame,provider)
@@ -168,10 +171,10 @@ class DirectorySource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvi
     val dataSet = remoteDataFrame.source.datasetId
     val dataFrameName = remoteDataFrame.source.dataFrames
     val path = provider.getPath(remoteDataFrame)
-    val format = remoteDataFrame.getPropertiesMap("http://example.org/dataset/"+"format")
-    val fileType = remoteDataFrame.getPropertiesMap("http://example.org/dataset/"+"fileType")
-    val size =  remoteDataFrame.getPropertiesMap("http://example.org/dataset/"+"size")
-    val lastModified =  remoteDataFrame.getPropertiesMap("http://example.org/dataset/"+"lastModified")
+    val format = remoteDataFrame.getPropertiesMap("dataFormat")
+    val fileType = remoteDataFrame.getPropertiesMap("dataType")
+    val size =  remoteDataFrame.getPropertiesMap("size")
+    val lastModified =  remoteDataFrame.getPropertiesMap("lastModified")
     log.info(s"create dataFrame from $path")
     val chunkSize: Int = 5 * 1024 * 1024
     val stream: Iterator[Row] = DataUtils.listFiles(s"$path").toIterator.zipWithIndex.map {

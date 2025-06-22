@@ -5,6 +5,7 @@ import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.spark.sql.Row
 import org.grapheco.client.{Blob, CSVSource, DirectorySource, FairdClient}
 import org.apache.spark.sql.types.{IntegerType, StringType, StructType}
+import org.grapheco.provider.MockDataFrameProvider
 import org.grapheco.server.{FairdServer, FlightProducerImpl}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
@@ -19,7 +20,7 @@ import java.nio.charset.StandardCharsets
 object ClientTest extends Logging {
   val location = Location.forGrpcInsecure("0.0.0.0", 33333)
   val allocator: BufferAllocator = new RootAllocator()
-  val producer = new FlightProducerImpl(allocator, location)
+  val producer = new FlightProducerImpl(allocator, location, new MockDataFrameProvider)
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {
@@ -64,7 +65,12 @@ class ClientTest {
     val batchSize = 2
     val startTime = System.currentTimeMillis()
     var start = System.currentTimeMillis()
-//    df.getMetaData
+    println("SchemaURI:"+df.getSchemaURI)
+    println("---------------------------------------------------------------------------")
+    println("MetaData:"+df.getMetaData)
+    println("---------------------------------------------------------------------------")
+    println("Schema:"+df.getSchema)
+    println("---------------------------------------------------------------------------")
     df.foreach(row => {
       //      计算当前 row 占用的字节数（UTF-8 编码）
       //      val index = row.get(0).asInstanceOf[Int]

@@ -36,6 +36,7 @@ class FlightDataClient(url: String, port:Int) {
     getListStrByFlightInfo(flightInfo)
   }
 
+
   def getSchema(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
     getStrByFlightInfo(flightInfo)
@@ -131,9 +132,9 @@ class FlightDataClient(url: String, port:Int) {
 
       var isFirstChunk: Boolean = true
       var currentSeq: Seq[Any] = flatIter.next()
-      var cachedSeq: Seq[Any] = flatIter.next()
+      var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
-      var cachedChunk: Array[Byte] = currentSeq(6).asInstanceOf[Array[Byte]]
+      var cachedChunk: Array[Byte] = currentSeq(4).asInstanceOf[Array[Byte]]
       var cachedName: String = currentSeq(0).asInstanceOf[String]
       var currentName: String = currentSeq(0).asInstanceOf[String]
       new Iterator[Row] {
@@ -151,7 +152,7 @@ class FlightDataClient(url: String, port:Int) {
                 if (!isFirstChunk) {
                   val nextSeq: Seq[Any] = flatIter.next()
                   val nextName: String = nextSeq(0).asInstanceOf[String]
-                  val nextChunk: Array[Byte] = nextSeq(6).asInstanceOf[Array[Byte]]
+                  val nextChunk: Array[Byte] = nextSeq(4).asInstanceOf[Array[Byte]]
                   if (nextName != currentName) {
                     // index 变化，结束当前块
                     isExhausted = true
@@ -210,7 +211,7 @@ class FlightDataClient(url: String, port:Int) {
 
             }
           }
-          Row((currentSeq:+new Blob(blobIter)): _*)
+          Row(currentSeq.patch(4, Nil, 1):+new Blob(blobIter):_*)
           //          Row(iter.next())
         }
       }

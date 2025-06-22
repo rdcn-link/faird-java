@@ -18,13 +18,13 @@ import scala.collection.mutable
 trait DataFrameProvider {
   def checkPermission(dataFrameName: String, userId: String, operation: String): Boolean
   def listDataSetNames(): List[String]
-  def getRDFModel(remoteDataFrame: RemoteDataFrame): Model
+  def getRDFModel(dataFrameName: String): Model
   def listDataFrameNames(dataSetName: String): List[String]
   def getDataFrameSource(remoteDataFrame: RemoteDataFrame, factory: DynamicDataFrameSourceFactory): DataFrameSource
   def mockDataSetMetaData(): Map[String, Model]
-  def getSchema(remoteDataFrame: RemoteDataFrame): StructType
-  def getMetaData(remoteDataFrame: RemoteDataFrame): String
-  def getSchemaURI(remoteDataFrame: RemoteDataFrame): String
+  def getSchema(dataFrameName: String): StructType
+  def getMetaData(dataFrameName: String): String
+  def getSchemaURI(dataFrameName: String): String
   def getPath(remoteDataFrame: RemoteDataFrame):String
 }
 
@@ -58,19 +58,19 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
 
 
 
-  override def getRDFModel(remoteDataFrame: RemoteDataFrame): Model = {
-    val dataSetName = remoteDataFrame.source.datasetId
+  override def getRDFModel(dataFrameName: String): Model = {
+
     val rdfModel = ModelFactory.createDefaultModel()
-    val resource = rdfModel.createResource(ns + dataSetName)
+    val resource = rdfModel.createResource(ns + dataFrameName)
     rdfModel.add(resource, rdfModel.createProperty(ns + "type"), "DataSet")
-    rdfModel.add(resource, rdfModel.createProperty(ns + "title"), dataSetName)
+    rdfModel.add(resource, rdfModel.createProperty(ns + "title"), dataFrameName)
     rdfModel.add(resource, rdfModel.createProperty(ns + "description"), "description")
     rdfModel.add(resource, rdfModel.createProperty(ns + "lastModified"), "2025-6-21")
-    rdfModel.add(resource, rdfModel.createProperty(ns + "DataType"), "File")
+    rdfModel.add(resource, rdfModel.createProperty(ns + "dataType"), "File")
     rdfModel.add(resource, rdfModel.createProperty(ns + "dataFormat"), "bin")
+    rdfModel.add(resource, rdfModel.createProperty(ns + "size"), "100MB")
     rdfModel.add(resource, rdfModel.createProperty(ns + "contains"),
-    dataSets.getOrElse(dataSetName, Nil).mkString(", "))
-    remoteDataFrame.setRDFModel(rdfModel)
+    dataSets.getOrElse(dataFrameName, Nil).mkString(", "))
     val structType =
             new StructType()
               .add("name", StringType)
@@ -90,18 +90,17 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
     dataSets.getOrElse(dataSetName, Nil)
   }
 
-  override def getSchema(remoteDataFrame: RemoteDataFrame): StructType = {
-    getRDFModel(remoteDataFrame)
-    val model = remoteDataFrame.getRDFModel
-    val subject = model.getResource(ns+remoteDataFrame.source.datasetId)
+  override def getSchema(dataFrameName: String): StructType = {
+    val model = getRDFModel(dataFrameName)
+    val subject = model.getResource(ns+dataFrameName)
     val schemaJson = subject.getProperty(model.getProperty(ns+"schema"))
       .getString
     DataType.fromJson(schemaJson).asInstanceOf[StructType]
 
   }
 
-  override def getMetaData(remoteDataFrame: RemoteDataFrame): String = {
-    val model = getRDFModel(remoteDataFrame)
+  override def getMetaData(dataFrameName: String): String = {
+    val model = getRDFModel(dataFrameName)
     val sw = new StringWriter()
     model.write(sw,"TURTLE")
     sw.toString.asInstanceOf[String]
@@ -111,11 +110,12 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
   override def getDataFrameSource(remoteDataFrame: RemoteDataFrame, factory: DynamicDataFrameSourceFactory): DataFrameSource = {
     // For demonstration, assume all files are in "/mock/data"
     val dataSetName = remoteDataFrame.source.datasetId
-    remoteDataFrame.setRDFModel(getRDFModel(remoteDataFrame))
-    remoteDataFrame.setSchema(getSchema(remoteDataFrame).toString())
-    remoteDataFrame.setMetaData(getMetaData(remoteDataFrame))
+    remoteDataFrame.setRDFModel(getRDFModel(dataSetName))
+    remoteDataFrame.setSchema(getSchema(dataSetName).toString())
+    remoteDataFrame.setMetaData(getMetaData(dataSetName))
     remoteDataFrame.setSchemaURI("http://rdcn.link/schema/"+dataSetName)
     remoteDataFrame.setPropertiesMap
+    log.info("getting DataFrameSource...")
     factory.createFileListDataFrameSource(remoteDataFrame)
   }
 
@@ -123,9 +123,8 @@ class MockDataFrameProvider extends DataFrameProvider with Logging{
     dataSetsPath.getOrElse(remoteDataFrame.source.datasetId,"")
   }
 
-  override def getSchemaURI(remoteDataFrame: RemoteDataFrame): String = {
-    remoteDataFrame.setSchemaURI("http://rdcn.link/schema/"+remoteDataFrame.source.datasetId)
-    remoteDataFrame.getSchemaURI
+  override def getSchemaURI(dataFrameName: String): String = {
+    "http://rdcn.link/schema/"+dataFrameName
   }
 }
 

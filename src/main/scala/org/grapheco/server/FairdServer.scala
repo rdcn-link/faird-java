@@ -51,7 +51,7 @@ object FairdServer extends App with Logging {
   }
 }
 
-class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends NoOpFlightProducer with Logging {
+class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: MockDataFrameProvider = null) extends NoOpFlightProducer with Logging {
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val batchLen = 1000
@@ -144,28 +144,25 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-    val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
-    val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
-    val provider = new MockDataFrameProvider
-    val factory = new DynamicDataFrameSourceFactory(provider)
-    val df: DataFrameSource = provider.getDataFrameSource(request, factory)
-    val schema = DataUtils.sparkSchemaToArrowSchema(provider.getSchema(request))
-    new String(ticket.getBytes, StandardCharsets.UTF_8) match {
+        val provider = new MockDataFrameProvider
+        val factory = new DynamicDataFrameSourceFactory(provider)
+        new String(ticket.getBytes, StandardCharsets.UTF_8) match {
       case "listDataSetNames" => getListStrStream(datasets, listener)
       case ss if ss.startsWith("listDataFrameNames") => {
         getListStrStream(dataFrames.get(ss.split("\\.")(1)).getOrElse(List.empty), listener)
       }
+      case ss if ss.startsWith("getSchemaURI") => {
+        getStrStream(provider.getSchemaURI(ss.split("\\.")(1)),listener)
+
+      }
       case ss if ss.startsWith("getSchema") => {
-        getStrStream(provider.getSchema(request).toString,listener)
+        getStrStream(provider.getSchema(ss.split("\\.")(1)).toString,listener)
       }
       case ss if ss.startsWith("getMetaData") => {
-        getStrStream(provider.getMetaData(request),listener)
+        getStrStream(provider.getMetaData(ss.split("\\.")(1)),listener)
 
       }
-      case ss if ss.startsWith("getSchemaURI") => {
-        getStrStream(provider.getSchemaURI(request),listener)
 
-      }
       case _ => {
 
         /** *
@@ -175,6 +172,11 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
          * 3、DataFrame的转换操作
          * 4、访问 DataFrame的schema？如果是结构化数据分隔符？
          */
+        val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
+        val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
+        val df: DataFrameSource = provider.getDataFrameSource(request, factory)
+        val schema = DataUtils.sparkSchemaToArrowSchema(provider.getSchema(request.source.datasetId))
+
 
         //能否支持并发
         val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
@@ -209,45 +211,14 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
   }
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
-    try {
       // 添加路径有效性检查
       val path = descriptor.getPath
-      if (path == null || path.isEmpty) {
-        throw CallStatus.INVALID_ARGUMENT  // 明确错误类型
-          .withDescription("FlightDescriptor.path 不能为空")
-          .toRuntimeException()
-      }
       val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
       val request = requestMap.getOrDefault(descriptor, null)
-      //    val schema = if (request != null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
-      val schema = new Schema(List.empty.asJava)
-      new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
-    } catch {
-      case e: NullPointerException =>{
-        e.printStackTrace()
-        throw CallStatus.INTERNAL
-          .withDescription(s"FlightInfo构建失败: 缺少必要参数")
-          .withCause(e)
-          .toRuntimeException()
-      }
 
-      case e: IllegalArgumentException =>{
-        e.printStackTrace()
-        throw CallStatus.INVALID_ARGUMENT
-          .withDescription(s"无效的FlightInfo参数: ${e.getMessage}")
-          .withCause(e)
-          .toRuntimeException()
-      }
-
-      case e: Exception =>{
-        e.printStackTrace()
-        throw CallStatus.INTERNAL
-          .withDescription(s"FlightInfo创建失败: ${e.getMessage}")
-          .withCause(e)
-          .toRuntimeException()
-      }
-
-    }
+    //    val schema = if (request != null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
+      val schema =  if (request != null) sparkSchemaToArrowSchema(provider.getSchema(request.source.datasetId)) else new Schema(List.empty.asJava)
+    new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
