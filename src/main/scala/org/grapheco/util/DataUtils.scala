@@ -4,10 +4,18 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
-import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
+import org.apache.spark.sql.types.{ArrayType, BinaryType, BooleanType, ByteType, DataType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, StructType}
+
+import scala.jdk.CollectionConverters._
+import org.apache.arrow.vector.complex.MapVector
+import org.apache.arrow.vector.types.{DateUnit, FloatingPointPrecision, IntervalUnit, TimeUnit}
+import org.apache.spark.SparkException
+import org.apache.spark.sql.errors.ExecutionErrors
+import org.apache.spark.sql.types._
 
 import java.io.{File, FileInputStream}
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicInteger
 import scala.io.Source
 import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
@@ -18,7 +26,7 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
  * @Modified By:
  */
 object DataUtils {
-
+  //建议使用org.apache.spark.sql.util.ArrowUtils.toArrowSchema(Schema, "UTC")
   def sparkSchemaToArrowSchema(sparkSchema: StructType): Schema = {
     val fields: List[Field] = sparkSchema.fields.map { field =>
       val arrowFieldType = field.dataType match {

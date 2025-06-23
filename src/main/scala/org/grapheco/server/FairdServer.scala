@@ -9,7 +9,7 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
 import org.grapheco.{Logging, SimpleSerializer}
 import org.grapheco.client.{DFOperation, DataAccessRequest}
-import org.grapheco.provider.{DataFrameSource, DataFrameSourceFactoryImpl, MockDataFrameProvider}
+import org.grapheco.provider.{DataFrameSource, DataFrameSourceFactoryImpl, DynamicDataFrameSourceFactory, MockDataFrameProvider}
 import org.grapheco.util.DataUtils
 import org.grapheco.util.DataUtils.sparkSchemaToArrowSchema
 
@@ -51,7 +51,7 @@ object FairdServer extends App with Logging {
   }
 }
 
-class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends NoOpFlightProducer with Logging{
+class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: MockDataFrameProvider = null) extends NoOpFlightProducer with Logging {
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val batchLen = 1000
@@ -81,12 +81,12 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     }
   }
 
-  private def getListStrStream(seq:Seq[String], listener: FlightProducer.ServerStreamListener): Unit = {
+  private def getListStrStream(seq: Seq[String], listener: FlightProducer.ServerStreamListener): Unit = {
     val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Utf8()), null))
     val schema = new Schema(fields.asJava)
     val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
     val root = VectorSchemaRoot.create(schema, childAllocator)
-    try{
+    try {
       val nameVector = root.getVector("name").asInstanceOf[VarCharVector]
       root.allocateNew()
       var index = 0
@@ -98,7 +98,28 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
       listener.start(root)
       listener.putNext()
       listener.completed()
-    }finally {
+    } finally {
+      root.close()
+      childAllocator.close()
+    }
+  }
+
+  private def getStrStream(str: String, listener: FlightProducer.ServerStreamListener): Unit = {
+    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Utf8()), null))
+    val schema = new Schema(fields.asJava)
+    val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
+    val root = VectorSchemaRoot.create(schema, childAllocator)
+    try {
+      val nameVector = root.getVector("name").asInstanceOf[VarCharVector]
+      root.allocateNew()
+      var index = 0
+      nameVector.setSafe(index, str.getBytes("UTF-8"))
+      index += 1
+      root.setRowCount(index)
+      listener.start(root)
+      listener.putNext()
+      listener.completed()
+    } finally {
       root.close()
       childAllocator.close()
     }
@@ -109,7 +130,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
     if (dir.exists && dir.isDirectory) {
       dir.listFiles
         .map(_.getName)
-        .filter(x => x!=".DS_Store")
+        .filter(x => x != ".DS_Store")
         .toList
     } else {
       List.empty
@@ -118,48 +139,51 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
 
   //读取配置文件，通过DataFrameProvider提供
   private val datasets = listFiles("/Users/renhao/Downloads/MockData")
-  private val dataFrames: Map[String, List[String]] = datasets.map(x => (x,listFiles("/Users/renhao/Downloads/MockData/"+x))).toMap
+  private val dataFrames: Map[String, List[String]] = datasets.map(x => (x, listFiles("/Users/renhao/Downloads/MockData/" + x))).toMap
+  private val dfName2dF: Map[String, String] = Map.empty
+
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-    new String(ticket.getBytes, StandardCharsets.UTF_8) match {
+        val provider = new MockDataFrameProvider
+        val factory = new DynamicDataFrameSourceFactory(provider)
+        new String(ticket.getBytes, StandardCharsets.UTF_8) match {
       case "listDataSetNames" => getListStrStream(datasets, listener)
       case ss if ss.startsWith("listDataFrameNames") => {
-
         getListStrStream(dataFrames.get(ss.split("\\.")(1)).getOrElse(List.empty), listener)
       }
-      case _ => {
-        val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
+      case ss if ss.startsWith("getSchemaURI") => {
+        getStrStream(provider.getSchemaURI(ss.split("\\.")(1)),listener)
 
-        /***
+      }
+      case ss if ss.startsWith("getSchema") => {
+        getStrStream(provider.getSchema(ss.split("\\.")(1)).toString,listener)
+      }
+      case ss if ss.startsWith("getMetaData") => {
+        getStrStream(provider.getMetaData(ss.split("\\.")(1)),listener)
+
+      }
+
+      case _ => {
+
+        /** *
          * request 包含
          * 1、user 信息
          * 2、访问 DataFrame位置，DataFrame名称所属DataSet
          * 3、DataFrame的转换操作
          * 4、访问 DataFrame的schema？如果是结构化数据分隔符？
          */
+        val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
         val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
-
-        //    val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
-        //    val fields: List[Field] = List(
-        //      new Field("id", FieldType.nullable(new ArrowType.Int(32, true)), null),
-        //      new Field("name", FieldType.nullable(new ArrowType.Utf8()), null),
-        //      new Field("chunkIndex", FieldType.nullable(new ArrowType.Int(32, true)), null),
-        //    new Field("bin", FieldType.nullable(new ArrowType.Binary()), null)
-        //    )
-
-        //应从request中获取信息进行创建
-//        val fields: List[Field] = List(new Field("name", FieldType.nullable(new ArrowType.Binary), null))
-//        val schema = new Schema(fields.asJava)
-        val schema = DataUtils.sparkSchemaToArrowSchema(request.source.expectedSchema)
-        val provider = new MockDataFrameProvider
-        val factory = new DataFrameSourceFactoryImpl
         val df: DataFrameSource = provider.getDataFrameSource(request, factory)
+        val schema = DataUtils.sparkSchemaToArrowSchema(provider.getSchema(request.source.datasetId))
 
+
+        //能否支持并发
         val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
         val root = VectorSchemaRoot.create(schema, childAllocator)
         val loader = new VectorLoader(root)
         listener.start(root)
-        try{
+        try {
           df.getArrowRecordBatch(root).foreach(batch => {
             try {
               loader.load(batch)
@@ -167,7 +191,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
                 Thread.onSpinWait()
               }
               listener.putNext()
-            }finally {
+            } finally {
               batch.close()
             }
           })
@@ -187,9 +211,13 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location) extends
   }
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
-    val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
-    val request = requestMap.getOrDefault(descriptor, null)
-    val schema = if(request!=null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
+      // 添加路径有效性检查
+      val path = descriptor.getPath
+      val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
+      val request = requestMap.getOrDefault(descriptor, null)
+
+    //    val schema = if (request != null) sparkSchemaToArrowSchema(request.source.expectedSchema) else new Schema(List.empty.asJava)
+      val schema =  if (request != null) sparkSchemaToArrowSchema(provider.getSchema(request.source.datasetId)) else new Schema(List.empty.asJava)
     new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }
 

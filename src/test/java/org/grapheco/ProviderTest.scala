@@ -22,7 +22,7 @@ class ProviderTest {
     println(provider.listDataFrameNames("climate")) // List(climate_temp, climate_rain)
 
     val model = ModelFactory.createDefaultModel()
-    provider.getDataSetMetaData("climate", model)
+//    provider.getDataSetMetaData("climate", model)
     model.write(System.out, "TURTLE")
 
 //    val source = provider.getDataFrameSource("part-00000", factory)

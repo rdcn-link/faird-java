@@ -12,11 +12,11 @@ import java.io.Serializable
  * @Modified By:
  */
 case class DataAccessRequest(
-                              datasetId: String,                                // 数据集唯一标识
-                              dataFrames: String,                               // DataFrame名称 -> 来源
+                              datasetId: String,                                // 数据集唯一标识 // DataFrame名称 -> 来源
                               userCredential: Credentials,                      // 用户凭证
-                              expectedSchema: StructType,                      // DataFrame名称 -> 期望的schema
-                              inputSource: InputSource = StructuredSource() //默认读取结构化数据，DataFrame只有一列，内容为一行
+//                              expectedSchema: StructType = null,                      // DataFrame名称 -> 期望的schema
+                              inputSource: InputSource = StructuredSource(), //默认读取结构化数据，DataFrame只有一列，内容为一行
+                              dataFrames: String = ""
                             ) extends Serializable
 
 sealed trait InputSource extends Serializable
