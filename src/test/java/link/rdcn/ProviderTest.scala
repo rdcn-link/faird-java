@@ -1,6 +1,6 @@
 package link.rdcn
 
-import link.rdcn.provider.{DataFrameSourceFactoryImpl, MockDataFrameProvider}
+import link.rdcn.provider.{DataFrameSourceFactoryImpl, MockDataProvider}
 import org.apache.jena.rdf.model.ModelFactory
 import org.junit.jupiter.api.Test
 
@@ -14,7 +14,7 @@ class ProviderTest {
 
   @Test
   def m1(): Unit = {
-    val provider = new MockDataFrameProvider
+    val provider = new MockDataProvider
     val factory = new DataFrameSourceFactoryImpl
 
     println(provider.checkPermission("pop_urban", "user1", "read")) // true

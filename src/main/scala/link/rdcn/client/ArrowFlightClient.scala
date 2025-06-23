@@ -21,11 +21,21 @@ import scala.jdk.CollectionConverters.{asScalaBufferConverter, seqAsJavaListConv
  * @Data 2025/6/16 14:45
  * @Modified By:
  */
-class FlightDataClient(url: String, port:Int) {
+
+trait ProtocolClient{
+  def listDataSetNames(): Seq[String]
+  def listDataFrameNames(dsName: String): Seq[String]
+  def getDataSetMetaData(dsName: String): String
+  def close(): Unit
+  def getRows(request: DataAccessRequest, ops: List[DFOperation]): Iterator[Row]
+}
+class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 
   val location = Location.forGrpcInsecure(url, port)
   val allocator: BufferAllocator = new RootAllocator()
   private val flightClient = FlightClient.builder(allocator, location).build()
+
+  override def getDataSetMetaData(dsName: String): String = ???
 
   def listDataSetNames(): Seq[String] = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path("listDataSetNames"))

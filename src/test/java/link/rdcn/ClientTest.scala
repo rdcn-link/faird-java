@@ -1,7 +1,7 @@
 package link.rdcn
 
 import link.rdcn.client.{Blob, CSVSource, DirectorySource, FairdClient}
-import link.rdcn.provider.MockDataFrameProvider
+import link.rdcn.provider.MockDataProvider
 import link.rdcn.server.{FairdServer, FlightProducerImpl}
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets
 object ClientTest extends Logging {
   val location = Location.forGrpcInsecure("0.0.0.0", 33333)
   val allocator: BufferAllocator = new RootAllocator()
-  val producer = new FlightProducerImpl(allocator, location, new MockDataFrameProvider)
+  val producer = new FlightProducerImpl(allocator, location, new MockDataProvider)
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {

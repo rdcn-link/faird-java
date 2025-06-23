@@ -62,7 +62,7 @@ case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl) {
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation], client: FlightDataClient = null) extends RemoteDataFrame with Logging {
+case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation], client: ArrowFlightClient = null) extends RemoteDataFrame with Logging {
   private var _schema: String = _
   private var _format: String = _
   private var _metaData: String = _

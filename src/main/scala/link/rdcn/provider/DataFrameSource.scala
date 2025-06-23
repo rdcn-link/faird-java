@@ -12,26 +12,22 @@ import link.rdcn.client.{CSVSource, DFOperation, DirectorySource, RemoteDataFram
 import link.rdcn.util.DataUtils
 import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
-import org.apache.arrow.vector.types.pojo.Schema
-import org.apache.jena.rdf.model.{Literal, Resource}
 import org.apache.spark.sql.Row
 
-import java.io.{File, FileInputStream}
 import scala.collection.{Seq, mutable}
-import scala.io.Source
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
 trait DataFrameSource {
-  def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+  def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+
+  def process(rows: Iterator[Row]): Iterator[_]
 }
 
-trait DataFrameSourceFactory {
-  def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource
-}
+case class ArrowFlightDataFrameSource(iter: Iterator[Seq[Row]]) extends DataFrameSource {
 
-case class DataFrameSourceImpl(iter: Iterator[Seq[Row]]) extends DataFrameSource {
+  override def process(rows: Iterator[Row]): Iterator[ArrowRecordBatch] = ???
 
-  override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
+  def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
     iter.map(rows => createDummyBatch(root, rows))
   }
 
@@ -93,7 +89,7 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging {
         }.map(Row.fromTuple(_))
     }
     val result = applyOperations(stream, remoteDataFrame.ops)
-    DataFrameSourceImpl(result.grouped(batchSize))
+    ArrowFlightDataFrameSource(result.grouped(batchSize))
   }
 
   private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {
@@ -102,25 +98,7 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging {
 
 }
 
-class DynamicDataFrameSourceFactory(provider: DataFrameProvider) extends DataFrameSourceFactory with Logging {
-
-
-  override def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource = {
-    val propertiesMap: Map[String, String] = remoteDataFrame.getPropertiesMap
-
-    val dataFormat: String = propertiesMap("dataFormat").asInstanceOf[String]
-//    log.info(s"propertiesMap is null? ${dataFormat}")
-    dataFormat match {
-      case "csv" => new CSVSource(remoteDataFrame,provider)
-      case "structured" => new StructuredSource(remoteDataFrame,provider)
-      case _ => new DirectorySource(remoteDataFrame,provider)
-      //      case other => throw new IllegalArgumentException(s"Unsupported format: $other")
-    }
-  }
-}
-
-
-class CSVSource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvider) extends DataFrameSource with Logging {
+class CSVSource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) extends DataFrameSource with Logging {
   val batchSize = 10000
   private val _dataFrameSourceImpl: DataFrameSource = {
     val dataSet = remoteDataFrame.source.datasetId
@@ -133,17 +111,19 @@ class CSVSource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvider) e
     })
 
     val result = applyOperations(stream, remoteDataFrame.ops)
-    DataFrameSourceImpl(result.grouped(batchSize))
+    ArrowFlightDataFrameSource(result.grouped(batchSize))
   }
 
   private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {
     ops.foldLeft(stream) { (acc, op) => op.transform(acc) }
   }
 
-  override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getArrowRecordBatch(root)
+  override def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getRecordBatch(root)
+
+  override def process(rows: Iterator[Row]): Iterator[_] = ???
 }
 
-class StructuredSource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvider) extends DataFrameSource with Logging {
+class StructuredSource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) extends DataFrameSource with Logging {
   val batchSize = 10000
   private val _dataFrameSourceImpl: DataFrameSource = {
     val dataSet = remoteDataFrame.source.datasetId
@@ -154,17 +134,19 @@ class StructuredSource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProv
     })
 
     val result = applyOperations(stream, remoteDataFrame.ops)
-    DataFrameSourceImpl(result.grouped(batchSize))
+    ArrowFlightDataFrameSource(result.grouped(batchSize))
   }
 
   private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {
     ops.foldLeft(stream) { (acc, op) => op.transform(acc) }
   }
 
-  override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getArrowRecordBatch(root)
+  override def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getRecordBatch(root)
+
+  override def process(rows: Iterator[Row]): Iterator[_] = ???
 }
 
-class DirectorySource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvider) extends DataFrameSource with Logging {
+class DirectorySource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) extends DataFrameSource with Logging {
   val batchSize = 10
   private val _dataFrameSourceImpl: DataFrameSource = {
     val dataSet = remoteDataFrame.source.datasetId
@@ -184,15 +166,17 @@ class DirectorySource(remoteDataFrame: RemoteDataFrame, provider: DataFrameProvi
     }.map(Row.fromTuple(_))
 
 
-  val result = applyOperations(stream, remoteDataFrame.ops)
-  DataFrameSourceImpl(result.grouped(batchSize))
-}
+    val result = applyOperations(stream, remoteDataFrame.ops)
+    ArrowFlightDataFrameSource(result.grouped(batchSize))
+  }
 
-private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {
-  ops.foldLeft(stream) { (acc, op) => op.transform(acc) }
-}
+  private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {
+    ops.foldLeft(stream) { (acc, op) => op.transform(acc) }
+  }
 
-override def getArrowRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getArrowRecordBatch(root)
+  override def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = _dataFrameSourceImpl.getRecordBatch(root)
+
+  override def process(rows: Iterator[Row]): Iterator[_] = ???
 }
 
 

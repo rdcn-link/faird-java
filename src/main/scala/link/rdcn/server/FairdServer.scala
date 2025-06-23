@@ -11,7 +11,7 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
 import DataUtils.sparkSchemaToArrowSchema
 import link.rdcn.{Logging, SimpleSerializer}
-import link.rdcn.provider.{DataFrameSource, DataFrameSourceFactoryImpl, DynamicDataFrameSourceFactory, MockDataFrameProvider}
+import link.rdcn.provider.{DataFrameSource, DataFrameSourceFactoryImpl, DynamicDataFrameSourceFactory, MockDataProvider}
 
 import java.io.{File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
@@ -51,7 +51,7 @@ object FairdServer extends App with Logging {
   }
 }
 
-class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: MockDataFrameProvider = null) extends NoOpFlightProducer with Logging {
+class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: MockDataProvider = null) extends NoOpFlightProducer with Logging {
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val batchLen = 1000
@@ -144,7 +144,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
 
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-        val provider = new MockDataFrameProvider
+        val provider = new MockDataProvider
         val factory = new DynamicDataFrameSourceFactory(provider)
         new String(ticket.getBytes, StandardCharsets.UTF_8) match {
       case "listDataSetNames" => getListStrStream(datasets, listener)
@@ -184,7 +184,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
         val loader = new VectorLoader(root)
         listener.start(root)
         try {
-          df.getArrowRecordBatch(root).foreach(batch => {
+          df.getRecordBatch(root).foreach(batch => {
             try {
               loader.load(batch)
               while (!listener.isReady()) {
