@@ -10,7 +10,8 @@ import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vec
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType}
 import DataUtils.sparkSchemaToArrowSchema
-import link.rdcn.{Logging, SimpleSerializer}
+import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
+import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataFrameSource, DataFrameSourceFactoryImpl, DynamicDataFrameSourceFactory, MockDataProvider}
 
 import java.io.{File, FileInputStream, IOException}
@@ -30,7 +31,7 @@ import scala.collection.mutable.ArrayBuffer
  */
 
 object FairdServer extends App with Logging {
-  val location = Location.forGrpcInsecure("0.0.0.0", 33333)
+  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
 
   try {
@@ -38,7 +39,6 @@ object FairdServer extends App with Logging {
     val flightServer = FlightServer.builder(allocator, location, producer).build()
 
     flightServer.start()
-    println(s"Server (Location): Listening on port ${flightServer.getPort}")
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         flightServer.close()
@@ -149,6 +149,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
         new String(ticket.getBytes, StandardCharsets.UTF_8) match {
       case "listDataSetNames" => getListStrStream(datasets, listener)
       case ss if ss.startsWith("listDataFrameNames") => {
+        logger.info("打印DataFrame")
         getListStrStream(dataFrames.get(ss.split("\\.")(1)).getOrElse(List.empty), listener)
       }
       case ss if ss.startsWith("getSchemaURI") => {

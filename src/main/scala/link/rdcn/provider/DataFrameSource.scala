@@ -70,7 +70,7 @@ class DataFrameSourceFactoryImpl extends DataFrameSourceFactory with Logging {
     val dataSet = remoteDataFrame.source.datasetId
     val dataFrameName = remoteDataFrame.source.dataFrames
     val rdfModel = remoteDataFrame.getRDFModel
-    log.info(s"create dataFrame from $dataSet/$dataFrameName")
+    logger.info(s"create dataFrame from $dataSet/$dataFrameName")
     //根据dataSet dataFrameName拉取数据，目前这里dataSet代表路径 dataFrameName代表文件名称
     val stream: Iterator[Row] = remoteDataFrame.source.inputSource match {
       case CSVSource(delimiter) => DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
@@ -103,7 +103,7 @@ class CSVSource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) extend
   private val _dataFrameSourceImpl: DataFrameSource = {
     val dataSet = remoteDataFrame.source.datasetId
     val dataFrameName = remoteDataFrame.source.dataFrames
-    log.info(s"create dataFrame from $dataSet/$dataFrameName")
+    logger.info(s"create dataFrame from $dataSet/$dataFrameName")
 
     val delimiter: String = remoteDataFrame.getPropertiesMap.get("http://example.org/dataset/"+"delimiter").map(_.toString).getOrElse(",")
     val stream: Iterator[Row] = DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
@@ -128,7 +128,7 @@ class StructuredSource(remoteDataFrame: RemoteDataFrame, provider: DataProvider)
   private val _dataFrameSourceImpl: DataFrameSource = {
     val dataSet = remoteDataFrame.source.datasetId
     val dataFrameName = remoteDataFrame.source.dataFrames
-    log.info(s"create dataFrame from $dataSet/$dataFrameName")
+    logger.info(s"create dataFrame from $dataSet/$dataFrameName")
     val stream: Iterator[Row] = DataUtils.getFileLines(s"$dataSet/$dataFrameName").map(line => {
       Row(line)
     })
@@ -156,7 +156,7 @@ class DirectorySource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) 
     val fileType = remoteDataFrame.getPropertiesMap("dataType")
     val size =  remoteDataFrame.getPropertiesMap("size")
     val lastModified =  remoteDataFrame.getPropertiesMap("lastModified")
-    log.info(s"create dataFrame from $path")
+    logger.info(s"create dataFrame from $path")
     val chunkSize: Int = 5 * 1024 * 1024
     val stream: Iterator[Row] = DataUtils.listFiles(s"$path").toIterator.zipWithIndex.map {
       case (file, index) =>

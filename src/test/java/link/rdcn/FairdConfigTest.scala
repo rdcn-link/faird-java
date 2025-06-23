@@ -1,8 +1,8 @@
 package link.rdcn
 
+import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
+import org.apache.logging.log4j.{LogManager, Logger}
 import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationContext
-import org.springframework.context.support.ClassPathXmlApplicationContext
 
 
 /**
@@ -15,12 +15,18 @@ class FairdConfigTest {
 
   @Test
   def m1(): Unit = {
-    val context: ApplicationContext = new ClassPathXmlApplicationContext("applicationContext.xml");
-    val config: FairdConfig = context.getBean("fairdConfig", classOf[FairdConfig])
+    val props = loadProperties()
+
+    val config = loadFairdConfig(props)
+    initLog4j(props)
+
+    val logger: Logger = LogManager.getLogger(getClass)
+
+    logger.info("日志已初始化")
+    logger.info(s"主机: ${config.getHostName}, 标题: ${config.getHostTitle}, 端口: ${config.getHostPort}")
 
     println("Host: " + config.getHostName());
     println("Title: " + config.getHostTitle());
     println("Domain: " + config.getHostDomain());
-    println("Log Path: " + config.getLogPath());
   }
 }

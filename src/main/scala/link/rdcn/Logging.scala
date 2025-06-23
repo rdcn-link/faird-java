@@ -1,5 +1,6 @@
 package link.rdcn
 
+import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
 import org.apache.logging.log4j.{LogManager, Logger}
 
 /**
@@ -9,5 +10,6 @@ import org.apache.logging.log4j.{LogManager, Logger}
  * @Modified By:
  */
 trait Logging {
-  protected lazy val log: Logger = LogManager.getLogger(getClass)
+  ConfigLoader //加载logger配置信息
+  protected lazy val logger: Logger = LogManager.getLogger(getClass)
 }

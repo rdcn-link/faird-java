@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets
  * @Modified By:
  */
 object ClientTest extends Logging {
-  val location = Location.forGrpcInsecure("0.0.0.0", 33333)
+  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
   val producer = new FlightProducerImpl(allocator, location, new MockDataProvider)
   val flightServer = FlightServer.builder(allocator, location, producer).build()
@@ -38,7 +38,7 @@ class ClientTest {
 
   @Test
   def listDataSetTest(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
+    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
     dc.listDataSetNames().foreach(println)
     println("---------------------------------------------------------------------------")
     dc.listDataFrameNames("unstructured").foreach(println)
@@ -111,6 +111,7 @@ class ClientTest {
       .add("bin", BinaryType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
+
     val df = dc.open("C:\\Users\\NatsusakiYomi\\Downloads\\数据")
     var totalBytes: Long = 0L
     var realBytes: Long = 0L

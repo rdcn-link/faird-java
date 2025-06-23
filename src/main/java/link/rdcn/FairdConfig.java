@@ -12,10 +12,9 @@ public class FairdConfig {
     private String hostPosition;
     private String hostDomain;
     private int hostPort;
-    private String logPath;
     private int catdbPort;
 
-    // Getters & Setters
+    // Getter & Setter
     public String getHostName() { return hostName; }
     public void setHostName(String hostName) { this.hostName = hostName; }
 
@@ -31,10 +30,6 @@ public class FairdConfig {
     public int getHostPort() { return hostPort; }
     public void setHostPort(int hostPort) { this.hostPort = hostPort; }
 
-    public String getLogPath() { return logPath; }
-    public void setLogPath(String logPath) { this.logPath = logPath; }
-
     public int getCatdbPort() { return catdbPort; }
     public void setCatdbPort(int catdbPort) { this.catdbPort = catdbPort; }
 }
-

@@ -1,5 +1,6 @@
 package link.rdcn.client
 
+import link.rdcn
 import link.rdcn.SimpleSerializer
 import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
