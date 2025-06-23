@@ -1,4 +1,4 @@
-package org.grapheco
+package link.rdcn
 
 import org.apache.logging.log4j.{LogManager, Logger}
 

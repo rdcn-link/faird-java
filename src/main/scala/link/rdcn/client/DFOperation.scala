@@ -1,7 +1,6 @@
-package org.grapheco.client
+package link.rdcn.client
 
 import org.apache.spark.sql.Row
-import org.grapheco.server.SerializableFunction
 
 /**
  * @Author renhao

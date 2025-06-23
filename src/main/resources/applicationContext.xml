@@ -9,7 +9,7 @@
          http://www.springframework.org/schema/context/spring-context.xsd">
 
     <!-- 注入配置Bean -->
-    <bean id="fairdConfig" class="org.grapheco.FairdConfig">
+    <bean id="fairdConfig" class="link.rdcn.FairdConfig">
         <property name="hostName" value="cerndc"/>
         <property name="hostTitle" value="国家生态科学数据中心"/>
         <property name="hostPosition" value="39.98,116.39"/>

@@ -1,11 +1,10 @@
-package org.grapheco.server
+package link.rdcn.client
 
+import link.rdcn.Logging
 import org.apache.hadoop.shaded.com.sun.jersey.core.header.MatchingEntityTag
 import org.apache.jena.rdf.model.{Literal, Model, Resource}
 import org.apache.spark.sql.{Row, types}
 import org.apache.spark.sql.types.{BinaryType, IntegerType, StringType, StructType}
-import org.grapheco.Logging
-import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FilterOp, FlightDataClient, GroupByOp, LimitOp, MapOp, MaxOp, ReduceOp, SelectOp}
 
 import scala.collection.mutable
 

@@ -1,7 +1,7 @@
-package org.grapheco
+package link.rdcn
 
+import link.rdcn.provider.{DataFrameSourceFactoryImpl, MockDataFrameProvider}
 import org.apache.jena.rdf.model.ModelFactory
-import org.grapheco.provider.{MockDataFrameProvider, DataFrameSourceFactoryImpl}
 import org.junit.jupiter.api.Test
 
 /**

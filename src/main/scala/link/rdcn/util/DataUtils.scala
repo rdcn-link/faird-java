@@ -1,4 +1,4 @@
-package org.grapheco.util
+package link.rdcn.util
 
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}

@@ -1,4 +1,4 @@
-package org.grapheco.provider
+package link.rdcn.provider
 
 /**
  * @Author renhao
@@ -7,15 +7,14 @@ package org.grapheco.provider
  * @Modified By:
  */
 
+import link.rdcn.Logging
+import link.rdcn.client.{CSVSource, DFOperation, DirectorySource, RemoteDataFrame, StructuredSource}
+import link.rdcn.util.DataUtils
 import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.jena.rdf.model.{Literal, Resource}
 import org.apache.spark.sql.Row
-import org.grapheco.Logging
-import org.grapheco.client.{CSVSource, DFOperation, DirectorySource, StructuredSource}
-import org.grapheco.server.RemoteDataFrame
-import org.grapheco.util.DataUtils
 
 import java.io.{File, FileInputStream}
 import scala.collection.{Seq, mutable}

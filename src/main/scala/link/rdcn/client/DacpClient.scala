@@ -1,10 +1,9 @@
-package org.grapheco.server
+package link.rdcn.client
 
+import link.rdcn.UsernamePassword
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.ScalaReflection.{Schema, schemaFor}
 import org.apache.spark.sql.types.StructType
-import org.grapheco.UsernamePassword
-import org.grapheco.client.{Blob, DFOperation, DataAccessRequest, FlightDataClient, InputSource, StructuredSource}
 
 /**
  * @Author renhao

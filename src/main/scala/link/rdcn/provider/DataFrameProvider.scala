@@ -1,9 +1,9 @@
-package org.grapheco.provider
+package link.rdcn.provider
 
+import link.rdcn.Logging
+import link.rdcn.client.RemoteDataFrame
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
 import org.apache.spark.sql.types.{BinaryType, DataType, StringType, StructType}
-import org.grapheco.Logging
-import org.grapheco.server.RemoteDataFrame
 
 import java.io.StringWriter
 import scala.collection.mutable

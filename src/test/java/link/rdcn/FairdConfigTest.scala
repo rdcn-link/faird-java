@@ -1,4 +1,4 @@
-package org.grapheco
+package link.rdcn
 
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationContext

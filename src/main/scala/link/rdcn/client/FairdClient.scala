@@ -1,6 +1,4 @@
-package org.grapheco.client
-
-import org.grapheco.server.{RemoteDataFrameImpl, DacpClient}
+package link.rdcn.client
 
 import java.nio.charset.StandardCharsets
 

@@ -1,5 +1,6 @@
-package org.grapheco.client
+package link.rdcn.client
 
+import link.rdcn.SimpleSerializer
 import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.FloatingPointPrecision
@@ -7,7 +8,6 @@ import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType}
-import org.grapheco.SimpleSerializer
 
 import java.util.UUID
 import java.io.ByteArrayOutputStream

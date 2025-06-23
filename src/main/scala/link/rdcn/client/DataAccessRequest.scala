@@ -1,7 +1,7 @@
-package org.grapheco.client
+package link.rdcn.client
 
+import link.rdcn.Credentials
 import org.apache.spark.sql.types.StructType
-import org.grapheco.Credentials
 
 import java.io.Serializable
 
