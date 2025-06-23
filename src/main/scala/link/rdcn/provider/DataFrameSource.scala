@@ -17,14 +17,14 @@ import org.apache.spark.sql.Row
 import scala.collection.{Seq, mutable}
 import scala.jdk.CollectionConverters.asScalaBufferConverter
 
-trait DataFrameSource {
-  def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
-
+abstract class DataFrameSource {
+//  def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch]
+  val iter:Iterator[Row]
   def process(rows: Iterator[Row]): Iterator[_]
 }
 
-case class ArrowFlightDataFrameSource(iter: Iterator[Seq[Row]]) extends DataFrameSource {
-
+case class ArrowFlightDataFrameSource(iter: Iterator[Row]) extends DataFrameSource {
+  val batchSize=1000
   override def process(rows: Iterator[Row]): Iterator[ArrowRecordBatch] = ???
 
   def getRecordBatch(root: VectorSchemaRoot): Iterator[ArrowRecordBatch] = {
@@ -111,7 +111,7 @@ class CSVSource(remoteDataFrame: RemoteDataFrame, provider: DataProvider) extend
     })
 
     val result = applyOperations(stream, remoteDataFrame.ops)
-    ArrowFlightDataFrameSource(result.grouped(batchSize))
+//    ArrowFlightDataFrameSource(result.grouped(batchSize))
   }
 
   private def applyOperations(stream: Iterator[Row], ops: List[DFOperation]): Iterator[Row] = {

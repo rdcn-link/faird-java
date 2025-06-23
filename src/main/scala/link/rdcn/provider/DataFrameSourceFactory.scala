@@ -10,17 +10,17 @@ import link.rdcn.client.RemoteDataFrame
  * @Modified By:
  */
 trait DataFrameSourceFactory {
-  def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource
+  def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame,metaDataSet: MetaDataSet): Iterator[Row]
 }
 
 class DynamicDataFrameSourceFactory(provider: DataProvider) extends DataFrameSourceFactory with Logging {
 
 
-  override def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame): DataFrameSource = {
+  override def createFileListDataFrameSource(remoteDataFrame: RemoteDataFrame):Iterator[Row]  = {
     val propertiesMap: Map[String, String] = remoteDataFrame.getPropertiesMap
 
     val dataFormat: String = propertiesMap("dataFormat")
-    dataFormat match {
+    val dataFormat match {
       case "csv" => new CSVSource(remoteDataFrame,provider)
       case "structured" => new StructuredSource(remoteDataFrame,provider)
       case _ => new DirectorySource(remoteDataFrame,provider)
