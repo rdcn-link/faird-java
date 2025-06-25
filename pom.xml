@@ -45,33 +45,11 @@
       <artifactId>flight-sql-jdbc-driver</artifactId>
       <version>13.0.0</version>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.32</version>  <!-- 根据需要选择版本 -->
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.14.1</version>  <!-- 根据需要选择版本 -->
-    </dependency>
 
     <dependency>
       <groupId>commons-net</groupId>
       <artifactId>commons-net</artifactId>
       <version>3.11.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.12</artifactId>
-      <version>3.5.6</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_2.12</artifactId>
-      <version>3.5.6</version>
     </dependency>
 
     <dependency>
@@ -90,27 +68,6 @@
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
       <version>4.7.0</version>
-    </dependency>
-
-    <!-- Spring Core -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-core</artifactId>
-      <version>5.3.33</version> <!-- 或者你当前使用的版本 -->
-    </dependency>
-
-    <!-- Spring Beans -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-beans</artifactId>
-      <version>5.3.33</version>
-    </dependency>
-
-    <!-- Spring Context (包括 ApplicationContext 和 XML 解析支持) -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-context</artifactId>
-      <version>5.3.33</version>
     </dependency>
 
     <dependency>

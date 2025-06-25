@@ -1,23 +1,19 @@
 package link.rdcn.util
 
+import link.rdcn.Logging
+import link.rdcn.struct.ValueType._
+import link.rdcn.struct.{Row, StructType}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
-import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
-import org.apache.spark.sql.types.{ArrayType, BinaryType, BooleanType, ByteType, DataType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, StructType}
+import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 
-import scala.jdk.CollectionConverters._
-import org.apache.arrow.vector.complex.MapVector
-import org.apache.arrow.vector.types.{DateUnit, FloatingPointPrecision, IntervalUnit, TimeUnit}
-import org.apache.spark.SparkException
-import org.apache.spark.sql.errors.ExecutionErrors
-import org.apache.spark.sql.types._
-
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, IOException}
+import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicInteger
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.io.Source
-import scala.jdk.CollectionConverters.seqAsJavaListConverter
 
 /**
  * @Author renhao
@@ -25,30 +21,67 @@ import scala.jdk.CollectionConverters.seqAsJavaListConverter
  * @Data 2025/6/19 16:03
  * @Modified By:
  */
-object DataUtils {
-  //建议使用org.apache.spark.sql.util.ArrowUtils.toArrowSchema(Schema, "UTC")
-  def sparkSchemaToArrowSchema(sparkSchema: StructType): Schema = {
-    val fields: List[Field] = sparkSchema.fields.map { field =>
-      val arrowFieldType = field.dataType match {
-        case IntegerType =>
-          new FieldType(field.nullable, new ArrowType.Int(32, true), null)
+object DataUtils extends Logging{
+
+  //内存中生成数据
+  def createCacheBatch(arrowRoot: VectorSchemaRoot, batchLen: Int): ArrowRecordBatch = {
+    arrowRoot.allocateNew()
+    val vec = arrowRoot.getVector("name").asInstanceOf[VarBinaryVector]
+    val rowCount = batchLen
+    for (i <- 0 to (rowCount - 1)) {
+      val ss =
+        """
+          |5e1c88487133410c80a73378c1013463 a8f7ec6584bf4d40a99e898df710a2cc-754190e62b3849c18b1fcc23e4eb2fa6
+          |""".stripMargin
+      vec.setSafe(i, ss.getBytes("UTF-8"))
+    }
+    arrowRoot.setRowCount(rowCount)
+    val unloader = new VectorUnloader(arrowRoot)
+    unloader.getRecordBatch
+  }
+
+  def convertStringRowToTypedRow(row: Row, schema: StructType): Row = {
+    val typedValues = schema.columns.zipWithIndex.map { case (field, i) =>
+      val rawValue = row.getAs[String](i).getOrElse(null) // 原始 String 值
+      if (rawValue == null) {
+        null
+      } else field.colType match {
+        case IntType    => rawValue.toInt
+        case LongType       => rawValue.toLong
+        case DoubleType     => rawValue.toDouble
+        case FloatType      => rawValue.toFloat
+        case BooleanType    => rawValue.toBoolean
+        case StringType     => rawValue
+
+        // 你可以继续扩展其他类型
+        case _ => throw new UnsupportedOperationException(s"Unsupported type: ${field.colType}")
+      }
+    }
+    Row.fromSeq(typedValues)
+  }
+
+  def convertStructTypeToArrowSchema(structType: StructType): Schema = {
+    val fields: List[Field] = structType.columns.map { column =>
+      val arrowFieldType = column.colType match {
+        case IntType =>
+          new FieldType(column.nullable, new ArrowType.Int(32, true), null)
         case LongType =>
-          new FieldType(field.nullable, new ArrowType.Int(64, true), null)
+          new FieldType(column.nullable, new ArrowType.Int(64, true), null)
         case FloatType =>
-          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), null)
+          new FieldType(column.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), null)
         case DoubleType =>
-          new FieldType(field.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), null)
+          new FieldType(column.nullable, new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), null)
         case StringType =>
-          new FieldType(field.nullable, ArrowType.Utf8.INSTANCE, null)
+          new FieldType(column.nullable, ArrowType.Utf8.INSTANCE, null)
         case BooleanType =>
-          new FieldType(field.nullable, ArrowType.Bool.INSTANCE, null)
+          new FieldType(column.nullable, ArrowType.Bool.INSTANCE, null)
         case BinaryType =>
-          new FieldType(field.nullable, new ArrowType.Binary(), null)
+          new FieldType(column.nullable, new ArrowType.Binary(), null)
         case _ =>
-          throw new UnsupportedOperationException(s"Unsupported type: ${field.dataType}")
+          throw new UnsupportedOperationException(s"Unsupported type: ${column.colType}")
       }
 
-      new Field(field.name, arrowFieldType, Collections.emptyList())
+      new Field(column.name, arrowFieldType, Collections.emptyList())
     }.toList
 
     new Schema(fields.asJava)
@@ -61,6 +94,40 @@ object DataUtils {
       dir.listFiles().filter(_.isFile).toSeq
     } else {
       Seq.empty
+    }
+  }
+
+  def listFilesWithAttributes(directoryPath: String): Seq[(File, BasicFileAttributes)] = {
+    val dir = new File(directoryPath)
+    if (dir.exists() && dir.isDirectory) {
+      dir.listFiles()
+        .filter(_.isFile)
+        .toSeq
+        .flatMap { file =>
+          val path = file.toPath
+          try {
+            val attrs = Files.readAttributes(path, classOf[BasicFileAttributes])
+            Some((file, attrs))
+          } catch {
+            case _: IOException =>
+              logger.error(s"读取文件${file.getAbsolutePath} 失败")
+              None
+          }
+        }
+    } else {
+      Seq.empty
+    }
+  }
+
+  def getFileTypeByExtension(file: File): String = {
+    val fileName = file.getName
+    fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase match {
+      case "txt"  => "Text File"
+      case "jpg"  => "Image File"
+      case "png"  => "Image File"
+      case "pdf"  => "PDF Document"
+      case "csv"  => "CSV File"
+      case _      => "Unknown Type"
     }
   }
 

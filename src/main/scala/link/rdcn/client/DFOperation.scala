@@ -1,6 +1,7 @@
 package link.rdcn.client
 
-import org.apache.spark.sql.Row
+import link.rdcn.struct.Row
+
 
 /**
  * @Author renhao
