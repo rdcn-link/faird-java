@@ -1,20 +1,15 @@
 package link.rdcn.client
 
-import link.rdcn
 import link.rdcn.SimpleSerializer
+import link.rdcn.struct.Row
 import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{BooleanType, DoubleType, FloatType, IntegerType, LongType, StringType}
 
 import java.util.UUID
 import java.io.ByteArrayOutputStream
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 
 /**
  * @Author renhao
@@ -53,8 +48,8 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     getStrByFlightInfo(flightInfo)
   }
 
-  def getMetaData(dataFrameName: String): String = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getMetaData.$dataFrameName"))
+  def getMetaData(dataSetName: String): String = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getMetaData.$dataSetName"))
     getStrByFlightInfo(flightInfo)
   }
 
@@ -101,8 +96,8 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     //flightInfo 中可以获取schema
     println(s"Client (Get Metadata): $flightInfo")
     val flightInfoSchema = flightInfo.getSchema
-    val isBinaryColumn = if (flightInfoSchema.getFields.size() <= 2) false
-    else flightInfoSchema.getFields.get(6).getType match {
+    val isBinaryColumn = if (flightInfoSchema.getFields.size() <= 7) false
+    else flightInfoSchema.getFields.get(7).getType match {
       case _: ArrowType.Binary => true
       case _ => false
     }
@@ -157,7 +152,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 
             private var isExhausted: Boolean = false // flatIter 是否耗尽
 
-            // 预读取下一块的 index 和 data（如果存在）
+            // 预读取下一块的 index 和 struct（如果存在）
             private def readNextChunk(): Unit = {
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {

@@ -1,12 +1,7 @@
 package link.rdcn.provider
 
-import link.rdcn.Logging
-import link.rdcn.client.RemoteDataFrame
+import link.rdcn.struct.{DataFrameInfo, DataSet, StructType}
 import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
-import org.apache.spark.sql.types.{BinaryType, DataType, StringType, StructType}
-
-import java.io.StringWriter
-import scala.collection.mutable
 
 /**
  * @Author renhao
@@ -16,23 +11,33 @@ import scala.collection.mutable
  */
 
 trait DataProvider {
-  def checkPermission(dataFrameName: String, userId: String, operation: String): Boolean
-  def listDataSetNames(): List[String]
-  def getRDFModel(dataFrameName: String): Model
-  def listDataFrameNames(dataSetName: String): List[String]
-  def getDataFrameSource(remoteDataFrame: RemoteDataFrame, factory: DynamicDataFrameSourceFactory): DataFrameSource
-  def mockDataSetMetaData(): Map[String, Model]
-  def getSchema(dataFrameName: String): StructType
-  def getMetaData(dataFrameName: String): String
-  def getSchemaURI(dataFrameName: String): String
-  def getPath(remoteDataFrame: RemoteDataFrame):String
+  val dataSets: List[DataSet]
+
+  def listDataSetNames(): List[String] = {
+    dataSets.map(_.dataSetName)
+  }
+  def getDataSetMetaData(dataSetName: String, rdfModel: Model): Unit = {
+    val dataSet: DataSet = dataSets.find(_.dataSetName == dataSetName).getOrElse(return rdfModel)
+    dataSet.getMetadata(rdfModel)
+  }
+  def listDataFrameNames(dataSetName: String): List[String] = {
+    val dataSet: DataSet = dataSets.find(_.dataSetName == dataSetName).getOrElse(return List.empty)
+    dataSet.dataFrames.map(_.name)
+  }
+  def getDataFrameSource(dataFrameName: String, factory: DataStreamSourceFactory): DataStreamSource = {
+    val dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return ArrowFlightDataStreamSource(Iterator.empty, StructType.empty))
+    factory.createDataFrameSource(dataFrameInfo)
+  }
+
+  def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
+    dataSets.foreach(ds => {
+      val dfInfo = ds.getDataFrameInfo(dataFrameName)
+      if(dfInfo.nonEmpty) return dfInfo
+    })
+    None
+  }
 }
 
-case class MetaDataSet()
-//provider.listDataSetNames(): List[String]
-//provider.getDataSetMetaData(dataSetName, rdfModel): Unit //RDF形式的元数据
-//provider.listDataFrameNames(dataSetName): List[String]
-//provider.getDataFrameSource(dataFrameName, MetaDataSet,dataFrameSourceFactory): DataFrameSource
 
 
 

@@ -1,12 +1,12 @@
 package link.rdcn
 
-import link.rdcn.client.{Blob, CSVSource, DirectorySource, FairdClient}
-import link.rdcn.provider.MockDataProvider
+import link.rdcn.client.{Blob, FairdClient}
+import link.rdcn.provider.DataProvider
 import link.rdcn.server.{FairdServer, FlightProducerImpl}
+import link.rdcn.struct.{DataSet, Row, StructType}
+import link.rdcn.struct.ValueType.{BinaryType, IntType, StringType}
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, StringType, StructType}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
 import java.nio.charset.StandardCharsets
@@ -20,15 +20,19 @@ import java.nio.charset.StandardCharsets
 object ClientTest extends Logging {
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
-  val producer = new FlightProducerImpl(allocator, location, new MockDataProvider)
+  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
+    override val dataSets: List[DataSet] = List.empty
+  })
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {
+    //
     flightServer.start()
     println(s"Server (Location): Listening on port ${flightServer.getPort}")
   }
   @AfterAll
   def stopServer(): Unit = {
+    //
     producer.close()
     flightServer.close()
   }
@@ -50,10 +54,9 @@ class ClientTest {
 
   @Test
   def dfApiTest(): Unit = {
-    import org.apache.spark.sql.types._
 
-    val schema = new StructType()
-      .add("id", IntegerType, nullable = false)
+    val schema = StructType.empty
+      .add("id", IntType, nullable = false)
       .add("name", StringType)
       .add("bin", BinaryType)
 
@@ -65,11 +68,11 @@ class ClientTest {
     val batchSize = 2
     val startTime = System.currentTimeMillis()
     var start = System.currentTimeMillis()
+
     println("SchemaURI:"+df.getSchemaURI)
     println("---------------------------------------------------------------------------")
-    println("MetaData:"+df.getMetaData)
-    println("---------------------------------------------------------------------------")
-    println("Schema:"+df.getSchema)
+
+    println("StructType:"+df.getSchema)
     println("---------------------------------------------------------------------------")
     df.foreach(row => {
       //      计算当前 row 占用的字节数（UTF-8 编码）
@@ -103,10 +106,9 @@ class ClientTest {
 
   @Test
   def binaryFilesTest(): Unit = {
-    import org.apache.spark.sql.types._
 
-    val schema = new StructType()
-      .add("id", IntegerType, nullable = false)
+    val schema = StructType.empty
+      .add("id", IntType, nullable = false)
       .add("name", StringType)
       .add("bin", BinaryType)
 
@@ -150,9 +152,8 @@ class ClientTest {
 
   @Test
   def bpsTest(): Unit = {
-    import org.apache.spark.sql.types._
 
-    val schema = new StructType()
+    val schema = StructType.empty
       .add("name", StringType)
 
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
@@ -195,7 +196,7 @@ class ClientTest {
   @Test
   def csvSourceTest(): Unit = {
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val schema = new StructType()
+    val schema = StructType.empty
       .add("col1", StringType)
       .add("col2", StringType)
     val df = dc.open("/Users/renhao/Downloads/MockData/hdfs")
@@ -204,14 +205,14 @@ class ClientTest {
     })
     df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString)).foreach(println)
     df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString))
-      .filter(x=>x.getString(0).startsWith("###"))
+      .filter(x=>x.getAs[String](0).get.startsWith("###"))
       .foreach(println)
   }
   @Test
   def csvSourceLdbcTest(): Unit = {
     val dc = FairdClient.connect("dacp://0.0.0.0:33333")
 //    id|type|name|url
-    val schema = new StructType()
+    val schema = StructType.empty
       .add("id", StringType)
       .add("type", StringType)
       .add("name", StringType)
