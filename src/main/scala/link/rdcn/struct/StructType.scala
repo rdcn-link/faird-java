@@ -1,4 +1,5 @@
 package link.rdcn.struct
+import link.rdcn.struct.ValueType._
 
 /**
  * @Author renhao
@@ -61,4 +62,10 @@ object StructType {
     new StructType(names.map(n => Column(n, ValueType.StringType)))
 
   val empty: StructType = new StructType(Seq.empty)
+
+  def binaryStructType: StructType = {
+    StructType.empty.add("index", IntType).add("name", StringType).add("size", LongType).add("type", StringType)
+      .add("creationTime()", LongType).add("lastModifiedTime()", LongType).add("lastAccessTime", LongType)
+      .add("File",BinaryType)
+  }
 }

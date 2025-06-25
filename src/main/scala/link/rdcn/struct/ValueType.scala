@@ -19,7 +19,7 @@ object ValueType {
   case object DoubleType  extends ValueType { val name = "Double" }
   case object StringType  extends ValueType { val name = "String" }
   case object BooleanType extends ValueType { val name = "Boolean" }
-  case object BinaryType  extends ValueType { val name = "Binary" } // 字节数组
+  case object BinaryType  extends ValueType { val name = "Binary" }// 字节数组
   case object NullType    extends ValueType { val name = "Null" }
 
   val values: Seq[ValueType] = Seq(
@@ -32,6 +32,7 @@ object ValueType {
    * 从字符串恢复类型（不区分大小写）。
    * 支持常见同义词：如 "int"/"integer"，"bytes"/"binary" 等。
    */
+    //TODO: 新增FileTime
   def fromName(name: String): Option[ValueType] = {
     val lower = name.trim.toLowerCase
     lower match {

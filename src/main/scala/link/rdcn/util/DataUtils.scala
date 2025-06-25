@@ -1,6 +1,8 @@
 package link.rdcn.util
 
 import link.rdcn.Logging
+import scala.collection.mutable
+
 import link.rdcn.struct.ValueType._
 import link.rdcn.struct.{Row, StructType}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
@@ -22,6 +24,34 @@ import scala.io.Source
  * @Modified By:
  */
 object DataUtils extends Logging{
+  private val resourceManager = new ResourceManager
+
+  class ResourceManager {
+    private val resources = mutable.Map[String, Source]()
+
+    def register(source: Source, filePath: String): Unit = {
+      resources.synchronized {
+        resources += (filePath -> source)
+      }
+    }
+
+    def close(filePath: String): Unit = {
+      resources.synchronized {
+        resources.get(filePath).foreach { source =>
+          source.close()
+          resources -= filePath
+        }
+      }
+    }
+
+    def closeAll(): Unit = {
+      resources.synchronized {
+        resources.values.foreach(_.close())
+        resources.clear()
+      }
+    }
+  }
+
 
   //内存中生成数据
   def createCacheBatch(arrowRoot: VectorSchemaRoot, batchLen: Int): ArrowRecordBatch = {
@@ -127,6 +157,7 @@ object DataUtils extends Logging{
       case "png"  => "Image File"
       case "pdf"  => "PDF Document"
       case "csv"  => "CSV File"
+      case "bin"  => "Binary File"
       case _      => "Unknown Type"
     }
   }
@@ -150,8 +181,18 @@ object DataUtils extends Logging{
 
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
+    resourceManager.register(source, filePath)
     source.getLines()
   }
+
+  def closeFileSource(filePath: String): Unit = {
+    resourceManager.close(filePath)
+  }
+
+  def closeAllFileSources(): Unit = {
+    resourceManager.closeAll()
+  }
+
 
   def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot, batchSize: Int = 10
                           ): Iterator[ArrowRecordBatch] = {
@@ -179,7 +220,11 @@ object DataUtils extends Logging{
     val inputStream = new FileInputStream(file)
 
     new Iterator[Array[Byte]] {
-      override def hasNext: Boolean = inputStream.available() > 0
+      override def hasNext: Boolean = {
+        val hn = inputStream.available() > 0
+        if (!hn) inputStream.close()
+        hn
+      }
 
       override def next(): Array[Byte] = {
         val bufferSize = Math.min(chunkSize, inputStream.available())
