@@ -6,6 +6,9 @@ import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType, StringType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
 import link.rdcn.util.DataUtils
+import link.rdcn.struct.ValueType.{DoubleType, IntType, StringType}
+import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, StructType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
@@ -20,6 +23,8 @@ import scala.util.Random
 import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
 import java.awt.Color
+import java.util
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**
  * @Author renhao
@@ -29,7 +34,7 @@ import java.awt.Color
  */
 
 object ProviderTest{
-  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+  val location: Location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
 
 //  generalData
@@ -49,6 +54,23 @@ object ProviderTest{
 
 
   val producer = new FlightProducerImpl(allocator, location, dataProvider)
+  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
+    override def setDataSets(): java.util.List[DataSet] = List(dataSetCsv).asJava
+
+    override val authProvider: AuthProvider = new AuthProvider {
+      /**
+       * 用户认证，成功返回认证后的用户信息，失败抛出 AuthException 异常
+       */
+      override def authenticate(credentials: Credentials): AuthenticatedUser = {
+        new AuthenticatedUser("", new java.util.HashSet[String](),new java.util.HashSet[String]())
+      }
+
+      /**
+       * 判断用户是否具有某项权限
+       */
+      override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = true
+    }
+  })
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {

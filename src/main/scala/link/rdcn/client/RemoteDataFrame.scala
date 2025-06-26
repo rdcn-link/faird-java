@@ -15,7 +15,7 @@ import scala.collection.mutable
 trait SerializableFunction[-T, +R] extends (T => R) with Serializable
 
 trait RemoteDataFrame extends Serializable {
-  val source: DataAccessRequest
+  val dataFrameName: String
   val ops: List[DFOperation]
 
   def getSchema: String
@@ -39,12 +39,12 @@ trait RemoteDataFrame extends Serializable {
 
 case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl) {
   def max(column: String): RemoteDataFrameImpl = {
-    RemoteDataFrameImpl(remoteDataFrameImpl.source, remoteDataFrameImpl.ops :+ MaxOp(column), remoteDataFrameImpl.client)
+    RemoteDataFrameImpl(remoteDataFrameImpl.dataFrameName, remoteDataFrameImpl.ops :+ MaxOp(column), remoteDataFrameImpl.client)
   }
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation], client: ArrowFlightClient = null) extends RemoteDataFrame with Logging {
+case class RemoteDataFrameImpl(dataFrameName: String, ops: List[DFOperation], client: ArrowFlightClient = null) extends RemoteDataFrame with Logging {
 
   override def filter(f: Row => Boolean): RemoteDataFrame = {
     copy(ops = ops :+ FilterOp(new SerializableFunction[Row, Boolean] {
@@ -81,11 +81,11 @@ case class RemoteDataFrameImpl(source: DataAccessRequest, ops: List[DFOperation]
     GroupedDataFrame(this)
   }
 
-  private def records(): Iterator[Row] = client.getRows(source, ops)
+  private def records(): Iterator[Row] = client.getRows(dataFrameName, ops)
 
-  override def getSchema: String = client.getSchema(source.dataFrame)
+  override def getSchema: String = client.getSchema(dataFrameName)
 
-  override def getSchemaURI: String = client.getSchemaURI(source.dataFrame)
+  override def getSchemaURI: String = client.getSchemaURI(dataFrameName)
 }
 
 

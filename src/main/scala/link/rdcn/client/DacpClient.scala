@@ -1,6 +1,6 @@
 package link.rdcn.client
 
-import link.rdcn.user.UsernamePassword
+import link.rdcn.user.{Credentials, UsernamePassword}
 
 /**
  * @Author renhao
@@ -12,14 +12,14 @@ import link.rdcn.user.UsernamePassword
 
 class DacpClient(url: String, port: Int, user: String = null, password: String = null) {
   private val client = new ArrowFlightClient(url, port)
-//  def execute(source: String, ops: List[DFOperation]): Iterator[Row] = client.getRows(source, ops)
+  client.login(new UsernamePassword(user, password))
+
   def open(dataFrameName: String): RemoteDataFrameImpl = {
-    val source = DataAccessRequest(dataFrameName, new UsernamePassword(user, password))
-    RemoteDataFrameImpl(source, List.empty, client)
+    RemoteDataFrameImpl(dataFrameName, List.empty, client)
   }
   def listDataSetNames(): Seq[String] = client.listDataSetNames
   def listDataFrameNames(dsName: String): Seq[String] = client.listDataFrameNames(dsName)
 
-  def getDataSetMetaData(dsName: String): String = client.getMetaData(dsName)
+  def getDataSetMetaData(dsName: String): String = client.getDataSetMetaData(dsName)
 }
 

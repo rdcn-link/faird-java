@@ -56,4 +56,29 @@ object ValueType {
     }
 }
 
+object ValueTypeHelper {
+
+  def getAllTypes: Seq[ValueType] = ValueType.values
+
+  /** 获取某个具体类型（便于 Java 调用） */
+  def getIntType: ValueType = ValueType.IntType
+  def getLongType: ValueType = ValueType.LongType
+  def getFloatType: ValueType = ValueType.FloatType
+  def getDoubleType: ValueType = ValueType.DoubleType
+  def getStringType: ValueType = ValueType.StringType
+  def getBooleanType: ValueType = ValueType.BooleanType
+  def getBinaryType: ValueType = ValueType.BinaryType
+  def getNullType: ValueType = ValueType.NullType
+
+  /** 是否是数值类型 */
+  def isNumeric(t: ValueType): Boolean =
+    ValueType.isNumeric(t)
+
+  /** 从字符串解析 ValueType */
+  def fromName(name: String): ValueType =
+    ValueType.fromName(name).getOrElse(
+      throw new IllegalArgumentException(s"Invalid type: $name")
+    )
+}
+
 

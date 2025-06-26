@@ -2,6 +2,7 @@ package link.rdcn.client
 
 import link.rdcn.SimpleSerializer
 import link.rdcn.struct.Row
+import link.rdcn.user.Credentials
 import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot}
@@ -25,15 +26,30 @@ trait ProtocolClient{
   def listDataFrameNames(dsName: String): Seq[String]
   def getDataSetMetaData(dsName: String): String
   def close(): Unit
-  def getRows(request: DataAccessRequest, ops: List[DFOperation]): Iterator[Row]
+  def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]
 }
 class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 
   val location = Location.forGrpcInsecure(url, port)
   val allocator: BufferAllocator = new RootAllocator()
   private val flightClient = FlightClient.builder(allocator, location).build()
+  private val userToken = UUID.randomUUID().toString
 
-  override def getDataSetMetaData(dsName: String): String = ???
+  def login(credentials: Credentials): Unit = {
+    val paramFields: Seq[Field] = List(
+      new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
+    )
+    val schema = new Schema(paramFields.asJava)
+    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
+    val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
+    credentialsVector.allocateNew(1)
+    credentialsVector.set(0, SimpleSerializer.serialize(credentials))
+    vectorSchemaRoot.setRowCount(1)
+    val listener = flightClient.startPut(FlightDescriptor.path(s"login.$userToken"), vectorSchemaRoot, new AsyncPutListener())
+    listener.putNext()
+    listener.completed()
+    listener.getResult()
+  }
 
   def listDataSetNames(): Seq[String] = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path("listDataSetNames"))
@@ -44,14 +60,13 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     getListStrByFlightInfo(flightInfo)
   }
 
-
   def getSchema(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
     getStrByFlightInfo(flightInfo)
   }
 
-  def getMetaData(dataSetName: String): String = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getMetaData.$dataSetName"))
+  override def getDataSetMetaData(dataSetName: String): String = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
     getStrByFlightInfo(flightInfo)
   }
 
@@ -60,23 +75,27 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     getStrByFlightInfo(flightInfo)
   }
 
-
   def close(): Unit = {
     flightClient.close()
   }
 
-  def getRows(request: DataAccessRequest, ops: List[DFOperation]): Iterator[Row]  = {
+  def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]  = {
     //上传参数
     val paramFields: Seq[Field] = List(
-      new Field("source", FieldType.nullable(new ArrowType.Binary()), null),
+
+      new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
+      new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
       new Field("DFOperation", FieldType.nullable(new ArrowType.Binary()), null)
     )
     val schema = new Schema(paramFields.asJava)
     val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-    val varCharVector = vectorSchemaRoot.getVector("source").asInstanceOf[VarBinaryVector]
+    val dfNameCharVector = vectorSchemaRoot.getVector("dfName").asInstanceOf[VarCharVector]
+    val tokenCharVector = vectorSchemaRoot.getVector("userToken").asInstanceOf[VarCharVector]
     val DFOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarBinaryVector]
-    varCharVector.allocateNew(1)
-    varCharVector.set(0, SimpleSerializer.serialize(request))
+    dfNameCharVector.allocateNew(1)
+    dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
+    tokenCharVector.allocateNew(1)
+    tokenCharVector.set(0, userToken.getBytes("UTF-8"))
     if(ops.length == 0){
       DFOperationVector.allocateNew(1)
       vectorSchemaRoot.setRowCount(1)
@@ -225,7 +244,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     }
   }
 
-    private def getListStrByFlightInfo(flightInfo: FlightInfo): Seq[String] = {
+  private def getListStrByFlightInfo(flightInfo: FlightInfo): Seq[String] = {
     val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
     if(flightStream.next()){
       val vectorSchemaRootReceived = flightStream.getRoot
@@ -240,7 +259,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     }else Seq.empty
   }
 
-    private def getStrByFlightInfo(flightInfo: FlightInfo): String = {
+  private def getStrByFlightInfo(flightInfo: FlightInfo): String = {
       val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
       if(flightStream.next()){
         val vectorSchemaRootReceived = flightStream.getRoot
