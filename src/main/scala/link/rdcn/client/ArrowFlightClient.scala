@@ -10,6 +10,8 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import java.util.UUID
 import java.io.ByteArrayOutputStream
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable
 
 /**
  * @Author renhao
@@ -96,8 +98,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
     //flightInfo 中可以获取schema
     println(s"Client (Get Metadata): $flightInfo")
     val flightInfoSchema = flightInfo.getSchema
-    val isBinaryColumn = if (flightInfoSchema.getFields.size() <= 7) false
-    else flightInfoSchema.getFields.get(7).getType match {
+    val isBinaryColumn = flightInfoSchema.getFields.last.getType match {
       case _: ArrowType.Binary => true
       case _ => false
     }
@@ -112,7 +113,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
         //        var it = Seq.range(0, rowCount).toIterator
         Seq.range(0, rowCount).map(index => {
-          val rowMap = fieldVectors.map(vec => {
+          val rowMap = mutable.LinkedHashMap(fieldVectors.map(vec => {
             if (vec.isNull(index)) (vec.getName, null)
             else vec match {
               case v: org.apache.arrow.vector.IntVector => (vec.getName, v.get(index))
@@ -123,8 +124,8 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
               case v: org.apache.arrow.vector.VarBinaryVector => (vec.getName, v.get(index))
               case _ => throw new UnsupportedOperationException(s"Unsupported vector type: ${vec.getClass}")
             }
-          }).toMap
-          val r: Seq[Any] = rowMap.toSeq.map(x => x._2)
+          }):_*)
+          val r: Seq[Any] = rowMap.values.toList
           //                    Row(rowMap.toSeq.map(x => x._2): _*)
           r
         })
@@ -136,12 +137,11 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
       // 第三列不是binary类型，直接返回Row(Seq[Any])
       flatIter.map(seq => Row.fromSeq(seq))
     } else {
-      val chunkIndex = 6
       var isFirstChunk: Boolean = true
-      var currentSeq: Seq[Any] = flatIter.next()
+      var currentSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
       var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
-      var cachedChunk: Array[Byte] = currentSeq(chunkIndex).asInstanceOf[Array[Byte]]
+      var cachedChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
       var cachedName: String = currentSeq(0).asInstanceOf[String]
       var currentName: String = currentSeq(0).asInstanceOf[String]
       new Iterator[Row] {
@@ -157,9 +157,9 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
             private def readNextChunk(): Unit = {
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {
-                  val nextSeq: Seq[Any] = flatIter.next()
+                  val nextSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
                   val nextName: String = nextSeq(0).asInstanceOf[String]
-                  val nextChunk: Array[Byte] = nextSeq(chunkIndex).asInstanceOf[Array[Byte]]
+                  val nextChunk: Array[Byte] = nextSeq.last.asInstanceOf[Array[Byte]]
                   if (nextName != currentName) {
                     // index 变化，结束当前块
                     isExhausted = true
@@ -218,7 +218,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 
             }
           }
-          Row(currentSeq.patch(6, Nil, 1):+new Blob(blobIter):_*)
+          Row(currentSeq.init:+new Blob(blobIter):_*)
           //          Row(iter.next())
         }
       }

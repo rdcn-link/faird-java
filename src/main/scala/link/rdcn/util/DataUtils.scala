@@ -35,6 +35,12 @@ object DataUtils extends Logging{
       }
     }
 
+    def getSource(filePath: String): Option[Source] = {
+      resources.synchronized {
+        resources.get(filePath)
+      }
+    }
+
     def close(filePath: String): Unit = {
       resources.synchronized {
         resources.get(filePath).foreach { source =>
@@ -48,6 +54,8 @@ object DataUtils extends Logging{
       resources.synchronized {
         resources.values.foreach(_.close())
         resources.clear()
+        System.gc()
+        Thread.sleep(100)
       }
     }
   }
@@ -216,32 +224,64 @@ object DataUtils extends Logging{
   }
 
   def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
-
     val inputStream = new FileInputStream(file)
+    var isClosed = false
 
     new Iterator[Array[Byte]] {
       override def hasNext: Boolean = {
-        val hn = inputStream.available() > 0
-        if (!hn) inputStream.close()
-        hn
+        if (isClosed) return false
+
+        try {
+          val available = inputStream.available() > 0
+          if (!available) {
+            closeStream()
+          }
+          available
+        } catch {
+          case e: IOException =>
+            logger.error(s"Error checking stream availability: ${e.getMessage}")
+            closeStream()
+            false
+        }
       }
 
       override def next(): Array[Byte] = {
-        val bufferSize = Math.min(chunkSize, inputStream.available())
-        val buffer = new Array[Byte](bufferSize)
-        val bytesRead = inputStream.read(buffer)
-        if (bytesRead == -1) {
-          inputStream.close()
-          Iterator.empty.next()
-        } else if (bytesRead < buffer.length) {
-          inputStream.close()
-          buffer.take(bytesRead)
-        } else {
-          buffer
+        if (isClosed) throw new NoSuchElementException("Stream already closed")
+
+        try {
+          val bufferSize = Math.min(chunkSize, inputStream.available())
+          val buffer = new Array[Byte](bufferSize)
+          val bytesRead = inputStream.read(buffer)
+
+          if (bytesRead == -1) {
+            closeStream()
+            throw new NoSuchElementException("End of stream reached")
+          } else if (bytesRead < buffer.length) {
+            closeStream()
+            buffer.take(bytesRead)
+          } else {
+            buffer
+          }
+        } catch {
+          case e: IOException =>
+            closeStream()
+            throw new RuntimeException(s"Error reading from stream: ${e.getMessage}", e)
+        }
+      }
+
+      private def closeStream(): Unit = {
+        if (!isClosed) {
+          try {
+            inputStream.close()
+          } catch {
+            case e: IOException =>
+              logger.error(s"Error closing stream: ${e.getMessage}")
+          } finally {
+            isClosed = true
+          }
         }
       }
     }
-
   }
 
   //结构化文件分批传输

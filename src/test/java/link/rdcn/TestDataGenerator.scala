@@ -1,26 +1,33 @@
 package org.grapheco
 
-import link.rdcn.ProviderTest
+import link.rdcn.ClientTest
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 import java.io.{BufferedWriter, FileOutputStream, FileWriter}
 import java.util.zip.{ZipEntry, ZipOutputStream}
-import scala.util.Using
+//import scala.util.Using
 //import scala.util.Using
 import org.apache.commons.io.FileUtils
 
 object TestDataGenerator {
-  private val baseDir = ProviderTest.getOutputDir("test_output")
+  private val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
-  private val binDir = ProviderTest.getOutputDir("test_output/bin")
-  private val csvDir = ProviderTest.getOutputDir("test_output/csv")
+  private val binDir = getOutputDir("test_output/bin")
+  private val csvDir = getOutputDir("test_output/csv")
 //  private val unstructuredDir = baseDir.resolve("unstructured")
 
   // 文件数量配置
   private val binFileCount = 3
   private val csvFileCount = 3
 //  private val unstructuredFileCount = 3
+
+  def getOutputDir(subdir: String): Path = {
+    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
+    val outDir = baseDir.resolve("target").resolve(subdir)
+    Files.createDirectories(outDir)
+    outDir
+  }
 
   // 生成所有测试数据
   def generateTestData(): Unit = {
@@ -42,7 +49,7 @@ object TestDataGenerator {
     println("Cleaning up test data...")
     val startTime = System.currentTimeMillis()
 
-    if (Files.exists(ProviderTest.getOutputDir("test_output"))) {
+    if (Files.exists(getOutputDir("test_output"))) {
       FileUtils.deleteDirectory(baseDir.toFile)
       println(s"Deleted directory: ${baseDir.toAbsolutePath}")
     }
@@ -83,24 +90,44 @@ object TestDataGenerator {
   }
 
 
+  import java.io.{BufferedWriter, FileWriter}
+  import java.nio.file.Path
+
   private def generateCsvFiles(): Unit = {
     println(s"Generating $csvFileCount CSV files with 100 million rows each...")
-    (1 to csvFileCount).foreach { i => // 移除 .par，直接按顺序处理
+    (1 to csvFileCount).foreach { i =>
       val fileName = s"data_$i.csv"
-      val filePath = csvDir.resolve(fileName)
+      val filePath = csvDir.resolve(fileName).toFile
       val startTime = System.currentTimeMillis()
       val rows = 10000 // 1 亿行
-      Using.resource(new BufferedWriter(new FileWriter(filePath.toFile), 1024 * 1024)) { writer =>
-        writer.write("id,value\n") // 表头
+      var writer: BufferedWriter = null // 声明为 var，方便 finally 块中访问
+
+      try {
+        writer = new BufferedWriter(new FileWriter(filePath), 1024 * 1024) // 1MB 缓冲区
+        writer.write("id,value\n") // 写入表头
+
         for (row <- 1 to rows) {
           writer.append(row.toString).append(',').append(math.random.toString).append('\n')
           if (row % 1000000 == 0) writer.flush() // 每百万行刷一次
         }
+
+        val duration = (System.currentTimeMillis() - startTime) / 1000.0
+        println(f"   Generated ${filePath.getName} with $rows rows in $duration%.2fs")
+
+      } catch {
+        case e: Exception =>
+          println(s"Error generating file ${filePath.getName}: ${e.getMessage}")
+          throw e
+
+      } finally {
+        if (writer != null) {
+          try writer.close()
+          catch { case e: Exception => println(s"Error closing writer: ${e.getMessage}") }
+        }
       }
-      val duration = (System.currentTimeMillis() - startTime) / 1000.0
-      println(f"   Generated ${filePath.getFileName} with $rows rows in $duration%.2fs")
     }
   }
+
 
 
 

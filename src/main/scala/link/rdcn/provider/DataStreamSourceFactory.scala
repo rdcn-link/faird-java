@@ -29,7 +29,7 @@ class DynamicDataStreamSourceFactory() extends DataStreamSourceFactory with Logg
         val chunkSize: Int = 5 * 1024 * 1024
         DataUtils.listFilesWithAttributes(dataFrameInfo.name).toIterator.zipWithIndex
           // schema [ID, name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
-          .map{case (file, index) => (index, file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,file._1)}
+          .map{case (file, index) => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,file._1)}
           .map(Row.fromTuple(_))
     }
 
