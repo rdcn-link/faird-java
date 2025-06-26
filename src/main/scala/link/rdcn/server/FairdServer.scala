@@ -1,5 +1,6 @@
 package link.rdcn.server
 
+import io.grpc.StatusRuntimeException
 import link.rdcn.client.{DFOperation, DataAccessRequest, RemoteDataFrameImpl}
 import link.rdcn.util.DataUtils
 import org.apache.arrow.flight._
@@ -66,6 +67,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
               val authenticatedUser: AuthenticatedUser = provider.authProvider.authenticate(credentials)
               val loginToken: String = ticketKey.split("\\.")(1)
               authenticatedUserMap.put(loginToken, authenticatedUser)
+              provider.authProvider.putAuthenticatedUser(loginToken, authenticatedUser)
               flightStream.getRoot.clear()
             }
           case _ => {
@@ -79,7 +81,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
                throw new Exception(s"The user $userToken is not logged in")
               }
               if(! provider.authProvider.authorize(authenticatedUser.get, dfName))
-                throw new Exception(s"No access permission $dfName")
+                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"No access permission $dfName"))
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
                 if (bytes == null) null else

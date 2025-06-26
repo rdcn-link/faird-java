@@ -9,6 +9,9 @@ import link.rdcn.user.exception.AuthException;
  * @Modified By:
  */
 public interface AuthProvider {
+    void putAuthenticatedUser(String token ,AuthenticatedUser user);
+
+
     /**
      * 用户认证，成功返回认证后的用户信息，失败抛出 AuthException 异常
      */

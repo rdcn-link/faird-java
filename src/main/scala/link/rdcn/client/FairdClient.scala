@@ -48,4 +48,13 @@ object FairdClient{
         throw new Exception(err)
     }
   }
+
+  def connect(url: String, token: String): DacpClient = {
+    DacpUriParser.parse(url) match {
+      case Right(parsed) =>
+        new DacpClient(parsed.host, parsed.port, null, null, token)
+      case Left(err) =>
+        throw new Exception(err)
+    }
+  }
 }

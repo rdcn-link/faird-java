@@ -2,12 +2,11 @@ package link.rdcn
 
 import link.rdcn.client.{Blob, FairdClient}
 import link.rdcn.provider.DataProvider
-import link.rdcn.server.{FairdServer, FlightProducerImpl}
-import link.rdcn.struct.{DataSet, Row, StructType}
+import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.ValueType.{BinaryType, IntType, StringType}
+import link.rdcn.struct.{DataSet, Row, StructType}
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.grapheco.TestDataGenerator
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
 import java.nio.charset.StandardCharsets
@@ -21,9 +20,7 @@ import java.nio.charset.StandardCharsets
 object BpsTest extends Logging {
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
-  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
-    override val dataSets: List[DataSet] = List.empty
-  })
+  val producer = ClientTest.producer
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {

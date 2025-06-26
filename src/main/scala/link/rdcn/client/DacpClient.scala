@@ -1,6 +1,6 @@
 package link.rdcn.client
 
-import link.rdcn.user.{Credentials, UsernamePassword}
+import link.rdcn.user.{Credentials, TokenAuth, UsernamePassword}
 
 /**
  * @Author renhao
@@ -10,9 +10,12 @@ import link.rdcn.user.{Credentials, UsernamePassword}
  */
 
 
-class DacpClient(url: String, port: Int, user: String = null, password: String = null) {
+class DacpClient(url: String, port: Int, user: String = null, password: String = null, token: String = null) {
   private val client = new ArrowFlightClient(url, port)
-  client.login(new UsernamePassword(user, password))
+  if (token == null)
+    client.login(new UsernamePassword(user, password))
+  else
+    client.login(new TokenAuth(token))
 
   def open(dataFrameName: String): RemoteDataFrameImpl = {
     RemoteDataFrameImpl(dataFrameName, List.empty, client)

@@ -1,11 +1,7 @@
-package org.grapheco
+package link.rdcn
 
-import link.rdcn.ClientTest
-
+import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
-import java.util.UUID
-import java.io.{BufferedWriter, FileOutputStream, FileWriter}
-import java.util.zip.{ZipEntry, ZipOutputStream}
 //import scala.util.Using
 //import scala.util.Using
 import org.apache.commons.io.FileUtils

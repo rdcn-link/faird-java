@@ -7,7 +7,10 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class UserNotFoundException extends AuthException {
+    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
+            .withDescription("用户不存在!");
+
     public UserNotFoundException() {
-        super("用户不存在");
+        super(status);
     }
 }

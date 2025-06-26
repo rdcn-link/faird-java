@@ -1,6 +1,6 @@
 package link.rdcn.user;
 
-import java.util.Set;
+import scala.collection.immutable.Set;
 
 /**
  * @Author renhao
