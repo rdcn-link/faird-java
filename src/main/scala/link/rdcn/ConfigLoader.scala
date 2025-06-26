@@ -73,3 +73,7 @@ object ConfigLoader {
   }
 }
 
+object ConfigBridge{
+  def getConfig(): FairdConfig = ConfigLoader.fairdConfig
+}
+

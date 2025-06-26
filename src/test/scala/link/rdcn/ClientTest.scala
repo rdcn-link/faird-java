@@ -10,6 +10,8 @@ import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
 import java.nio.charset.StandardCharsets
+import java.util
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**
  * @Author renhao
@@ -18,24 +20,24 @@ import java.nio.charset.StandardCharsets
  * @Modified By:
  */
 object ClientTest extends Logging {
-  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-  val allocator: BufferAllocator = new RootAllocator()
-  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
-    override val dataSets: List[DataSet] = List.empty
-  })
-  val flightServer = FlightServer.builder(allocator, location, producer).build()
-  @BeforeAll
-  def startServer(): Unit = {
-    //
-    flightServer.start()
-    println(s"Server (Location): Listening on port ${flightServer.getPort}")
-  }
-  @AfterAll
-  def stopServer(): Unit = {
-    //
-    producer.close()
-    flightServer.close()
-  }
+//  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+//  val allocator: BufferAllocator = new RootAllocator()
+//  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
+//    override val dataSets: java.util.List[DataSet] = List.empty.asJava
+//  })
+//  val flightServer = FlightServer.builder(allocator, location, producer).build()
+//  @BeforeAll
+//  def startServer(): Unit = {
+//    //
+//    flightServer.start()
+//    println(s"Server (Location): Listening on port ${flightServer.getPort}")
+//  }
+//  @AfterAll
+//  def stopServer(): Unit = {
+//    //
+//    producer.close()
+//    flightServer.close()
+//  }
 }
 
 class ClientTest {
@@ -44,12 +46,12 @@ class ClientTest {
   def listDataSetTest(): Unit = {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101")
     dc.listDataSetNames().foreach(println)
-    println("---------------------------------------------------------------------------")
-    dc.listDataFrameNames("unstructured").foreach(println)
-    println("---------------------------------------------------------------------------")
-    dc.listDataFrameNames("hdfs").foreach(println)
-    println("---------------------------------------------------------------------------")
-    dc.listDataFrameNames("ldbc").foreach(println)
+//    println("---------------------------------------------------------------------------")
+//    dc.listDataFrameNames("unstructured").foreach(println)
+//    println("---------------------------------------------------------------------------")
+//    dc.listDataFrameNames("hdfs").foreach(println)
+//    println("---------------------------------------------------------------------------")
+//    dc.listDataFrameNames("ldbc").foreach(println)
   }
 
   @Test

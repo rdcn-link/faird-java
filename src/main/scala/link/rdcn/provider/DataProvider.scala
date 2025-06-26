@@ -1,7 +1,10 @@
 package link.rdcn.provider
 
 import link.rdcn.struct.{DataFrameInfo, DataSet, StructType}
-import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
+import link.rdcn.user.AuthProvider
+import org.apache.jena.rdf.model.Model
+
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 /**
  * @Author renhao
@@ -10,18 +13,19 @@ import org.apache.jena.rdf.model.{Model, ModelFactory, ResourceFactory}
  * @Modified By:
  */
 
-trait DataProvider {
-  val dataSets: List[DataSet]
+abstract class DataProvider {
+  def setDataSets(): java.util.List[DataSet]
+  val authProvider: AuthProvider
 
   def listDataSetNames(): List[String] = {
-    dataSets.map(_.dataSetName)
+    dataSetsScalaList.map(_.dataSetName)
   }
   def getDataSetMetaData(dataSetName: String, rdfModel: Model): Unit = {
-    val dataSet: DataSet = dataSets.find(_.dataSetName == dataSetName).getOrElse(return rdfModel)
+    val dataSet: DataSet = dataSetsScalaList.find(_.dataSetName == dataSetName).getOrElse(return rdfModel)
     dataSet.getMetadata(rdfModel)
   }
   def listDataFrameNames(dataSetName: String): List[String] = {
-    val dataSet: DataSet = dataSets.find(_.dataSetName == dataSetName).getOrElse(return List.empty)
+    val dataSet: DataSet = dataSetsScalaList.find(_.dataSetName == dataSetName).getOrElse(return List.empty)
     dataSet.dataFrames.map(_.name)
   }
   def getDataFrameSource(dataFrameName: String, factory: DataStreamSourceFactory): DataStreamSource = {
@@ -30,12 +34,15 @@ trait DataProvider {
   }
 
   def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
-    dataSets.foreach(ds => {
+    dataSetsScalaList.foreach(ds => {
       val dfInfo = ds.getDataFrameInfo(dataFrameName)
       if(dfInfo.nonEmpty) return dfInfo
     })
     None
   }
+
+  private val dataSetsScalaList = setDataSets.asScala.toList
+
 }
 
 
