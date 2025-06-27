@@ -50,8 +50,9 @@ object FairdServer extends App with Logging {
 class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: DataProvider = null) extends NoOpFlightProducer with Logging {
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
+  //身份过期维持
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
-  private val batchLen = 1000
+//  private val batchLen = 1000
 
   override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
 
@@ -67,7 +68,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
               val authenticatedUser: AuthenticatedUser = provider.authProvider.authenticate(credentials)
               val loginToken: String = ticketKey.split("\\.")(1)
               authenticatedUserMap.put(loginToken, authenticatedUser)
-              provider.authProvider.putAuthenticatedUser(loginToken, authenticatedUser)
               flightStream.getRoot.clear()
             }
           case _ => {
@@ -81,7 +81,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
                throw new Exception(s"The user $userToken is not logged in")
               }
               if(! provider.authProvider.authorize(authenticatedUser.get, dfName))
-                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"No access permission $dfName"))
+                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"不允许访问$dfName"))
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
                 if (bytes == null) null else
@@ -176,6 +176,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
             val structType = provider.getDataFrameInfo(request.dataFrameName).map(_.schema)
               .getOrElse(throw new Exception(s"DataFrame ${request.dataFrameName} does not exist"))
             val schema = convertStructTypeToArrowSchema(structType)
+            val batchLen = provider.getDataFrameInfo(request.dataFrameName).map(_.inputSource.batchLen).getOrElse(1000)
 
             //能否支持并发
             val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)

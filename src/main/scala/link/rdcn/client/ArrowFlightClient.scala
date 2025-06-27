@@ -9,7 +9,8 @@ import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 
 import java.util.UUID
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
+import java.nio.file.{Path, Paths}
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
@@ -237,7 +238,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 
             }
           }
-          Row(currentSeq.init:+new Blob(blobIter):_*)
+          Row(currentSeq.init:+new Blob(blobIter,currentSeq(0).asInstanceOf[String]):_*)
           //          Row(iter.next())
         }
       }
@@ -272,7 +273,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
 }
 
 // 表示完整的二进制文件
-class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
+class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends Serializable {
   // 缓存加载后的完整数据
   private var _content: Option[Array[Byte]] = None
   // 缓存文件大小（独立于_content，避免获取大数组长度）
@@ -295,7 +296,7 @@ class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
         totalSize += chunk.length
         chunkCount+=1
         byteStream.write(chunk)
-        byteStream.reset()
+//        byteStream.reset()
 
       }
 //      println("loaded Lazily")
@@ -336,11 +337,44 @@ class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
     System.gc()
   }
 
+  // 获得 `InputStream`（适合流式读取 `content`）
+  def getInputStream: InputStream = {
+    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
+    if (_content.isEmpty) loadLazily()
+    new ByteArrayInputStream(_content.get)
+  }
+  // 将 Blob 内容写入指定文件（返回写入的字节数）
+  def writeToFile(pathString: String): Long = {
+    val path = Paths.get(pathString+name)
+    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
+    if (_size.isEmpty) loadLazily()
+    val inputStream = getInputStream
+    val outputStream = new FileOutputStream(path.toFile)
+    try {
+      var bytesWritten: Long = 0L
+      val buffer = new Array[Byte](4096) // 4KB 缓冲区
+      var bytesRead: Int = 0
+      // **流式写入，避免全部加载到内存**
+      while ( {
+        bytesRead = inputStream.read(buffer)
+        bytesRead != -1
+      }) {
+        outputStream.write(buffer, 0, bytesRead)
+        bytesWritten += bytesRead
+      }
+      bytesWritten // 返回实际写入的字节数
+    } finally {
+      inputStream.close()
+      outputStream.close()
+    }
+  }
+
+
   /** 获取分块迭代器 */
 //  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
 
   override def toString: String = {
     loadLazily()
-    s"Blob()"
+    s"Blob[$name]"
   }
 }

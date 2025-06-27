@@ -19,13 +19,13 @@ class DynamicDataStreamSourceFactory() extends DataStreamSourceFactory with Logg
   override def createDataFrameSource(dataFrameInfo: DataFrameInfo): DataStreamSource = {
     val inputSource = dataFrameInfo.inputSource
     val stream: Iterator[Row] = inputSource match {
-      case CSVSource(delimiter, head) =>
+      case CSVSource(delimiter, head, batchLen) =>
         val iterLines = DataUtils.getFileLines(dataFrameInfo.name)
         .map(line => Row(line.split(delimiter): _*))
         if(head) iterLines.next()
         iterLines.map(DataUtils.convertStringRowToTypedRow(_, dataFrameInfo.schema))
-      case StructuredSource() => DataUtils.getFileLines(dataFrameInfo.name).map(line => Row(line))
-      case DirectorySource(false) =>
+      case StructuredSource(batchLen) => DataUtils.getFileLines(dataFrameInfo.name).map(line => Row(line))
+      case DirectorySource(false,batchLen) =>
         val chunkSize: Int = 5 * 1024 * 1024
         DataUtils.listFilesWithAttributes(dataFrameInfo.name).toIterator.zipWithIndex
           // schema [ID, name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]

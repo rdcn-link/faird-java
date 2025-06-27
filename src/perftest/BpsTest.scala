@@ -1,5 +1,3 @@
-package link.rdcn
-
 import link.rdcn.client.{Blob, FairdClient}
 import link.rdcn.provider.DataProvider
 import link.rdcn.server.FlightProducerImpl

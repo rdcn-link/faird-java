@@ -1,19 +1,19 @@
 package link.rdcn
 
 
+import link.rdcn.ClientTest._
 import link.rdcn.client.{DacpClient, FairdClient}
 import link.rdcn.provider.DataProvider
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType, StringType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, Row, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, TokenAuth, UsernamePassword}
-import link.rdcn.util.DataUtils
+import link.rdcn.util.{DataGenerator, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import TestDataGenerator.getOutputDir
-import link.rdcn.ClientTest.{password, username}
+import link.rdcn.util.DataGenerator.getOutputDir
 import link.rdcn.user.exception._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
@@ -27,6 +27,7 @@ import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.io.Source
 
 /**
@@ -41,7 +42,7 @@ object ClientTest {
   val allocator: BufferAllocator = new RootAllocator()
 
   //  generalData
-  TestDataGenerator.generateTestData()
+  DataGenerator.generateTestData()
   val csvDfInfos = listFiles(getOutputDir("test_output/csv").toString).map(file => {
     DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", IntType).add("value", DoubleType))
   })
@@ -51,26 +52,26 @@ object ClientTest {
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
 
-  val username = "admin"
-  val password = "admin"
-  val writePassword = "write"
-  val credentials: Credentials = new UsernamePassword(username, password)
-  val authprovider = new AuthProvider{
+  val adminUsername = "admin"
+  val adminPassword = "admin"
+  val userUsername = "user"
+  val userPassword = "user"
+//  val credentials: Credentials = new UsernamePassword(username, password)
+  val authprovider = new AuthProvider {
 
-    private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
 
     /**
-     * 用户认证，成功返回认证后的用户信息，失败抛出 AuthException 异常
+     * 用户认证，成功返回认证后的用户信息
      */
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
-      if(credentials.isInstanceOf[UsernamePassword]) {
-        val usernamePassword =credentials.asInstanceOf[UsernamePassword]
-        if (usernamePassword.getUsername == username && usernamePassword.getPassword == password) {
-          new AuthenticatedUser(username, Set("admin"),Set("read"))
-        } else if (usernamePassword.getUsername == username && usernamePassword.getPassword == writePassword) {
-          new AuthenticatedUser(username, Set("admin"),Set("write"))
+      if (credentials.isInstanceOf[UsernamePassword]) {
+        val usernamePassword = credentials.asInstanceOf[UsernamePassword]
+        if (usernamePassword.getUsername == adminUsername && usernamePassword.getPassword == adminPassword) {
+          new AuthenticatedUser(adminUsername, Set("admin"), Set.empty)
+        } else if (usernamePassword.getUsername == userUsername && usernamePassword.getPassword == userPassword) {
+          new AuthenticatedUser(userUsername, Set("user"), Set.empty)
         }
-        else if(usernamePassword.getUsername != "admin" ) {
+        else if (usernamePassword.getUsername != "admin") {
           throw new UserNotFoundException() {}
         } else {
           throw new InvalidCredentialsException()
@@ -84,19 +85,17 @@ object ClientTest {
      * 判断用户是否具有某项权限
      */
     override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
-      user.getPermissions.contains("write")
+      if (user.getUserId == "admin") true
+      else user.getPermissions.contains(s"$dataFrameName")
     }
 
-    def putAuthenticatedUser(token: String, user: AuthenticatedUser): Unit = {
-      authenticatedUserMap.put(token, user)
-    }
   }
   val dataProvider = new DataProvider() {
 
     val authProvider: AuthProvider = authprovider
 
-    override def setDataSets: List[DataSet] = {
-      List(dataSetCsv, dataSetBin)
+    override def setDataSets: java.util.List[DataSet] = {
+      List(dataSetCsv, dataSetBin).asJava
     }
 
   }
@@ -104,7 +103,7 @@ object ClientTest {
 
   val producer = new FlightProducerImpl(allocator, location, dataProvider)
   val flightServer = FlightServer.builder(allocator, location, producer).build()
-  lazy val dc: DacpClient = FairdClient.connect("dacp://0.0.0.0:3101", username, password)
+  lazy val dc: DacpClient = FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, adminPassword)
 
   @BeforeAll
   def startServer(): Unit = {
@@ -122,7 +121,7 @@ object ClientTest {
     //    dc.close()
 
     DataUtils.closeAllFileSources()
-    TestDataGenerator.cleanupTestData()
+    DataGenerator.cleanupTestData()
   }
 
 
@@ -139,7 +138,7 @@ class ClientTest {
   val binModel: Model = ClientTest.genModel
   val dc: DacpClient = ClientTest.dc
   val baseDir: String = getOutputDir("test_output").toString
-  val baseCSVDir: String = baseDir+"\\csv"
+  val baseCSVDir: String = baseDir + "\\csv"
 
 
   @Test()
@@ -147,7 +146,7 @@ class ClientTest {
     // 模拟非admin用户的情况进行测试
     val exception = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", "NotAdmin", password)
+      () => FairdClient.connect("dacp://0.0.0.0:3101", "NotAdmin", adminPassword)
     )
     assertEquals("用户不存在!", exception.getMessage)
   }
@@ -157,7 +156,7 @@ class ClientTest {
     // 模拟非admin用户的情况进行测试
     val exception = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", username, "wrongpassword")
+      () => FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, "wrongPassword")
     )
     assertEquals("无效的用户名/密码!", exception.getMessage)
   }
@@ -165,27 +164,18 @@ class ClientTest {
 
 
   @Test()
-  def testLoginWhenCredentialsIsInvalid(): Unit = {
-    // 模拟非admin用户的情况进行测试
-    val exception = assertThrows(
-      classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", "expiredToken")
-    )
-    assertEquals("Token过期!", exception.getMessage)
-  }
-
-  @Test()
   def testAuthorizeFalse(): Unit = {
-    val df = dc.open(baseCSVDir+"\\data_1.csv")
-    // 假设没有write权限
+    val dc = FairdClient.connect("dacp://0.0.0.0:3101", userUsername, userPassword)
+    val df = dc.open(baseCSVDir + "\\data_1.csv")
+    // 假设没有权限
     val exception = assertThrows(
       classOf[Exception],
       () => df.foreach(_ => {})
     )
-    assertEquals("No access permission "+baseCSVDir+"\\data_1.csv", exception.getMessage)
+    assertEquals("不允许访问" + baseCSVDir + "\\data_1.csv", exception.getMessage)
   }
 
-  
+
   @Test
   def testListDataSetNames(): Unit = {
     assertEquals(provider.listDataSetNames().toSet, dc.listDataSetNames().toSet, "ListDataSetNames接口输出与预期不符！")

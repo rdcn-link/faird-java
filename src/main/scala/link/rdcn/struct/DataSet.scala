@@ -10,21 +10,28 @@ import org.apache.jena.vocabulary.RDF
  * @Data 2025/6/24 14:17
  * @Modified By:
  */
-sealed trait InputSource
+sealed trait InputSource {
+  def batchLen: Int
+}
 case class CSVSource(
                       delimiter: String = ",",
-                      head: Boolean = false
+                      head: Boolean = false,
+                      batchLen: Int = 1000
                     ) extends InputSource
 
 case class JSONSource(
-                       multiline: Boolean = false
+                       multiline: Boolean = false,
+                       batchLen: Int = 1000
                      ) extends InputSource
 
 case class DirectorySource(
-                            recursive: Boolean = true
+                            recursive: Boolean = true,
+                            batchLen: Int = 10
                           ) extends InputSource
 
-case class StructuredSource() extends InputSource
+case class StructuredSource(
+                             batchLen: Int = 1000
+                           ) extends InputSource
 
 case class DataFrameInfo(
                         name: String,

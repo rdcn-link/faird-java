@@ -1,4 +1,4 @@
-package link.rdcn
+package link.rdcn.util
 
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
@@ -6,7 +6,7 @@ import java.nio.file.{Files, Path, Paths}
 //import scala.util.Using
 import org.apache.commons.io.FileUtils
 
-object TestDataGenerator {
+object DataGenerator {
   private val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
   private val binDir = getOutputDir("test_output/bin")
