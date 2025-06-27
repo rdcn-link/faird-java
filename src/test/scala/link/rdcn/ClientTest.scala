@@ -174,6 +174,7 @@ class ClientTest {
     )
     assertEquals("不允许访问" + baseCSVDir + "\\data_1.csv", exception.getMessage)
   }
+  //匿名访问
 
 
   @Test
@@ -187,6 +188,9 @@ class ClientTest {
     assertEquals(provider.listDataFrameNames("bin").toSet, dc.listDataFrameNames("bin").toSet, "ListDataFrameNames接口读取二进制文件输出与预期不符！")
 
   }
+  //服务未启动
+  //df不存在
+  //访问时
 
   @Test
   def testGetDataSetMetaData(): Unit = {

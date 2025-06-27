@@ -14,7 +14,7 @@ import scala.collection.JavaConverters.asScalaBufferConverter
  */
 
 abstract class DataProvider {
-  def setDataSets(): List[DataSet]
+  def setDataSets(): java.util.List[DataSet]
   val authProvider: AuthProvider
 
   def listDataSetNames(): List[String] = {
@@ -41,7 +41,7 @@ abstract class DataProvider {
     None
   }
 
-  private val dataSetsScalaList = setDataSets
+  private val dataSetsScalaList = setDataSets.asScala.toList
 
 }
 
