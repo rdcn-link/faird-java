@@ -1,12 +1,9 @@
 package link.rdcn
 
 import link.rdcn.client.{Blob, FairdClient}
-import link.rdcn.provider.DataProvider
-import link.rdcn.server.{FairdServer, FlightProducerImpl}
 import link.rdcn.struct.{DataSet, Row, StructType}
 import link.rdcn.struct.ValueType.{BinaryType, IntType, StringType}
 import org.apache.arrow.flight.{FlightServer, Location}
-import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
 import java.nio.charset.StandardCharsets
@@ -22,7 +19,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 object ClientTest extends Logging {
 //  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
 //  val allocator: BufferAllocator = new RootAllocator()
-//  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
+//  val producer = new FlightProducerImpl(allocator, location, new DataProviderImplByDataSetList(){
 //    override val dataSets: java.util.List[DataSet] = List.empty.asJava
 //  })
 //  val flightServer = FlightServer.builder(allocator, location, producer).build()
@@ -44,10 +41,13 @@ class ClientTest {
 
   @Test
   def listDataSetTest(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
+    val dc = FairdClient.connect("dacp://10.0.82.71:8232")
+//    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
     dc.listDataSetNames().foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("unstructured").foreach(println)
+    println("---------------------------------------------------------------------------")
+    dc.listDataFrameNames("滚动轴承基础物理参数检测技术").foreach(println)
+    val df = dc.open("/mnt/sdb/instdb/file_1.csv")
+    df.foreach(println)
 //    println("---------------------------------------------------------------------------")
 //    dc.listDataFrameNames("hdfs").foreach(println)
 //    println("---------------------------------------------------------------------------")

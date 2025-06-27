@@ -24,8 +24,7 @@ object ConfigLoader {
 
   def loadProperties(): Properties = {
     val props = new Properties()
-    val configFilePath = getClass.getClassLoader.getResource("faird.conf").getPath
-    val fis = new java.io.InputStreamReader(new java.io.FileInputStream(configFilePath), "UTF-8")
+    val fis = new java.io.InputStreamReader(getClass.getClassLoader.getResourceAsStream("faird.conf"), "UTF-8")
     try props.load(fis) finally fis.close()
     props
   }

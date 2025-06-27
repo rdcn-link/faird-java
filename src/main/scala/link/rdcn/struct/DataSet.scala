@@ -10,21 +10,6 @@ import org.apache.jena.vocabulary.RDF
  * @Data 2025/6/24 14:17
  * @Modified By:
  */
-sealed trait InputSource
-case class CSVSource(
-                      delimiter: String = ",",
-                      head: Boolean = false
-                    ) extends InputSource
-
-case class JSONSource(
-                       multiline: Boolean = false
-                     ) extends InputSource
-
-case class DirectorySource(
-                            recursive: Boolean = true
-                          ) extends InputSource
-
-case class StructuredSource() extends InputSource
 
 case class DataFrameInfo(
                         name: String,

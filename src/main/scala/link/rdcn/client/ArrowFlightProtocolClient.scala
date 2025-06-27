@@ -26,7 +26,7 @@ trait ProtocolClient{
   def close(): Unit
   def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]
 }
-class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
+class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
   val location = Location.forGrpcInsecure(url, port)
   val allocator: BufferAllocator = new RootAllocator()
@@ -64,7 +64,8 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
   }
 
   override def getDataSetMetaData(dataSetName: String): String = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
+//    getDataSetMetaData
+    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
     getStrByFlightInfo(flightInfo)
   }
 
@@ -135,6 +136,7 @@ class ArrowFlightClient(url: String, port:Int) extends ProtocolClient{
             if (vec.isNull(index)) (vec.getName, null)
             else vec match {
               case v: org.apache.arrow.vector.IntVector => (vec.getName, v.get(index))
+              case v: org.apache.arrow.vector.BigIntVector => (vec.getName, v.getObject(index))
               case v: org.apache.arrow.vector.VarCharVector => (vec.getName, new String(v.get(index)))
               case v: org.apache.arrow.vector.Float8Vector => (vec.getName, v.get(index))
               case v: org.apache.arrow.vector.BitVector => (vec.getName, v.get(index) == 1)

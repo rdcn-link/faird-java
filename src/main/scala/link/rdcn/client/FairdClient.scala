@@ -1,5 +1,7 @@
 package link.rdcn.client
 
+import link.rdcn.user.UsernamePassword
+
 import java.nio.charset.StandardCharsets
 
 /**
@@ -31,21 +33,45 @@ private object DacpUriParser {
   }
 }
 
-object FairdClient{
-  def connect (url: String): DacpClient = {
+class FairdClient private (
+                            url: String,
+                            port: Int,
+                            user: String = null,
+                            password: String = null
+                          ) {
+  private val protocolClient = new ArrowFlightProtocolClient(url, port)
+  protocolClient.login(new UsernamePassword(user, password))
+
+  def open(dataFrameName: String): RemoteDataFrameImpl =
+    RemoteDataFrameImpl(dataFrameName, List.empty, protocolClient)
+
+  def listDataSetNames(): Seq[String] =
+    protocolClient.listDataSetNames()
+
+  def listDataFrameNames(dsName: String): Seq[String] =
+    protocolClient.listDataFrameNames(dsName)
+
+  def getDataSetMetaData(dsName: String): String =
+    protocolClient.getDataSetMetaData(dsName)
+
+  def close(): Unit = protocolClient.close()
+}
+
+
+object FairdClient {
+  def connect(url: String): FairdClient =
     DacpUriParser.parse(url) match {
       case Right(parsed) =>
-        new DacpClient(parsed.host, parsed.port)
+        new FairdClient(parsed.host, parsed.port)
       case Left(err) =>
-        throw new Exception(err)
+        throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
-  }
-  def connect(url: String, user: String, password: String): DacpClient = {
+
+  def connect(url: String, user: String, password: String): FairdClient =
     DacpUriParser.parse(url) match {
       case Right(parsed) =>
-        new DacpClient(parsed.host, parsed.port, user, password)
+        new FairdClient(parsed.host, parsed.port, user, password)
       case Left(err) =>
-        throw new Exception(err)
+        throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
-  }
 }

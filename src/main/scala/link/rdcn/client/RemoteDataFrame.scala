@@ -44,7 +44,7 @@ case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl) {
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(dataFrameName: String, ops: List[DFOperation], client: ArrowFlightClient = null) extends RemoteDataFrame with Logging {
+case class RemoteDataFrameImpl(dataFrameName: String, ops: List[DFOperation], client: ArrowFlightProtocolClient = null) extends RemoteDataFrame with Logging {
 
   override def filter(f: Row => Boolean): RemoteDataFrame = {
     copy(ops = ops :+ FilterOp(new SerializableFunction[Row, Boolean] {

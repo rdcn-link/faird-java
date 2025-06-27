@@ -1,14 +1,14 @@
 package link.rdcn.server
 
-import link.rdcn.client.{DFOperation, DataAccessRequest, RemoteDataFrameImpl}
+import link.rdcn.client.{DFOperation, RemoteDataFrameImpl}
 import link.rdcn.util.DataUtils
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
-import link.rdcn.provider.{DataProvider, DataStreamSource, DynamicDataStreamSourceFactory}
-import link.rdcn.user.{AuthenticatedUser, Credentials}
+import link.rdcn.provider.{DataProvider, DataProviderImplByDataSetList, DataStreamSource}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
@@ -25,28 +25,28 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
  * @Modified By:
  */
 
-object FairdServer extends App with Logging {
-  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-  val allocator: BufferAllocator = new RootAllocator()
+//object FairdServer extends App with Logging {
+//  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+//  val allocator: BufferAllocator = new RootAllocator()
+//
+//  try {
+//    val producer = new FlightProducerImpl(allocator, location, )
+//    val flightServer = FlightServer.builder(allocator, location, producer).build()
+//
+//    flightServer.start()
+//    Runtime.getRuntime.addShutdownHook(new Thread() {
+//      override def run(): Unit = {
+//        flightServer.close()
+//        producer.close()
+//      }
+//    })
+//    flightServer.awaitTermination()
+//  } catch {
+//    case e: Exception => e.printStackTrace()
+//  }
+//}
 
-  try {
-    val producer = new FlightProducerImpl(allocator, location)
-    val flightServer = FlightServer.builder(allocator, location, producer).build()
-
-    flightServer.start()
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        flightServer.close()
-        producer.close()
-      }
-    })
-    flightServer.awaitTermination()
-  } catch {
-    case e: Exception => e.printStackTrace()
-  }
-}
-
-class FlightProducerImpl(allocator: BufferAllocator, location: Location, provider: DataProvider = null) extends NoOpFlightProducer with Logging {
+class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataProvider: DataProvider, authProvider: AuthProvider) extends NoOpFlightProducer with Logging {
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
@@ -63,7 +63,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
               val root = flightStream.getRoot
               val credentialsBytes = root.getFieldVectors.get(0).asInstanceOf[VarBinaryVector].getObject(0)
               val credentials = SimpleSerializer.deserialize(credentialsBytes).asInstanceOf[Credentials]
-              val authenticatedUser: AuthenticatedUser = provider.authProvider.authenticate(credentials)
+              val authenticatedUser: AuthenticatedUser = authProvider.authenticate(credentials)
               val loginToken: String = ticketKey.split("\\.")(1)
               authenticatedUserMap.put(loginToken, authenticatedUser)
               flightStream.getRoot.clear()
@@ -78,7 +78,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
               if(authenticatedUser.isEmpty){
                throw new Exception(s"The user $userToken is not logged in")
               }
-              if(! provider.authProvider.authorize(authenticatedUser.get, dfName))
+              if(! authProvider.authorize(authenticatedUser.get, dfName))
                 throw new Exception(s"No access permission $dfName")
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
@@ -143,36 +143,31 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
 
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-        val factory = new DynamicDataStreamSourceFactory
-
         new String(ticket.getBytes, StandardCharsets.UTF_8) match {
-          case "listDataSetNames" => getListStrStream(provider.listDataSetNames(), listener)
+          case "listDataSetNames" => getListStrStream(dataProvider.listDataSetNames().asScala, listener)
           case ticketKey if ticketKey.startsWith("listDataFrameNames") => {
-            getListStrStream(provider.listDataFrameNames(ticketKey.split("\\.")(1)), listener)
+            getListStrStream(dataProvider.listDataFrameNames(ticketKey.split("\\.")(1)).asScala, listener)
           }
           case ticketKey if ticketKey.startsWith("getSchemaURI") => {
             val dfName = ticketKey.split("\\.")(1)
-            val dfInfo= provider.getDataFrameInfo(dfName).getOrElse(throw new Exception(s"DataFrame ${dfName} does not exist"))
-            getStrStream(dfInfo.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.getHostName}:${ConfigLoader.fairdConfig.getHostPort}"),listener)
+            getStrStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
 
           }
           case ticketKey if ticketKey.startsWith("getSchema") => {
             val dfName = ticketKey.split("\\.")(1)
-            val dfInfo= provider.getDataFrameInfo(dfName).getOrElse(throw new Exception(s"DataFrame ${dfName} does not exist"))
-            getStrStream(dfInfo.schema.toString,listener)
+            getStrStream(dataProvider.getDataFrameSchema(dfName).toString,listener)
           }
           case ticketKey if ticketKey.startsWith("getDataSetMetaData") => {
             val model: Model = ModelFactory.createDefaultModel()
-            provider.getDataSetMetaData(ticketKey.split("\\.")(1), model)
+            dataProvider.getDataSetMetaData(ticketKey.split("\\.")(1), model)
             getStrStream(model.toString,listener)
           }
           case _ => {
             val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
             val request: RemoteDataFrameImpl = requestMap.get(flightDescriptor)
 
-            val dataStreamSource: DataStreamSource = provider.getDataFrameSource(request.dataFrameName, factory)
-            val structType = provider.getDataFrameInfo(request.dataFrameName).map(_.schema)
-              .getOrElse(throw new Exception(s"DataFrame ${request.dataFrameName} does not exist"))
+            val dataStreamSource: DataStreamSource = dataProvider.getDataFrameSource(request.dataFrameName)
+            val structType = dataProvider.getDataFrameSchema(request.dataFrameName)
             val schema = convertStructTypeToArrowSchema(structType)
 
             //能否支持并发
@@ -214,7 +209,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, provide
       val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
       val request = requestMap.getOrDefault(descriptor, null)
       val schema =  if (request != null)
-        provider.getDataFrameInfo(request.dataFrameName).map(_.schema).map(convertStructTypeToArrowSchema(_)).getOrElse(new Schema(List.empty.asJava))
+        convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request.dataFrameName))
       else new Schema(List.empty.asJava)
       new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }

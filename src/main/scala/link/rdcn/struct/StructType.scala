@@ -59,6 +59,17 @@ object StructType {
 
   def fromNamesAsAny(names: Seq[String]): StructType =
     new StructType(names.map(n => Column(n, ValueType.StringType)))
+//  schema [ID, name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
+  def getBlobSchema(): StructType = {
+    new StructType(Seq.empty).add("id", ValueType.IntType)
+      .add("name", ValueType.StringType)
+      .add("fileType", ValueType.StringType)
+      .add("size", ValueType.LongType)
+      .add("createDate", ValueType.LongType)
+      .add("lastModifyDate", ValueType.LongType)
+      .add("lastAccessDate", ValueType.LongType)
+      .add("fileStream", ValueType.BinaryType)
+  }
 
   val empty: StructType = new StructType(Seq.empty)
 }

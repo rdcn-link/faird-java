@@ -1,7 +1,7 @@
 package link.rdcn
 
 import link.rdcn.client.FairdClient
-import link.rdcn.provider.DataProvider
+import link.rdcn.provider.DataProviderImplByDataSetList
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.ValueType.{DoubleType, IntType, StringType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, StructType}
@@ -36,10 +36,9 @@ object ProviderTest{
   })
   val dataSetCsv = DataSet("csv","1", dfInfos.toList)
 
-  val producer = new FlightProducerImpl(allocator, location, new DataProvider(){
-    override def setDataSets(): java.util.List[DataSet] = List(dataSetCsv).asJava
-
-    override val authProvider: AuthProvider = new AuthProvider {
+  val producer = new FlightProducerImpl(allocator, location, new DataProviderImplByDataSetList(){
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv)
+  }, new AuthProvider {
       /**
        * 用户认证，成功返回认证后的用户信息，失败抛出 AuthException 异常
        */
@@ -51,8 +50,10 @@ object ProviderTest{
        * 判断用户是否具有某项权限
        */
       override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = true
-    }
   })
+
+
+
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   @BeforeAll
   def startServer(): Unit = {
