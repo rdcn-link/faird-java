@@ -66,7 +66,8 @@ object TestBase {
       if (credentials.isInstanceOf[UsernamePassword]) {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
         if (usernamePassword.getUsername == null && usernamePassword.getPassword == null) {
-          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("用户未登录!"))
+//          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
+            throw new UserNotFoundException()
         }
         else if (usernamePassword.getUsername == adminUsername && usernamePassword.getPassword == adminPassword) {
           new AuthenticatedUser(adminUsername, Set("admin").asJava, Set.empty[String].asJava)
@@ -74,7 +75,7 @@ object TestBase {
           new AuthenticatedUser(userUsername, Set("user").asJava, Set.empty[String].asJava)
         }
         else if (usernamePassword.getUsername != "admin") {
-          throw new UserNotFoundException() {}
+          throw new UserNotFoundException()
         } else {
           throw new InvalidCredentialsException()
         }
@@ -106,7 +107,7 @@ object TestBase {
   @AfterAll
   def stopServer(): Unit = {
     producer.close()
-    flightServer.close()
+    flightServer.shutdown()
 
     DataUtils.closeAllFileSources()
     cleanupTestData()
