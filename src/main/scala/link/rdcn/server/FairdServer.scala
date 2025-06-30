@@ -9,6 +9,7 @@ import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorLoader, Ve
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataProvider, DataProviderImplByDataSetList, DataStreamSource}
+import link.rdcn.struct.StructType
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -211,9 +212,15 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
       val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
       val request = requestMap.getOrDefault(descriptor, null)
-      val schema =  if (request != null)
-        convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request.dataFrameName))
-      else new Schema(List.empty.asJava)
+      val schema =  if (request != null) {
+        val dataFrameSchema = dataProvider.getDataFrameSchema(request.dataFrameName)
+        if (dataFrameSchema == StructType.empty) {
+          throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription("DataFrame不存在!"))
+        }
+        else
+          convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request.dataFrameName))
+
+      } else new Schema(List.empty.asJava)
       new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
   }
 

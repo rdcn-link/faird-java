@@ -1,9 +1,10 @@
 package link.rdcn.client
 
+
 import link.rdcn.SimpleSerializer
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
-import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, Location}
+import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, FlightRuntimeException, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
@@ -37,19 +38,23 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
   private val userToken = UUID.randomUUID().toString
 
   def login(credentials: Credentials): Unit = {
-    val paramFields: Seq[Field] = List(
-      new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
-    )
-    val schema = new Schema(paramFields.asJava)
-    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-    val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
-    credentialsVector.allocateNew(1)
-    credentialsVector.set(0, SimpleSerializer.serialize(credentials))
-    vectorSchemaRoot.setRowCount(1)
-    val listener = flightClient.startPut(FlightDescriptor.path(s"login.$userToken"), vectorSchemaRoot, new AsyncPutListener())
-    listener.putNext()
-    listener.completed()
-    listener.getResult()
+//    try {
+      val paramFields: Seq[Field] = List(
+        new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
+      )
+      val schema = new Schema(paramFields.asJava)
+      val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
+      val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
+      credentialsVector.allocateNew(1)
+      credentialsVector.set(0, SimpleSerializer.serialize(credentials))
+      vectorSchemaRoot.setRowCount(1)
+      val listener = flightClient.startPut(FlightDescriptor.path(s"login.$userToken"), vectorSchemaRoot, new AsyncPutListener())
+      listener.putNext()
+      listener.completed()
+      listener.getResult()
+//    } catch {
+//      case e: FlightRuntimeException => throw e
+//    }
   }
 
   def listDataSetNames(): Seq[String] = {
