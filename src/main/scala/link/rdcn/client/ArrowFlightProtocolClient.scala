@@ -84,7 +84,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
   def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]  = {
     //上传参数
     val paramFields: Seq[Field] = List(
-
       new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
       new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
       new Field("DFOperation", FieldType.nullable(new ArrowType.Binary()), null)
@@ -127,12 +126,10 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
     val iter: Iterator[Seq[Seq[Any]]] = new Iterator[Seq[Seq[Any]]] {
       override def hasNext: Boolean = flightStream.next()
 
-
       override def next(): Seq[Seq[Any]] = {
         val vectorSchemaRootReceived = flightStream.getRoot
         val rowCount = vectorSchemaRootReceived.getRowCount
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-        //        var it = Seq.range(0, rowCount).toIterator
         Seq.range(0, rowCount).map(index => {
           val rowMap = mutable.LinkedHashMap(fieldVectors.map(vec => {
             if (vec.isNull(index)) (vec.getName, null)
