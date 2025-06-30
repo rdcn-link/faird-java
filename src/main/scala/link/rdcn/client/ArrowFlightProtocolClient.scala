@@ -9,8 +9,11 @@ import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 
 import java.util.UUID
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
+import java.nio.file.{Path, Paths}
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable
 
 /**
  * @Author renhao
@@ -116,8 +119,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
     //flightInfo 中可以获取schema
     println(s"Client (Get Metadata): $flightInfo")
     val flightInfoSchema = flightInfo.getSchema
-    val isBinaryColumn = if (flightInfoSchema.getFields.size() <= 7) false
-    else flightInfoSchema.getFields.get(7).getType match {
+    val isBinaryColumn = flightInfoSchema.getFields.last.getType match {
       case _: ArrowType.Binary => true
       case _ => false
     }
@@ -132,19 +134,19 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
         //        var it = Seq.range(0, rowCount).toIterator
         Seq.range(0, rowCount).map(index => {
-          val rowMap = fieldVectors.map(vec => {
+          val rowMap = mutable.LinkedHashMap(fieldVectors.map(vec => {
             if (vec.isNull(index)) (vec.getName, null)
             else vec match {
               case v: org.apache.arrow.vector.IntVector => (vec.getName, v.get(index))
-              case v: org.apache.arrow.vector.BigIntVector => (vec.getName, v.getObject(index))
+              case v: org.apache.arrow.vector.BigIntVector => (vec.getName, v.get(index))
               case v: org.apache.arrow.vector.VarCharVector => (vec.getName, new String(v.get(index)))
               case v: org.apache.arrow.vector.Float8Vector => (vec.getName, v.get(index))
               case v: org.apache.arrow.vector.BitVector => (vec.getName, v.get(index) == 1)
               case v: org.apache.arrow.vector.VarBinaryVector => (vec.getName, v.get(index))
               case _ => throw new UnsupportedOperationException(s"Unsupported vector type: ${vec.getClass}")
             }
-          }).toMap
-          val r: Seq[Any] = rowMap.toSeq.map(x => x._2)
+          }):_*)
+          val r: Seq[Any] = rowMap.values.toList
           //                    Row(rowMap.toSeq.map(x => x._2): _*)
           r
         })
@@ -158,12 +160,12 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
     } else {
 
       var isFirstChunk: Boolean = true
-      var currentSeq: Seq[Any] = flatIter.next()
+      var currentSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
       var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
-      var cachedChunk: Array[Byte] = currentSeq(4).asInstanceOf[Array[Byte]]
-      var cachedName: String = currentSeq(0).asInstanceOf[String]
-      var currentName: String = currentSeq(0).asInstanceOf[String]
+      var cachedChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
+      var cachedName: String = currentSeq(1).asInstanceOf[String]
+      var currentName: String = currentSeq(1).asInstanceOf[String]
       new Iterator[Row] {
         override def hasNext: Boolean = flatIter.hasNext || cachedChunk.nonEmpty
 
@@ -177,9 +179,9 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
             private def readNextChunk(): Unit = {
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {
-                  val nextSeq: Seq[Any] = flatIter.next()
-                  val nextName: String = nextSeq(0).asInstanceOf[String]
-                  val nextChunk: Array[Byte] = nextSeq(4).asInstanceOf[Array[Byte]]
+                  val nextSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
+                  val nextName: String = nextSeq(1).asInstanceOf[String]
+                  val nextChunk: Array[Byte] = nextSeq.last.asInstanceOf[Array[Byte]]
                   if (nextName != currentName) {
                     // index 变化，结束当前块
                     isExhausted = true
@@ -238,7 +240,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
             }
           }
-          Row(currentSeq.patch(4, Nil, 1):+new Blob(blobIter):_*)
+          Row(currentSeq.init:+new Blob(blobIter,currentSeq(1).asInstanceOf[String]):_*)
           //          Row(iter.next())
         }
       }
@@ -273,7 +275,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 }
 
 // 表示完整的二进制文件
-class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
+class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends Serializable {
   // 缓存加载后的完整数据
   private var _content: Option[Array[Byte]] = None
   // 缓存文件大小（独立于_content，避免获取大数组长度）
@@ -296,7 +298,7 @@ class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
         totalSize += chunk.length
         chunkCount+=1
         byteStream.write(chunk)
-        byteStream.reset()
+//        byteStream.reset()
 
       }
 //      println("loaded Lazily")
@@ -337,8 +339,44 @@ class Blob( val chunkIterator:Iterator[Array[Byte]]) extends Serializable {
     System.gc()
   }
 
+  // 获得 `InputStream`（适合流式读取 `content`）
+  def getInputStream: InputStream = {
+    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
+    if (_content.isEmpty) loadLazily()
+    new ByteArrayInputStream(_content.get)
+  }
+  // 将 Blob 内容写入指定文件（返回写入的字节数）
+  def writeToFile(pathString: String): Long = {
+    val path = Paths.get(pathString+name)
+    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
+    if (_size.isEmpty) loadLazily()
+    val inputStream = getInputStream
+    val outputStream = new FileOutputStream(path.toFile)
+    try {
+      var bytesWritten: Long = 0L
+      val buffer = new Array[Byte](4096) // 4KB 缓冲区
+      var bytesRead: Int = 0
+      // **流式写入，避免全部加载到内存**
+      while ( {
+        bytesRead = inputStream.read(buffer)
+        bytesRead != -1
+      }) {
+        outputStream.write(buffer, 0, bytesRead)
+        bytesWritten += bytesRead
+      }
+      bytesWritten // 返回实际写入的字节数
+    } finally {
+      inputStream.close()
+      outputStream.close()
+    }
+  }
+
+
   /** 获取分块迭代器 */
 //  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
 
-  override def toString: String = s"Blob()"
+  override def toString: String = {
+    loadLazily()
+    s"Blob[$name]"
+  }
 }

@@ -7,7 +7,10 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class InvalidCredentialsException extends AuthException {
+    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
+            .withDescription("无效的用户名/密码!");
+
     public InvalidCredentialsException() {
-        super("用户名或密码无效");
+        super(status);
     }
 }

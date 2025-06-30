@@ -10,13 +10,12 @@ import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
 import link.rdcn.user.exception.AuthException;
+import link.rdcn.util.DataUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.*;
@@ -78,9 +77,11 @@ public class JProviderTest {
         DataProvider dataProvider = new DataProvider(){
 
 
+
             @Override
             public List<String> listDataSetNames() {
                 return Collections.emptyList();
+
             }
 
             @Override
@@ -111,14 +112,41 @@ public class JProviderTest {
 
             @Override
             public DataStreamSource getDataFrameSource(String dataFrameName) {
-                if(dataFrameName == "/mnt/sdb/csv/a.csv"){
-                    return null;
-                }else {
+                DataUtils.inferExcelSchema("");
+                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
+
+//                if(dataFrameName == "/mnt/sdb/csv/a.csv"){
+//                    return null;
+//                }else {
                     DirectorySource directorySource = new DirectorySource(false);
                     return DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, getDataFrameSchema(dataFrameName), directorySource);
-                }
+//                }
 //                StructuredSource source = new StructuredSource();
 //                return DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, getDataFrameSchema(dataFrameName), source);
+
+//                List<List<Object>> data = new ArrayList<>();
+//
+//                // 第1条数据（包含 String 和 Integer）
+//                List<Object> row1 = new ArrayList<>();
+//                row1.add("Alice");
+//                row1.add(25);
+//                data.add(row1);
+//
+//                // 第2条数据
+//                List<Object> row2 = new ArrayList<>();
+//                row2.add("Bob");
+//                row2.add(30);
+//                data.add(row2);
+//
+//                // 第3条数据
+//                List<Object> row3 = new ArrayList<>();
+//                row3.add("Charlie");
+//                row3.add(22);
+//                data.add(row3);
+//
+//                // 获取 Iterator
+//                Iterator<List<Object>> iterator = data.iterator();
+//                return DataStreamSourceFactory.getDataFrameSourceFromJavaList(iterator, getDataFrameSchema(dataFrameName));
 
             }
 

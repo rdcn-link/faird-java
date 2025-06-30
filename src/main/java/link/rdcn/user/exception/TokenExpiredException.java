@@ -7,7 +7,10 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class TokenExpiredException extends AuthException {
+    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
+            .withDescription("Token过期!");
+
     public TokenExpiredException() {
-        super("Token 已过期");
+        super(status);
     }
 }

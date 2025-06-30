@@ -9,8 +9,9 @@ import link.rdcn.user.exception.AuthException;
  * @Modified By:
  */
 public interface AuthProvider {
+
     /**
-     * 用户认证，成功返回认证后的用户信息，失败抛出 AuthException 异常
+     * 用户认证，成功返回认证后的用户信息
      */
     AuthenticatedUser authenticate(Credentials credentials) throws AuthException;
 

@@ -1,5 +1,6 @@
 package link.rdcn.server
 
+import io.grpc.StatusRuntimeException
 import link.rdcn.client.{DFOperation, RemoteDataFrameImpl}
 import link.rdcn.util.DataUtils
 import org.apache.arrow.flight._
@@ -50,7 +51,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
   private val requestMap = new ConcurrentHashMap[FlightDescriptor, RemoteDataFrameImpl]()
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
-  private val batchLen = 1000
+  private val batchLen = 100
 
   override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
 
@@ -79,7 +80,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
                throw new Exception(s"The user $userToken is not logged in")
               }
               if(! authProvider.authorize(authenticatedUser.get, dfName))
-                throw new Exception(s"No access permission $dfName")
+                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"不允许访问$dfName"))
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
                 if (bytes == null) null else
@@ -146,20 +147,22 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         new String(ticket.getBytes, StandardCharsets.UTF_8) match {
           case "listDataSetNames" => getListStrStream(dataProvider.listDataSetNames().asScala, listener)
           case ticketKey if ticketKey.startsWith("listDataFrameNames") => {
-            getListStrStream(dataProvider.listDataFrameNames(ticketKey.split("\\.")(1)).asScala, listener)
+            val dataSet = ticketKey.replace("listDataFrameNames.","")
+            getListStrStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
           }
           case ticketKey if ticketKey.startsWith("getSchemaURI") => {
-            val dfName = ticketKey.split("\\.")(1)
+            val dfName = ticketKey.replace("getSchemaURI.","")
             getStrStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
 
           }
           case ticketKey if ticketKey.startsWith("getSchema") => {
-            val dfName = ticketKey.split("\\.")(1)
+            val dfName =  ticketKey.replace("getSchema.","")
             getStrStream(dataProvider.getDataFrameSchema(dfName).toString,listener)
           }
           case ticketKey if ticketKey.startsWith("getDataSetMetaData") => {
+            val dsName = ticketKey.replace("getDataSetMetaData.","")
             val model: Model = ModelFactory.createDefaultModel()
-            dataProvider.getDataSetMetaData(ticketKey.split("\\.")(1), model)
+            dataProvider.getDataSetMetaData(dsName, model)
             getStrStream(model.toString,listener)
           }
           case _ => {

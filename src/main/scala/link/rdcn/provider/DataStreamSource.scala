@@ -27,9 +27,9 @@ case class ArrowFlightDataStreamSource(iter: Iterator[Row], schema: StructType) 
   override def process(stream: Iterator[Row], root: VectorSchemaRoot, batchSize: Int): Iterator[ArrowRecordBatch] = {
     val streamSplitChunk: Iterator[Row] = if(schema.contains(BinaryType)){
       stream.flatMap(row => {
-        val file = row.getAs[File](7).get
+        val file = row.getAs[File](6).get
         DataUtils.readFileInChunks(file).map(bytes => {
-          (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5), row.get(6), bytes)
+          (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5), bytes)
         })
       }).map(Row.fromTuple(_))
     }else stream

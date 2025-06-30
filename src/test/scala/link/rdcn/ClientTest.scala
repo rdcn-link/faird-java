@@ -1,225 +1,206 @@
 package link.rdcn
 
-import link.rdcn.client.{Blob, FairdClient}
-import link.rdcn.struct.{DataSet, Row, StructType}
-import link.rdcn.struct.ValueType.{BinaryType, IntType, StringType}
-import org.apache.arrow.flight.{FlightServer, Location}
-import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
 
-import java.nio.charset.StandardCharsets
-import java.util
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import link.rdcn.ClientTest._
+import link.rdcn.client.FairdClient
+import link.rdcn.provider.DataProvider
+import link.rdcn.server.FlightProducerImpl
+import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType, StringType}
+import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, Row, StructType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, TokenAuth, UsernamePassword}
+import link.rdcn.util.{DataGenerator, DataUtils}
+import link.rdcn.util.DataUtils.listFiles
+import org.apache.arrow.flight.{FlightRuntimeException, FlightServer, Location}
+import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
+import org.apache.jena.rdf.model.{Model, ModelFactory}
+import link.rdcn.util.DataGenerator.getOutputDir
+import link.rdcn.user.exception._
+import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
+import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+
+import java.io.{PrintWriter, StringWriter}
+import java.nio.file.{Files, Path, Paths}
+import scala.util.Random
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+import java.awt.Color
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters.{seqAsJavaListConverter, setAsJavaSetConverter}
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.io.Source
 
 /**
  * @Author renhao
  * @Description:
- * @Data 2025/6/18 17:24
+ * @Data 2025/6/16 18:08
  * @Modified By:
  */
-object ClientTest extends Logging {
-//  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-//  val allocator: BufferAllocator = new RootAllocator()
-//  val producer = new FlightProducerImpl(allocator, location, new DataProviderImplByDataSetList(){
-//    override val dataSets: java.util.List[DataSet] = List.empty.asJava
-//  })
-//  val flightServer = FlightServer.builder(allocator, location, producer).build()
-//  @BeforeAll
-//  def startServer(): Unit = {
-//    //
-//    flightServer.start()
-//    println(s"Server (Location): Listening on port ${flightServer.getPort}")
-//  }
-//  @AfterAll
-//  def stopServer(): Unit = {
-//    //
-//    producer.close()
-//    flightServer.close()
-//  }
+
+object ClientTest {
+  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+  val allocator: BufferAllocator = new RootAllocator()
+
+  //  generalData
+  DataGenerator.generateTestData()
+  val csvDfInfos = listFiles(getOutputDir("test_output/csv").toString).map(file => {
+    DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", IntType).add("value", DoubleType))
+  })
+  val binDfInfos = Seq(
+    DataFrameInfo(getOutputDir("test_output/bin").toString, DirectorySource(false), StructType.binaryStructType))
+
+  val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
+  val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
+
+  val adminUsername = "admin"
+  val adminPassword = "admin"
+  val userUsername = "user"
+  val userPassword = "user"
+//  val credentials: Credentials = new UsernamePassword(username, password)
+  val authprovider = new AuthProvider {
+
+
+    /**
+     * 用户认证，成功返回认证后的用户信息
+     */
+    override def authenticate(credentials: Credentials): AuthenticatedUser = {
+      if (credentials.isInstanceOf[UsernamePassword]) {
+        val usernamePassword = credentials.asInstanceOf[UsernamePassword]
+        if (usernamePassword.getUsername == adminUsername && usernamePassword.getPassword == adminPassword) {
+          new AuthenticatedUser(adminUsername, Set("admin").asJava, Set.empty.asJava)
+        } else if (usernamePassword.getUsername == userUsername && usernamePassword.getPassword == userPassword) {
+          new AuthenticatedUser(userUsername, Set("user").asJava, Set.empty)
+        }
+        else if (usernamePassword.getUsername != "admin") {
+          throw new UserNotFoundException() {}
+        } else {
+          throw new InvalidCredentialsException()
+        }
+      } else {
+        throw new TokenExpiredException()
+      }
+    }
+
+    /**
+     * 判断用户是否具有某项权限
+     */
+    override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
+      if (user.getUserId == "admin") true
+      else user.getPermissions.contains(s"$dataFrameName")
+    }
+
+  }
+  val dataProvider = new DataProvider() {
+
+    val authProvider: AuthProvider = authprovider
+
+    override def setDataSets: java.util.List[DataSet] = {
+      List(dataSetCsv, dataSetBin).asJava
+    }
+
+  }
+
+
+  val producer = new FlightProducerImpl(allocator, location, dataProvider)
+  val flightServer = FlightServer.builder(allocator, location, producer).build()
+  lazy val dc = FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, adminPassword)
+
+  @BeforeAll
+  def startServer(): Unit = {
+    //
+    flightServer.start()
+    println(s"Server (Location): Listening on port ${flightServer.getPort}")
+
+  }
+
+  @AfterAll
+  def stopServer(): Unit = {
+    //
+    producer.close()
+    flightServer.close()
+    //    dc.close()
+
+    DataUtils.closeAllFileSources()
+    DataGenerator.cleanupTestData()
+  }
+
+
+  def genModel: Model = {
+    ModelFactory.createDefaultModel()
+  }
+
+
 }
 
 class ClientTest {
+  val provider = ClientTest.dataProvider
+  val csvModel: Model = ClientTest.genModel
+  val binModel: Model = ClientTest.genModel
+  val dc = ClientTest.dc
+  val baseDir: String = getOutputDir("test_output").toString
+  val baseCSVDir: String = baseDir + "\\csv"
 
-  @Test
-  def listDataSetTest(): Unit = {
-    val dc = FairdClient.connect("dacp://10.0.82.71:8232")
-//    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
-    dc.listDataSetNames().foreach(println)
-    println("---------------------------------------------------------------------------")
-    dc.listDataFrameNames("滚动轴承基础物理参数检测技术").foreach(println)
-    val df = dc.open("/mnt/sdb/instdb/file_1.csv")
-    df.foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("hdfs").foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("ldbc").foreach(println)
+
+  @Test()
+  def testLoginWhenUsernameIsNotAdmin(): Unit = {
+    // 模拟非admin用户的情况进行测试
+    val exception = assertThrows(
+      classOf[FlightRuntimeException],
+      () => FairdClient.connect("dacp://0.0.0.0:3101", "NotAdmin", adminPassword)
+    )
+    assertEquals("用户不存在!", exception.getMessage)
   }
 
-  @Test
-  def dfApiTest(): Unit = {
-
-    val schema = StructType.empty
-      .add("id", IntType, nullable = false)
-      .add("name", StringType)
-      .add("bin", BinaryType)
-
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("dacp://10.0.0.1/bindata")
-    var totalBytes: Long = 0L
-    var realBytes: Long = 0L
-    var count: Int = 0
-    val batchSize = 2
-    val startTime = System.currentTimeMillis()
-    var start = System.currentTimeMillis()
-
-    println("SchemaURI:"+df.getSchemaURI)
-    println("---------------------------------------------------------------------------")
-
-    println("StructType:"+df.getSchema)
-    println("---------------------------------------------------------------------------")
-    df.foreach(row => {
-      //      计算当前 row 占用的字节数（UTF-8 编码）
-      //      val index = row.get(0).asInstanceOf[Int]
-      val name = row.get(0).asInstanceOf[String]
-      val blob = row.get(6).asInstanceOf[Blob]
-      //      val bytesLen = blob.length
-      val bytesLen = blob.size
-      println(f"Received: ${blob.chunkCount} chunks, name:$name")
-      totalBytes += bytesLen
-      realBytes += bytesLen
-
-      count += 1
-
-      if (count % batchSize == 0) {
-        val endTime = System.currentTimeMillis()
-        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-        val bps = real_mbReceived / real_elapsedSeconds
-        val obps = total_mbReceived / total_elapsedSeconds
-        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-        start = System.currentTimeMillis()
-        realBytes = 0L
-      }
-    })
-    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
+  @Test()
+  def testLoginWhenTokenExpired(): Unit = {
+    // 模拟非admin用户的情况进行测试
+    val exception = assertThrows(
+      classOf[FlightRuntimeException],
+      () => FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, "wrongPassword")
+    )
+    assertEquals("无效的用户名/密码!", exception.getMessage)
   }
 
 
+
+  @Test()
+  def testAuthorizeFalse(): Unit = {
+    val dc = FairdClient.connect("dacp://0.0.0.0:3101", userUsername, userPassword)
+    val df = dc.open(baseCSVDir + "\\data_1.csv")
+    // 假设没有权限
+    val exception = assertThrows(
+      classOf[Exception],
+      () => df.foreach(_ => {})
+    )
+    assertEquals("不允许访问" + baseCSVDir + "\\data_1.csv", exception.getMessage)
+  }
+  //匿名访问
+
+
   @Test
-  def binaryFilesTest(): Unit = {
-
-    val schema = StructType.empty
-      .add("id", IntType, nullable = false)
-      .add("name", StringType)
-      .add("bin", BinaryType)
-
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-
-    val df = dc.open("C:\\Users\\NatsusakiYomi\\Downloads\\数据")
-    var totalBytes: Long = 0L
-    var realBytes: Long = 0L
-    var count: Int = 0
-    val batchSize = 2
-    val startTime = System.currentTimeMillis()
-    var start = System.currentTimeMillis()
-    df.foreach(row => {
-      //      计算当前 row 占用的字节数（UTF-8 编码）
-//      val index = row.get(0).asInstanceOf[Int]
-      val name = row.get(0).asInstanceOf[String]
-      val blob = row.get(1).asInstanceOf[Blob]
-      //      val bytesLen = blob.length
-      val bytesLen = blob.size
-      println(f"Received: ${blob.chunkCount} chunks, name:$name")
-      totalBytes += bytesLen
-      realBytes += bytesLen
-
-      count += 1
-
-      if (count % batchSize == 0) {
-        val endTime = System.currentTimeMillis()
-        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-        val bps = real_mbReceived / real_elapsedSeconds
-        val obps = total_mbReceived / total_elapsedSeconds
-        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-        start = System.currentTimeMillis()
-        realBytes = 0L
-      }
-    })
-    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
+  def testListDataSetNames(): Unit = {
+    assertEquals(provider.listDataSetNames().toSet, dc.listDataSetNames().toSet, "ListDataSetNames接口输出与预期不符！")
   }
 
   @Test
-  def bpsTest(): Unit = {
+  def testListDataFrameNames(): Unit = {
+    assertEquals(provider.listDataFrameNames("csv").toSet, dc.listDataFrameNames("csv").toSet, "ListDataFrameNames接口读取csv文件输出与预期不符！")
+    assertEquals(provider.listDataFrameNames("bin").toSet, dc.listDataFrameNames("bin").toSet, "ListDataFrameNames接口读取二进制文件输出与预期不符！")
 
-    val schema = StructType.empty
-      .add("name", StringType)
-
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val df = dc.open("/Users/renhao/Downloads/MockData/hdfs")
-    var totalBytes: Long = 0L
-    var realBytes: Long = 0L
-    var count: Int = 0
-    val batchSize = 500000
-    val startTime = System.currentTimeMillis()
-    var start = System.currentTimeMillis()
-    df.foreach(row => {
-      //      计算当前 row 占用的字节数（UTF-8 编码）
-      val bytesLen =
-//        row.get(0).asInstanceOf[Array[Byte]].length
-              row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
-
-      //          row.get(1).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
-
-      totalBytes += bytesLen
-      realBytes += bytesLen
-
-      count += 1
-
-      if (count % batchSize == 0) {
-        val endTime = System.currentTimeMillis()
-        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-        val bps = real_mbReceived / real_elapsedSeconds
-        val obps = total_mbReceived / total_elapsedSeconds
-        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-        start = System.currentTimeMillis()
-        realBytes = 0L
-      }
-    })
-    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
   }
+  //服务未启动
+  //df不存在
+  //访问时
 
   @Test
-  def csvSourceTest(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-    val schema = StructType.empty
-      .add("col1", StringType)
-      .add("col2", StringType)
-    val df = dc.open("/Users/renhao/Downloads/MockData/hdfs")
-    df.limit(10).foreach(row => {
-      println(row)
-    })
-    df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString)).foreach(println)
-    df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString))
-      .filter(x=>x.getAs[String](0).get.startsWith("###"))
-      .foreach(println)
+  def testGetDataSetMetaData(): Unit = {
+    //注入元数据
+    provider.getDataSetMetaData("csv", csvModel)
+    assertEquals(csvModel.toString, dc.getDataSetMetaData("csv"), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
+    provider.getDataSetMetaData("bin", binModel)
+    assertEquals(binModel.toString, dc.getDataSetMetaData("bin"), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
   }
-  @Test
-  def csvSourceLdbcTest(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    id|type|name|url
-    val schema = StructType.empty
-      .add("id", StringType)
-      .add("type", StringType)
-      .add("name", StringType)
-      .add("url", StringType)
-    val df = dc.open("/Users/renhao/Downloads/MockData/ldbc")
-    df.limit(10).foreach(println)
-  }
+
+
 }

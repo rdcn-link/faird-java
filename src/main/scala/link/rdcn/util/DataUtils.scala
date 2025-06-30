@@ -1,18 +1,22 @@
 package link.rdcn.util
 
 import link.rdcn.Logging
+
+import scala.collection.mutable
 import link.rdcn.struct.ValueType._
-import link.rdcn.struct.{Row, StructType}
+import link.rdcn.struct.{Column, Row, StructType, ValueType}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
+import org.apache.poi.ss.usermodel.{Cell, CellType, DateUtil}
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import java.io.{File, FileInputStream, IOException}
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.{asJavaIteratorConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.io.Source
 
 /**
@@ -22,6 +26,42 @@ import scala.io.Source
  * @Modified By:
  */
 object DataUtils extends Logging{
+  private val resourceManager = new ResourceManager
+
+  class ResourceManager {
+    private val resources = mutable.Map[String, Source]()
+
+    def register(source: Source, filePath: String): Unit = {
+      resources.synchronized {
+        resources += (filePath -> source)
+      }
+    }
+
+    def getSource(filePath: String): Option[Source] = {
+      resources.synchronized {
+        resources.get(filePath)
+      }
+    }
+
+    def close(filePath: String): Unit = {
+      resources.synchronized {
+        resources.get(filePath).foreach { source =>
+          source.close()
+          resources -= filePath
+        }
+      }
+    }
+
+    def closeAll(): Unit = {
+      resources.synchronized {
+        resources.values.foreach(_.close())
+        resources.clear()
+        System.gc()
+        Thread.sleep(100)
+      }
+    }
+  }
+
 
   //内存中生成数据
   def createCacheBatch(arrowRoot: VectorSchemaRoot, batchLen: Int): ArrowRecordBatch = {
@@ -150,8 +190,18 @@ object DataUtils extends Logging{
 
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
+    resourceManager.register(source, filePath)
     source.getLines()
   }
+
+  def closeFileSource(filePath: String): Unit = {
+    resourceManager.close(filePath)
+  }
+
+  def closeAllFileSources(): Unit = {
+    resourceManager.closeAll()
+  }
+
 
   def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot, batchSize: Int = 10
                           ): Iterator[ArrowRecordBatch] = {
@@ -175,28 +225,64 @@ object DataUtils extends Logging{
   }
 
   def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
-
     val inputStream = new FileInputStream(file)
+    var isClosed = false
 
     new Iterator[Array[Byte]] {
-      override def hasNext: Boolean = inputStream.available() > 0
+      override def hasNext: Boolean = {
+        if (isClosed) return false
+
+        try {
+          val available = inputStream.available() > 0
+          if (!available) {
+            closeStream()
+          }
+          available
+        } catch {
+          case e: IOException =>
+            logger.error(s"Error checking stream availability: ${e.getMessage}")
+            closeStream()
+            false
+        }
+      }
 
       override def next(): Array[Byte] = {
-        val bufferSize = Math.min(chunkSize, inputStream.available())
-        val buffer = new Array[Byte](bufferSize)
-        val bytesRead = inputStream.read(buffer)
-        if (bytesRead == -1) {
-          inputStream.close()
-          Iterator.empty.next()
-        } else if (bytesRead < buffer.length) {
-          inputStream.close()
-          buffer.take(bytesRead)
-        } else {
-          buffer
+        if (isClosed) throw new NoSuchElementException("Stream already closed")
+
+        try {
+          val bufferSize = Math.min(chunkSize, inputStream.available())
+          val buffer = new Array[Byte](bufferSize)
+          val bytesRead = inputStream.read(buffer)
+
+          if (bytesRead == -1) {
+            closeStream()
+            throw new NoSuchElementException("End of stream reached")
+          } else if (bytesRead < buffer.length) {
+            closeStream()
+            buffer.take(bytesRead)
+          } else {
+            buffer
+          }
+        } catch {
+          case e: IOException =>
+            closeStream()
+            throw new RuntimeException(s"Error reading from stream: ${e.getMessage}", e)
+        }
+      }
+
+      private def closeStream(): Unit = {
+        if (!isClosed) {
+          try {
+            inputStream.close()
+          } catch {
+            case e: IOException =>
+              logger.error(s"Error closing stream: ${e.getMessage}")
+          } finally {
+            isClosed = true
+          }
         }
       }
     }
-
   }
 
   //结构化文件分批传输
@@ -214,5 +300,70 @@ object DataUtils extends Logging{
     arrowRoot.setRowCount(i)
     val unloader = new VectorUnloader(arrowRoot)
     unloader.getRecordBatch
+  }
+
+  case class ExcelResult(schema: StructType, rows: Iterator[List[Any]])
+
+  /** 推断 schema，只读取前两行 */
+  def inferExcelSchema(path: String): StructType = {
+    val workbook = new XSSFWorkbook(new FileInputStream(path))
+    val sheet = workbook.getSheetAt(0)
+    val rowIter = sheet.iterator().asScala
+
+    if (!rowIter.hasNext) throw new RuntimeException("Empty Excel file")
+    val headerRow = rowIter.next()
+    val headers = headerRow.cellIterator().asScala.map(_.toString.trim).toList
+
+    if (!rowIter.hasNext) throw new RuntimeException("No data row to infer types")
+    val typeSampleRow = rowIter.next()
+    val inferredTypes = typeSampleRow.cellIterator().asScala.toList.map(detectType)
+
+    val finalTypes = headers.zipAll(inferredTypes, "", ValueType.StringType).map(_._2)
+    StructType.fromSeq(headers.zip(finalTypes).map { case (n, t) => Column(n, t) })
+  }
+
+  /** 按 schema 读取所有数据为 Iterator[List[Any]] */
+  def readExcelRows(path: String, schema: StructType): java.util.Iterator[java.util.List[Any]] = {
+    val workbook = new XSSFWorkbook(new FileInputStream(path))
+    val sheet = workbook.getSheetAt(0)
+    val rowIter = sheet.iterator().asScala
+
+    if (!rowIter.hasNext) throw new RuntimeException("Empty Excel file")
+    rowIter.next() // 跳过 header 行
+
+    val headers = schema.columnNames
+    val types = schema.columns.map(_.colType)
+
+    rowIter.map { row =>
+      headers.indices.map { idx =>
+        val cell = row.getCell(idx, org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+        if (cell == null) "" else readCell(cell, types(idx))
+      }.toList.asJava
+    }.asJava
+  }
+
+  private def detectType(cell: Cell): ValueType = {
+    cell.getCellType match {
+      case CellType.NUMERIC =>
+        if (DateUtil.isCellDateFormatted(cell)) ValueType.LongType
+        else {
+          val v = cell.getNumericCellValue
+          if (v == v.toInt) ValueType.IntType
+          else if (v == v.toLong) ValueType.LongType
+          else ValueType.DoubleType
+        }
+      case CellType.BOOLEAN => ValueType.BooleanType
+      case _ => ValueType.StringType
+    }
+  }
+
+  private def readCell(cell: Cell, valueType: ValueType): Any = {
+    valueType match {
+      case ValueType.IntType     => cell.getNumericCellValue.toInt
+      case ValueType.LongType    => cell.getNumericCellValue.toLong
+      case ValueType.DoubleType  => cell.getNumericCellValue
+      case ValueType.BooleanType => cell.getBooleanCellValue
+      case _                     => cell.toString.trim
+    }
   }
 }

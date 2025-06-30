@@ -1,5 +1,7 @@
 package link.rdcn.struct
 
+import scala.collection.JavaConverters.asScalaBufferConverter
+
 /**
  * @Author renhao
  * @Description:
@@ -56,6 +58,10 @@ object Row {
   def fromArray(arr: Array[Any]): Row = new Row(arr.toSeq)
 
   def fromTuple(tuple: Product): Row = fromSeq(tuple.productIterator.toSeq)
+
+  def fromJavaList(list: java.util.List[Object]): Unit = {
+    new Row(list.asScala)
+  }
 
   /** 空行 */
   val empty: Row = new Row(Seq.empty)
