@@ -2,34 +2,24 @@ package link.rdcn
 
 
 import link.rdcn.ClientTest._
+import link.rdcn.ProviderTest.getOutputDir
 import link.rdcn.client.FairdClient
-import link.rdcn.provider.DataProvider
+import link.rdcn.provider.{DataProvider, DataProviderImplByDataSetList}
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType, StringType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, Row, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, TokenAuth, UsernamePassword}
-import link.rdcn.util.{DataGenerator, DataUtils}
+import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import link.rdcn.util.DataGenerator.getOutputDir
 import link.rdcn.user.exception._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 
-import java.io.{PrintWriter, StringWriter}
-import java.nio.file.{Files, Path, Paths}
-import scala.util.Random
-import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters.{seqAsJavaListConverter, setAsJavaSetConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
-import scala.io.Source
 
 /**
  * @Author renhao
@@ -68,9 +58,9 @@ object ClientTest {
       if (credentials.isInstanceOf[UsernamePassword]) {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
         if (usernamePassword.getUsername == adminUsername && usernamePassword.getPassword == adminPassword) {
-          new AuthenticatedUser(adminUsername, Set("admin").asJava, Set.empty.asJava)
+          new AuthenticatedUser(adminUsername, Set("admin").asJava, Set.empty[String].asJava)
         } else if (usernamePassword.getUsername == userUsername && usernamePassword.getPassword == userPassword) {
-          new AuthenticatedUser(userUsername, Set("user").asJava, Set.empty)
+          new AuthenticatedUser(userUsername, Set("user").asJava, Set.empty[String].asJava)
         }
         else if (usernamePassword.getUsername != "admin") {
           throw new UserNotFoundException() {}
@@ -91,18 +81,12 @@ object ClientTest {
     }
 
   }
-  val dataProvider = new DataProvider() {
-
-    val authProvider: AuthProvider = authprovider
-
-    override def setDataSets: java.util.List[DataSet] = {
-      List(dataSetCsv, dataSetBin).asJava
-    }
-
+  val dataProvider = new DataProviderImplByDataSetList(){
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv,dataSetBin)
   }
 
 
-  val producer = new FlightProducerImpl(allocator, location, dataProvider)
+  val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
   val flightServer = FlightServer.builder(allocator, location, producer).build()
   lazy val dc = FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, adminPassword)
 

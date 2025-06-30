@@ -164,8 +164,8 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
       var cachedChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
-      var cachedName: String = currentSeq(1).asInstanceOf[String]
-      var currentName: String = currentSeq(1).asInstanceOf[String]
+      var cachedName: String = currentSeq(0).asInstanceOf[String]
+      var currentName: String = currentSeq(0).asInstanceOf[String]
       new Iterator[Row] {
         override def hasNext: Boolean = flatIter.hasNext || cachedChunk.nonEmpty
 
@@ -180,7 +180,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {
                   val nextSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
-                  val nextName: String = nextSeq(1).asInstanceOf[String]
+                  val nextName: String = nextSeq(0).asInstanceOf[String]
                   val nextChunk: Array[Byte] = nextSeq.last.asInstanceOf[Array[Byte]]
                   if (nextName != currentName) {
                     // index 变化，结束当前块
@@ -240,7 +240,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
             }
           }
-          Row(currentSeq.init:+new Blob(blobIter,currentSeq(1).asInstanceOf[String]):_*)
+          Row(currentSeq.init:+new Blob(blobIter,currentSeq(0).asInstanceOf[String]):_*)
           //          Row(iter.next())
         }
       }

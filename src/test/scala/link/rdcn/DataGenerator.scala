@@ -1,4 +1,4 @@
-package link.rdcn.util
+package link.rdcn
 
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
