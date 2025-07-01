@@ -1,8 +1,9 @@
-import link.rdcn.ConfigBridge;
-import link.rdcn.ConfigLoader;
+package link.rdcn;
+
 import link.rdcn.provider.DataProvider;
 import link.rdcn.provider.DataStreamSource;
 import link.rdcn.provider.DataStreamSourceFactory;
+import link.rdcn.server.FairdServer;
 import link.rdcn.server.FlightProducerImpl;
 import link.rdcn.struct.*;
 import link.rdcn.user.AuthProvider;
@@ -61,7 +62,7 @@ public class JProviderTest {
         }
 
         // 创建AuthProvider的实现类，用于处理用户认证和授权逻辑
-        AuthProvider au = new AuthProvider() {
+        AuthProvider authProvider = new AuthProvider() {
             /**
              * 使用提供的凭证进行用户身份验证
              *
@@ -155,6 +156,22 @@ public class JProviderTest {
              * 对于其他文件类型，Row的每列应与Schema一一对应
              * DataStreamSource类提供将数据处理为Iterator[Row]的方式，Provider也需要实现此类
              * 此处示例为通过Name、Schema、文件类型（csv，json，bin...）获得DataStreamSource
+             *
+             * DataStreamSource的实现类，用于流式提供DataFrame
+             * process方法产生用于传输DataFrame的迭代器（此处使用Flight协议作为示例）
+             * createDataFrame方法用于组装DataFrame对象，实例中包含schema和迭代器作为示例
+             * DataStreamSource dataStreamSource = new DataStreamSource() {
+             *             @Override
+             *             public Iterator<ArrowRecordBatch> process(Iterator<Row> stream, VectorSchemaRoot root, int batchSize) {
+             *                 return null;
+             *             }
+             *
+             *             @Override
+             *             public DataFrame createDataFrame() {
+             *                 return null;
+             *             }
+             *         };
+             *
              * @param dataFrameName DataFrame的名称
              * @return DataStreamSource
              */
@@ -203,47 +220,14 @@ public class JProviderTest {
             }
         };
 
-        /**
-         * DataStreamSource的实现类，用于流式提供DataFrame
-         * process方法产生用于传输DataFrame的迭代器（此处使用Flight协议作为示例）
-         * createDataFrame方法用于组装DataFrame对象，实例中包含schema和迭代器作为示例
-         */
-        DataStreamSource dataStreamSource = new DataStreamSource() {
-            @Override
-            public Iterator<ArrowRecordBatch> process(Iterator<Row> stream, VectorSchemaRoot root, int batchSize) {
-                return null;
-            }
+        //设置一个路径存放faird相关外部文件，其中faird.conf 存放到 $fairdHome/conf 路径下
+        String fairdHome = "./";
+        FairdServer fairdServer = new FairdServer(dataProvider, authProvider, fairdHome);
 
-            @Override
-            public DataFrame createDataFrame() {
-                return null;
-            }
-        };
-
-        FlightProducerImpl producer = new FlightProducerImpl(allocator, location, dataProvider, au);
-
-        try {
-            System.out.println(io.netty.buffer.PooledByteBufAllocator.class
-                    .getProtectionDomain()
-                    .getCodeSource()
-                    .getLocation());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            System.out.println(cfjd.io.netty.buffer.PooledByteBufAllocator.class
-                    .getProtectionDomain()
-                    .getCodeSource()
-                    .getLocation());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        FlightServer flightServer = FlightServer.builder(allocator, location, producer).build();
-        flightServer.start();
-        System.out.println("启动666");
-        flightServer.awaitTermination();
+        //启动faird服务
+        fairdServer.start();
+        //关闭faird服务
+        fairdServer.close();
     }
 
 }
