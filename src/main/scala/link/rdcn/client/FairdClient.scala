@@ -1,6 +1,6 @@
 package link.rdcn.client
 
-import link.rdcn.user.UsernamePassword
+import link.rdcn.user.{Credentials, UsernamePassword}
 
 import java.nio.charset.StandardCharsets
 
@@ -36,11 +36,10 @@ private object DacpUriParser {
 class FairdClient private (
                             url: String,
                             port: Int,
-                            user: String = null,
-                            password: String = null
+                            credentials: Credentials = Credentials.ANONYMOUS
                           ) {
   private val protocolClient = new ArrowFlightProtocolClient(url, port)
-  protocolClient.login(new UsernamePassword(user, password))
+  protocolClient.login(credentials)
 
   def open(dataFrameName: String): RemoteDataFrameImpl =
     RemoteDataFrameImpl(dataFrameName, List.empty, protocolClient)
@@ -59,18 +58,11 @@ class FairdClient private (
 
 
 object FairdClient {
-  def connect(url: String): FairdClient =
-    DacpUriParser.parse(url) match {
-      case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port)
-      case Left(err) =>
-        throw new IllegalArgumentException(s"Invalid DACP URL: $err")
-    }
 
-  def connect(url: String, user: String, password: String): FairdClient =
+  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient =
     DacpUriParser.parse(url) match {
       case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port, user, password)
+        new FairdClient(parsed.host, parsed.port, credentials)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
