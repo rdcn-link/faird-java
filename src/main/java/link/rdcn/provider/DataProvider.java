@@ -14,9 +14,9 @@ public interface DataProvider {
 
     List<String> listDataSetNames();
 
-    void getDataSetMetaData(String dataSetName, org.apache.jena.rdf.model.Model rdfModel);
+    void getDataSetMetaData(String dataSetId, org.apache.jena.rdf.model.Model rdfModel);
 
-    List<String> listDataFrameNames(String dataSetName);
+    List<String> listDataFrameNames(String dataSetId);  // /mnt/a.csv
 
     DataStreamSource getDataFrameSource(String dataFrameName);
 
