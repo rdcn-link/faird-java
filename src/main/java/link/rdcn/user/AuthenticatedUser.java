@@ -6,6 +6,7 @@ package link.rdcn.user;
  * @Data 2025/6/24 11:02
  * @Modified By:
  */
-public interface AuthenticatedUser {
 
+//保存用户登录状态的身份凭证
+public interface AuthenticatedUser {
 }

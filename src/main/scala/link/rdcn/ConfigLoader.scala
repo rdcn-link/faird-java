@@ -16,20 +16,36 @@ import org.apache.logging.log4j.core.config.Configurator
  * @Modified By:
  */
 
+import java.io.{FileInputStream, InputStreamReader}
+import java.util.Properties
+import org.apache.logging.log4j.{Level, LogManager}
+import org.apache.logging.log4j.core.config.{Configurator}
+import org.apache.logging.log4j.core.config.builder.api.{ConfigurationBuilder, ConfigurationBuilderFactory}
+import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
+
 object ConfigLoader {
 
-  val props = loadProperties()
-  val fairdConfig =  loadFairdConfig(props)
-  initLog4j(props)
+  @volatile private var initialized = false
+  private var props: Properties = _
+  var fairdConfig: FairdConfig = _
 
-  def loadProperties(): Properties = {
+  def init(configFilePath: String): Unit = synchronized {
+    if (!initialized) {
+      props = loadProperties(configFilePath)
+      fairdConfig = loadFairdConfig(props)
+      initLog4j(props)
+      initialized = true
+    }
+  }
+
+  private def loadProperties(path: String): Properties = {
     val props = new Properties()
-    val fis = new java.io.InputStreamReader(getClass.getClassLoader.getResourceAsStream("faird.conf"), "UTF-8")
+    val fis = new InputStreamReader(new FileInputStream(path), "UTF-8")
     try props.load(fis) finally fis.close()
     props
   }
 
-  def loadFairdConfig(props: Properties): FairdConfig = {
+  private def loadFairdConfig(props: Properties): FairdConfig = {
     val config = new FairdConfig
     config.setHostName(props.getProperty("faird.hostName"))
     config.setHostTitle(props.getProperty("faird.hostTitle"))
@@ -40,7 +56,7 @@ object ConfigLoader {
     config
   }
 
-  def initLog4j(props: Properties): Unit = {
+  private def initLog4j(props: Properties): Unit = {
     val builder: ConfigurationBuilder[BuiltConfiguration] = ConfigurationBuilderFactory.newConfigurationBuilder()
 
     builder.setStatusLevel(Level.WARN)
