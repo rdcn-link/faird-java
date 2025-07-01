@@ -2,6 +2,7 @@ package link.rdcn
 
 import link.rdcn.TestBase._
 import link.rdcn.client.FairdClient
+import link.rdcn.user.UsernamePassword
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.{BeforeEach, Test}
 
@@ -19,7 +20,7 @@ class ServerUnavailableTest {
 
     val exception = assertThrows(
       classOf[Exception],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, adminPassword)
+      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
 
     )
     assertEquals("server is not running!", exception.getMessage)

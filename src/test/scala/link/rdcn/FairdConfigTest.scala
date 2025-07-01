@@ -1,6 +1,7 @@
 package link.rdcn
 
 import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
+import link.rdcn.FairdConfigTest.getResourcePath
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.junit.jupiter.api.Test
 
@@ -11,14 +12,22 @@ import org.junit.jupiter.api.Test
  * @Data 2025/6/17 13:39
  * @Modified By:
  */
+object FairdConfigTest  {
+  def getResourcePath(resourceName: String): String = {
+    val url = Option(getClass.getClassLoader.getResource(resourceName))
+      .orElse(Option(getClass.getResource(resourceName)))
+      .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
+    url.getPath
+  }
+}
+
 class FairdConfigTest {
 
   @Test
   def m1(): Unit = {
-    val props = loadProperties()
+    ConfigLoader.init(getResourcePath("faird.conf"))
+    val config = ConfigBridge.getConfig
 
-    val config = loadFairdConfig(props)
-    initLog4j(props)
 
     val logger: Logger = LogManager.getLogger(getClass)
 

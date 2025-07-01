@@ -2,6 +2,7 @@ package link.rdcn
 
 import link.rdcn.TestBase._
 import link.rdcn.client.FairdClient
+import link.rdcn.user.UsernamePassword
 import org.apache.arrow.flight.FlightRuntimeException
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
@@ -27,7 +28,7 @@ class ClientTest extends TestBase {
     // 模拟非admin用户的情况进行测试
     val exception = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", "NotAdmin", adminPassword)
+      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword("NotAdmin", adminPassword))
     )
     assertEquals("用户不存在!", exception.getMessage)
   }
@@ -37,7 +38,7 @@ class ClientTest extends TestBase {
     // 模拟非admin用户的情况进行测试
     val exception = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, "wrongPassword")
+      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
     )
     assertEquals("无效的用户名/密码!", exception.getMessage)
   }
@@ -45,7 +46,7 @@ class ClientTest extends TestBase {
 
   @Test()
   def testAuthorizeFalse(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:3101", userUsername, userPassword)
+    val dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(userUsername, userPassword))
     val df = dc.open(csvDir + "\\data_1.csv")
     // 假设没有权限
     val exception = assertThrows(
@@ -59,21 +60,11 @@ class ClientTest extends TestBase {
   @Test
   def testAnonymousAccessDataFrameFalse(): Unit = {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101")
-    val df = dc.open(csvDir + "\\data_1.csv")
-
-    try{
-      df.foreach(_ => {})
-    } catch {
-      case e: Exception =>{
-        println(e.getMessage)
-        assertEquals("User not logged in", e.getMessage)
-      }
-
-    }
-//    val exception = assertThrows(
-//      classOf[FlightRuntimeException],
-//      () => df.foreach(_ => {})
-//    )
+    val exception = assertThrows(
+      classOf[FlightRuntimeException],
+      () => dc.open(csvDir + "\\data_1.csv")
+    )
+    assertEquals("User not logged in", exception.getMessage)
 
   }
 

@@ -1,6 +1,5 @@
 package link.rdcn
 
-import io.grpc.StatusRuntimeException
 import link.rdcn.client.FairdClient
 import link.rdcn.provider.DataProviderImplByDataSetList
 import link.rdcn.server.FlightProducerImpl
@@ -19,11 +18,14 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll}
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
 import java.io.{BufferedWriter, FileWriter}
+import java.util.UUID
 import scala.collection.JavaConverters.setAsJavaSetConverter
 
 trait TestBase
 
 object TestBase {
+
+  ConfigLoader.init(getResourcePath("faird.conf"))
 
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   val allocator: BufferAllocator = new RootAllocator()
@@ -55,9 +57,19 @@ object TestBase {
   val userUsername = "user"
   val userPassword = "user"
 
+  //权限
+  val permissions = Map(
+    "admin" -> Set("data_1.csv","invalid.csv")
+  )
+
+  //生成Token
+  val genToken = () => UUID.randomUUID().toString
 
 
+  class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
+    def getUserName: String = userName
 
+  }
 
 
   val authprovider = new AuthProvider {
@@ -65,16 +77,16 @@ object TestBase {
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       if (credentials.isInstanceOf[UsernamePassword]) {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
-        if (usernamePassword.getUsername == null && usernamePassword.getPassword == null) {
-//          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
-            throw new UserNotFoundException()
+        if (usernamePassword.userName == null && usernamePassword.password == null) {
+          //          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
+          throw new UserNotFoundException()
         }
-        else if (usernamePassword.getUsername == adminUsername && usernamePassword.getPassword == adminPassword) {
-          new AuthenticatedUser(adminUsername, Set("admin").asJava, Set.empty[String].asJava)
-        } else if (usernamePassword.getUsername == userUsername && usernamePassword.getPassword == userPassword) {
-          new AuthenticatedUser(userUsername, Set("user").asJava, Set.empty[String].asJava)
+        else if (usernamePassword.userName == adminUsername && usernamePassword.password == adminPassword) {
+          new TestAuthenticatedUser(adminUsername, genToken())
+        } else if (usernamePassword.userName == userUsername && usernamePassword.password == userPassword) {
+          new TestAuthenticatedUser(adminUsername, genToken())
         }
-        else if (usernamePassword.getUsername != "admin") {
+        else if (usernamePassword.userName != "admin") {
           throw new UserNotFoundException()
         } else {
           throw new InvalidCredentialsException()
@@ -85,8 +97,11 @@ object TestBase {
     }
 
     override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
-      if (user.getUserId == "admin") true
-      else user.getPermissions.contains(s"$dataFrameName")
+      val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
+      permissions.get(userName) match { // 用 get 避免 NoSuchElementException
+        case Some(allowedFiles) => allowedFiles.contains(dataFrameName)
+        case None => false // 用户不存在或没有权限
+      }
     }
 
   }
@@ -96,12 +111,18 @@ object TestBase {
 
   val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
   val flightServer: FlightServer = FlightServer.builder(allocator, location, producer).build()
-  lazy val dc: FairdClient = FairdClient.connect("dacp://0.0.0.0:3101", adminUsername, adminPassword)
+  lazy val dc: FairdClient = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
 
   @BeforeAll
   def startServer(): Unit = {
     flightServer.start()
     println(s"Server (Location): Listening on port ${flightServer.getPort}")
+  }
+
+  def main(args: Array[String]): Unit = {
+    flightServer.start()
+    println(s"Server (Location): Listening on port ${flightServer.getPort}")
+    flightServer.awaitTermination()
   }
 
   @AfterAll
@@ -122,6 +143,13 @@ object TestBase {
     val outDir = baseDir.resolve("target").resolve(subdir)
     Files.createDirectories(outDir)
     outDir
+  }
+
+  def getResourcePath(resourceName: String): String = {
+    val url = Option(getClass.getClassLoader.getResource(resourceName))
+      .orElse(Option(getClass.getResource(resourceName)))
+      .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
+    url.getPath
   }
 
   // 生成所有测试数据
