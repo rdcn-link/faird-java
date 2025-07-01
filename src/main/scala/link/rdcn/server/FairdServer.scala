@@ -2,7 +2,6 @@ package link.rdcn.server
 
 import io.grpc.StatusRuntimeException
 import link.rdcn.client.{DFOperation, RemoteDataFrameImpl}
-import link.rdcn.util.DataUtils
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
@@ -14,7 +13,6 @@ import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
 import java.nio.charset.StandardCharsets
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -26,26 +24,27 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
  * @Modified By:
  */
 
-//object FairdServer extends App with Logging {
-//  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-//  val allocator: BufferAllocator = new RootAllocator()
-//
-//  try {
-//    val producer = new FlightProducerImpl(allocator, location, )
-//    val flightServer = FlightServer.builder(allocator, location, producer).build()
-//
-//    flightServer.start()
-//    Runtime.getRuntime.addShutdownHook(new Thread() {
-//      override def run(): Unit = {
-//        flightServer.close()
-//        producer.close()
-//      }
-//    })
-//    flightServer.awaitTermination()
-//  } catch {
-//    case e: Exception => e.printStackTrace()
-//  }
-//}
+class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdHome: String){
+  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+  val allocator: BufferAllocator = new RootAllocator()
+
+  val producer = new FlightProducerImpl(allocator, location, dataProvider, authProvider)
+  val flightServer = FlightServer.builder(allocator, location, producer).build()
+  def start(): Unit = {
+    ConfigLoader.init(s"$fairdHome/conf/faird.conf")
+    flightServer.start()
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        flightServer.close()
+        producer.close()
+      }
+    })
+    flightServer.awaitTermination()
+  }
+  def close(): Unit = {
+    flightServer.close()
+  }
+}
 
 class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataProvider: DataProvider, authProvider: AuthProvider) extends NoOpFlightProducer with Logging {
 
