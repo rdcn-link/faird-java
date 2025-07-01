@@ -13,4 +13,5 @@ public class TokenExpiredException extends AuthException {
     public TokenExpiredException() {
         super(status);
     }
+
 }

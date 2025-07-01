@@ -107,7 +107,11 @@ object TestBase {
   }
   val dataProvider: DataProviderImplByDataSetList = new DataProviderImplByDataSetList() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
-  }
+    override val dataFramePaths: (String => String) = (relativePath: String) => {
+        getOutputDir("test_output/bin").resolve(relativePath).toString
+    }
+
+    }
 
   val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
   val flightServer: FlightServer = FlightServer.builder(allocator, location, producer).build()

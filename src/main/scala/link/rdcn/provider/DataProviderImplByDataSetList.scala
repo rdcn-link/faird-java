@@ -16,6 +16,7 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
 
 abstract class DataProviderImplByDataSetList extends DataProvider{
    val dataSetsScalaList: List[DataSet]
+   val dataFramePaths: (String => String)
 
   def listDataSetNames(): java.util.List[String] = {
     dataSetsScalaList.map(_.dataSetName).asJava

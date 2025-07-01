@@ -1,5 +1,12 @@
 package link.rdcn.user.exception;
 
+import com.google.rpc.Code;
+import com.google.rpc.Status;
+import io.grpc.Metadata;
+import io.grpc.protobuf.StatusProto;
+
+import static link.rdcn.user.exception.ErrorCode.USER_NOT_FOUND;
+
 /**
  * @Author renhao
  * @Description:
@@ -7,10 +14,18 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class InvalidCredentialsException extends AuthException {
-    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
-            .withDescription("无效的用户名/密码!");
+    private static final io.grpc.Status status = io.grpc.Status.INTERNAL
+            .withDescription("User not found");
+    private static final Metadata metadata = new Metadata();
+
+    static {
+        metadata.put(
+                Metadata.Key.of("error-code", Metadata.ASCII_STRING_MARSHALLER),
+                String.valueOf(ErrorCode.USER_NOT_FOUND.getCode())
+        );
+    }
 
     public InvalidCredentialsException() {
-        super(status);
+        super(status, metadata);
     }
 }

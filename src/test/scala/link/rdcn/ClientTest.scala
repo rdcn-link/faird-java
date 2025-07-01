@@ -3,6 +3,7 @@ package link.rdcn
 import link.rdcn.TestBase._
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword
+import link.rdcn.user.exception.{AuthException, ErrorCode}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
@@ -40,7 +41,9 @@ class ClientTest extends TestBase {
       classOf[FlightRuntimeException],
       () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
     )
-    assertEquals("无效的用户名/密码!", exception.getMessage)
+//    assertEquals("无效的用户名/密码!", exception.getMessage)
+
+    assertEquals(String.valueOf(ErrorCode.USER_NOT_FOUND.getCode),AuthException.getErrorCode(exception))
   }
 
 
