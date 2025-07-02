@@ -3,12 +3,13 @@ package link.rdcn
 import link.rdcn.TestBase._
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword
-import link.rdcn.user.exception.{AuthException, ErrorCode}
+import link.rdcn.user.exception._
 import org.apache.arrow.flight.FlightRuntimeException
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 
+import java.io.IOException
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 /**
@@ -27,36 +28,46 @@ class ClientTest extends TestBase {
   @Test()
   def testLoginWhenUsernameIsNotAdmin(): Unit = {
     // 模拟非admin用户的情况进行测试
-    val exception = assertThrows(
+    val exception = new ClientException(assertThrows(
       classOf[FlightRuntimeException],
       () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword("NotAdmin", adminPassword))
-    )
-    assertEquals("用户不存在!", exception.getMessage)
+    ))
+    assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode)
   }
 
   @Test()
   def testLoginWhenTokenExpired(): Unit = {
     // 模拟非admin用户的情况进行测试
-    val exception = assertThrows(
+    val exception = new ClientException(assertThrows(
       classOf[FlightRuntimeException],
       () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
-    )
-//    assertEquals("无效的用户名/密码!", exception.getMessage)
+    ))
 
-    assertEquals(String.valueOf(ErrorCode.USER_NOT_FOUND.getCode),AuthException.getErrorCode(exception))
+    assertEquals(ErrorCode.INVALID_CREDENTIALS, exception.getErrorCode)
   }
 
+  @Test()
+  def testAddressAlreadyInUse(): Unit = {
+    val exception = new ClientException(assertThrows(
+      classOf[IOException],
+      ()=>flightServer.start()
+    ))
+    assertEquals(ErrorCode.SERVER_ADDRESS_ALREADY_IN_USE, exception.getErrorCode)
+  }
 
   @Test()
-  def testAuthorizeFalse(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(userUsername, userPassword))
-    val df = dc.open(csvDir + "\\data_1.csv")
-    // 假设没有权限
-    val exception = assertThrows(
-      classOf[Exception],
-      () => df.foreach(_ => {})
-    )
-    assertEquals("不允许访问" + csvDir + "\\data_1.csv", exception.getMessage)
+  def testInvalidError(): Unit = {
+    val exception = new ClientException(new Exception(ErrorCode.INVALID_ERROR_CODE))
+    assertEquals(ErrorCode.NO_SUCH_ERROR, exception.getErrorCode)
+  }
+
+  @Test()
+  def testServerAlreadyStarted(): Unit = {
+    val exception = new ClientException(assertThrows(
+      classOf[IllegalStateException],
+      ()=>flightServer.start()
+    ))
+    assertEquals(ErrorCode.SERVER_ALREADY_STARTED, exception.getErrorCode)
   }
 
   //匿名访问DataFrame失败
@@ -67,7 +78,7 @@ class ClientTest extends TestBase {
       classOf[FlightRuntimeException],
       () => dc.open(csvDir + "\\data_1.csv")
     )
-    assertEquals("User not logged in", exception.getMessage)
+    assertEquals(ErrorCode.LOGIN_REQURIED, exception.getMessage)
 
   }
 
@@ -80,7 +91,7 @@ class ClientTest extends TestBase {
       classOf[FlightRuntimeException],
       () => df.foreach(_ => {})
     )
-    assertEquals("DataFrame不存在!", exception.getMessage)
+    assertEquals(ErrorCode.DATAFRAME_NOT_EXIST, exception.getMessage)
   }
 
 

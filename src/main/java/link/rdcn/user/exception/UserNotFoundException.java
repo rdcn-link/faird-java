@@ -1,5 +1,7 @@
 package link.rdcn.user.exception;
 
+import io.grpc.Metadata;
+
 /**
  * @Author renhao
  * @Description:
@@ -7,10 +9,17 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class UserNotFoundException extends AuthException {
-    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
-            .withDescription("用户不存在!");
+    private static final io.grpc.Status status = io.grpc.Status.INTERNAL;
+    private static final Metadata metadata = new Metadata();
+
+    static {
+        metadata.put(
+                Metadata.Key.of("error-code", Metadata.ASCII_STRING_MARSHALLER),
+                String.valueOf(ErrorCode.USER_NOT_FOUND.getCode())
+        );
+    }
 
     public UserNotFoundException() {
-        super(status);
+        super(status, metadata);
     }
 }

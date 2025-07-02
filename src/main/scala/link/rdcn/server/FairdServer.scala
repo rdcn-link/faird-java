@@ -80,7 +80,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
                throw new Exception(s"The user $userToken is not logged in")
               }
               if(! authProvider.authorize(authenticatedUser.get, dfName))
-                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"不允许访问$dfName"))
+                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"Cannot access $dfName"))
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
                 if (bytes == null) null else

@@ -14,14 +14,13 @@ import static link.rdcn.user.exception.ErrorCode.USER_NOT_FOUND;
  * @Modified By:
  */
 public class InvalidCredentialsException extends AuthException {
-    private static final io.grpc.Status status = io.grpc.Status.INTERNAL
-            .withDescription("User not found");
+    private static final io.grpc.Status status = io.grpc.Status.INTERNAL;
     private static final Metadata metadata = new Metadata();
 
     static {
         metadata.put(
                 Metadata.Key.of("error-code", Metadata.ASCII_STRING_MARSHALLER),
-                String.valueOf(ErrorCode.USER_NOT_FOUND.getCode())
+                String.valueOf(ErrorCode.INVALID_CREDENTIALS.getCode())
         );
     }
 

@@ -59,7 +59,7 @@ object TestBase {
 
   //权限
   val permissions = Map(
-    "admin" -> Set("data_1.csv","invalid.csv")
+    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv")
   )
 
   //生成Token

@@ -1,5 +1,8 @@
 package link.rdcn.user.exception;
 
+import io.grpc.Metadata;
+
+
 /**
  * @Author renhao
  * @Description:
@@ -7,11 +10,18 @@ package link.rdcn.user.exception;
  * @Modified By:
  */
 public class TokenExpiredException extends AuthException {
-    private static final io.grpc.Status status = io.grpc.Status.NOT_FOUND
-            .withDescription("Token过期!");
+    private static final io.grpc.Status status = io.grpc.Status.INTERNAL;
+    private static final Metadata metadata = new Metadata();
+
+    static {
+        metadata.put(
+                Metadata.Key.of("error-code", Metadata.ASCII_STRING_MARSHALLER),
+                String.valueOf(ErrorCode.TOKEN_EXPIRED.getCode())
+        );
+    }
 
     public TokenExpiredException() {
-        super(status);
+        super(status, metadata);
     }
 
 }

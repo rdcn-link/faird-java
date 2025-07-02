@@ -59,27 +59,27 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
   def listDataSetNames(): Seq[String] = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path("listDataSetNames"))
-    getListStrByFlightInfo(flightInfo)
+    getListStringByFlightInfo(flightInfo)
   }
   def listDataFrameNames(dsName: String): Seq[String] = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"listDataFrameNames.$dsName"))
-    getListStrByFlightInfo(flightInfo)
+    getListStringByFlightInfo(flightInfo)
   }
 
   def getSchema(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
-    getStrByFlightInfo(flightInfo)
+    getStringByFlightInfo(flightInfo)
   }
 
   override def getDataSetMetaData(dataSetName: String): String = {
 //    getDataSetMetaData
     val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
-    getStrByFlightInfo(flightInfo)
+    getStringByFlightInfo(flightInfo)
   }
 
   def getSchemaURI(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchemaURI.$dataFrameName"))
-    getStrByFlightInfo(flightInfo)
+    getStringByFlightInfo(flightInfo)
   }
 
   def close(): Unit = {
@@ -249,7 +249,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
     }
   }
 
-  private def getListStrByFlightInfo(flightInfo: FlightInfo): Seq[String] = {
+  private def getListStringByFlightInfo(flightInfo: FlightInfo): Seq[String] = {
     val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
     if(flightStream.next()){
       val vectorSchemaRootReceived = flightStream.getRoot
@@ -261,17 +261,17 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
         }).head
         rowMap
       })
-    }else Seq.empty
+    }else null
   }
 
-  private def getStrByFlightInfo(flightInfo: FlightInfo): String = {
+  private def getStringByFlightInfo(flightInfo: FlightInfo): String = {
       val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
       if(flightStream.next()){
         val vectorSchemaRootReceived = flightStream.getRoot
         val rowCount = vectorSchemaRootReceived.getRowCount
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
         fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
-      }else ""
+      }else null
     }
 
 }
