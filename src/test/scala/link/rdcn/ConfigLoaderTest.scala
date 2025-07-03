@@ -2,7 +2,10 @@ package link.rdcn
 
 import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
 import link.rdcn.FairdConfigTest.getResourcePath
+import link.rdcn.util.SharedValue.{allocator, location, producer}
+import org.apache.arrow.flight.{FlightRuntimeException, FlightServer, Location}
 import org.apache.logging.log4j.{LogManager, Logger}
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 
@@ -23,8 +26,19 @@ object FairdConfigTest  {
 
 class FairdConfigTest {
 
+
+  //未加载Config
   @Test
-  def m1(): Unit = {
+  def testConfigNotInit(): Unit = {
+    assertThrows(
+      classOf[NullPointerException],
+      () => Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+    )
+
+  }
+
+  @Test
+  def initTest(): Unit = {
     ConfigLoader.init(getResourcePath("faird.conf"))
     val config = ConfigBridge.getConfig
 
@@ -38,4 +52,6 @@ class FairdConfigTest {
     println("Title: " + config.getHostTitle());
     println("Domain: " + config.getHostDomain());
   }
+
+
 }

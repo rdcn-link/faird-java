@@ -1,19 +1,19 @@
 package link.rdcn
 
+import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
-import link.rdcn.provider.DataProviderImplByDataSetList
 import link.rdcn.server.FlightProducerImpl
+import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, IntType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
-import link.rdcn.user.exception.{InvalidCredentialsException, TokenExpiredException, UserNotFoundException}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, UsernamePassword}
-import link.rdcn.util.DataUtils
+import link.rdcn.util.{DataProviderImplByDataSetList, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.junit.jupiter.api.{AfterAll, BeforeAll}
+import org.junit.jupiter.api.{AfterAll, BeforeAll, TestInstance}
 
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
@@ -21,10 +21,13 @@ import java.io.{BufferedWriter, FileWriter}
 import java.util.UUID
 import scala.collection.JavaConverters.setAsJavaSetConverter
 
-trait TestBase
+trait TestBase {
+
+}
 
 object TestBase {
 
+  ConfigLoader.init(getResourcePath("faird.conf"))
   ConfigLoader.init(getResourcePath("faird.conf"))
 
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
@@ -56,10 +59,11 @@ object TestBase {
   val adminPassword = "admin"
   val userUsername = "user"
   val userPassword = "user"
+  val anonymousUsername = "anonymous"
 
   //权限
   val permissions = Map(
-    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv")
+    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir")
   )
 
   //生成Token
@@ -79,7 +83,7 @@ object TestBase {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
         if (usernamePassword.userName == null && usernamePassword.password == null) {
           //          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
-          throw new UserNotFoundException()
+          throw new AuthException(USER_NOT_FOUND)
         }
         else if (usernamePassword.userName == adminUsername && usernamePassword.password == adminPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
@@ -87,17 +91,19 @@ object TestBase {
           new TestAuthenticatedUser(adminUsername, genToken())
         }
         else if (usernamePassword.userName != "admin") {
-          throw new UserNotFoundException()
+          throw new AuthException(USER_NOT_FOUND)
         } else {
-          throw new InvalidCredentialsException()
+          throw new AuthException(INVALID_CREDENTIALS)
         }
       } else {
-        throw new TokenExpiredException()
+        new TestAuthenticatedUser(anonymousUsername, genToken())
       }
     }
 
     override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
+      if (userName == anonymousUsername)
+        throw new AuthException(USER_NOT_LOGGED_IN)
       permissions.get(userName) match { // 用 get 避免 NoSuchElementException
         case Some(allowedFiles) => allowedFiles.contains(dataFrameName)
         case None => false // 用户不存在或没有权限
@@ -110,33 +116,42 @@ object TestBase {
     override val dataFramePaths: (String => String) = (relativePath: String) => {
         getOutputDir("test_output/bin").resolve(relativePath).toString
     }
-
-    }
+  }
 
   val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
-  val flightServer: FlightServer = FlightServer.builder(allocator, location, producer).build()
+  private var flightServer: Option[FlightServer] = None
   lazy val dc: FairdClient = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+
 
   @BeforeAll
   def startServer(): Unit = {
-    flightServer.start()
-    println(s"Server (Location): Listening on port ${flightServer.getPort}")
-  }
-
-  def main(args: Array[String]): Unit = {
-    flightServer.start()
-    println(s"Server (Location): Listening on port ${flightServer.getPort}")
-    flightServer.awaitTermination()
+      generateTestData()
+      getServer
   }
 
   @AfterAll
-  def stopServer(): Unit = {
-    producer.close()
-    flightServer.shutdown()
-
-    DataUtils.closeAllFileSources()
-    cleanupTestData()
+  def stop(): Unit = {
+      producer.close()
+      stopServer()
+      DataUtils.closeAllFileSources()
+      cleanupTestData()
   }
+
+  def getServer: FlightServer = synchronized {
+    if (flightServer.isEmpty) {
+      val s = FlightServer.builder(allocator, location, producer).build()
+      s.start()
+      println(s"Server (Location): Listening on port ${s.getPort}")
+      flightServer = Some(s)
+    }
+    flightServer.get
+  }
+
+  def stopServer(): Unit = synchronized {
+    flightServer.foreach(_.shutdown())
+    flightServer = None
+  }
+
 
   def genModel: Model = {
     ModelFactory.createDefaultModel()

@@ -1,4 +1,4 @@
-package link.rdcn
+package link.rdcn.util
 
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
@@ -24,6 +24,8 @@ object DataGenerator {
     Files.createDirectories(outDir)
     outDir
   }
+
+
 
   // 生成所有测试数据
   def generateTestData(): Unit = {

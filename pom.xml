@@ -97,6 +97,13 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.beachape/enumeratum -->
+    <dependency>
+      <groupId>com.beachape</groupId>
+      <artifactId>enumeratum_2.12</artifactId>
+      <version>1.9.0</version>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>

@@ -1,6 +1,6 @@
 package link.rdcn.user;
 
-import link.rdcn.user.exception.AuthException;
+import link.rdcn.server.exception.AuthException;
 
 /**
  * @Author renhao

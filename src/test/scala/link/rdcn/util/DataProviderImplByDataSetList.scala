@@ -1,11 +1,11 @@
-package link.rdcn.provider
+package link.rdcn.util
 
 import link.rdcn.ConfigLoader
+import link.rdcn.provider.{ArrowFlightDataStreamSource, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.struct.{DataFrameInfo, DataSet, StructType}
-import link.rdcn.user.AuthProvider
 import org.apache.jena.rdf.model.Model
 
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**
  * @Author renhao
@@ -49,6 +49,7 @@ abstract class DataProviderImplByDataSetList extends DataProvider{
     })
     None
   }
+
 }
 
 

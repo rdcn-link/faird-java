@@ -7,7 +7,8 @@ import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
-import link.rdcn.provider.{DataProvider, DataProviderImplByDataSetList, DataStreamSource}
+import link.rdcn.provider.{DataProvider, DataStreamSource}
+import link.rdcn.server.exception.{AuthException, DataFrameAccessDeniedException, DataFrameNotFoundException}
 import link.rdcn.struct.StructType
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
@@ -80,7 +81,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
                throw new Exception(s"The user $userToken is not logged in")
               }
               if(! authProvider.authorize(authenticatedUser.get, dfName))
-                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"Cannot access $dfName"))
+                throw new DataFrameAccessDeniedException(dfName)
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)
                 if (bytes == null) null else
@@ -214,7 +215,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       val schema =  if (request != null) {
         val dataFrameSchema = dataProvider.getDataFrameSchema(request.dataFrameName)
         if (dataFrameSchema == StructType.empty) {
-          throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription("DataFrame不存在!"))
+          throw new DataFrameNotFoundException(request.dataFrameName)
         }
         else
           convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request.dataFrameName))
