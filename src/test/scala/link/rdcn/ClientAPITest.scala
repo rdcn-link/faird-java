@@ -2,12 +2,10 @@ package link.rdcn
 
 import link.rdcn.TestBase._
 import link.rdcn.util.SharedValue.genModel
-import link.rdcn.util.{DataUtils, ExceptionHandler}
 import org.apache.jena.rdf.model.Model
-import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.{AfterAll, AfterEach, BeforeAll, BeforeEach, Test}
 
-import java.io.IOException
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 /**

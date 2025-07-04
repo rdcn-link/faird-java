@@ -7,6 +7,7 @@ import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, UsernamePas
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
@@ -34,7 +35,7 @@ object SharedValue {
     }
   }
 
-  val emptyDataProvider: DataProviderImplByDataSetList = new DataProviderImplByDataSetList() {
+  val emptyDataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List.empty
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       null
@@ -42,6 +43,7 @@ object SharedValue {
   }
 
   val producer = new FlightProducerImpl(allocator, location, emptyDataProvider, emptyAuthProvider)
+  val configCache = ConfigLoader.fairdConfig
 
 
   def getOutputDir(subdir: String): Path = {
@@ -71,7 +73,6 @@ object SharedValue {
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
-
   }
 
   def genModel: Model = {

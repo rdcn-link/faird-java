@@ -7,12 +7,13 @@ import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, IntType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, UsernamePassword}
-import link.rdcn.util.{DataProviderImplByDataSetList, DataUtils}
+import link.rdcn.util.{DataProviderImpl, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightServer, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.logging.log4j.{LogManager, Logger}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, TestInstance}
 
 import java.io.FileOutputStream
@@ -27,7 +28,6 @@ trait TestBase {
 
 object TestBase {
 
-  ConfigLoader.init(getResourcePath("faird.conf"))
   ConfigLoader.init(getResourcePath("faird.conf"))
 
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
@@ -111,7 +111,7 @@ object TestBase {
     }
 
   }
-  val dataProvider: DataProviderImplByDataSetList = new DataProviderImplByDataSetList() {
+  val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
         getOutputDir("test_output/bin").resolve(relativePath).toString
@@ -121,7 +121,7 @@ object TestBase {
   val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
   private var flightServer: Option[FlightServer] = None
   lazy val dc: FairdClient = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
-
+  val configCache = ConfigLoader.fairdConfig
 
   @BeforeAll
   def startServer(): Unit = {

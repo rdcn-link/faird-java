@@ -14,7 +14,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
  * @Modified By:
  */
 
-abstract class DataProviderImplByDataSetList extends DataProvider{
+abstract class DataProviderImpl extends DataProvider{
    val dataSetsScalaList: List[DataSet]
    val dataFramePaths: (String => String)
 

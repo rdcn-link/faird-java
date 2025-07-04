@@ -19,7 +19,6 @@ class ClientAuthTest extends TestBase {
       () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword("NotAdmin", adminPassword))
     )
 
-
     assertEquals(ErrorCode.USER_NOT_FOUND, ExceptionHandler.getErrorCode(ServerException))
   }
 
@@ -39,7 +38,7 @@ class ClientAuthTest extends TestBase {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101")
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
-      () => dc.open(csvDir + "\\data_1.csv").foreach(_ => ())
+      () => dc.open(csvDir + "/data_1.csv").foreach(_ => ())
     )
     assertEquals(ErrorCode.USER_NOT_LOGGED_IN, ExceptionHandler.getErrorCode(serverException))
   }
