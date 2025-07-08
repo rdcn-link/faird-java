@@ -66,7 +66,8 @@ class DataFrameOperationTest extends TestBase {
   @Test
   def testDataFrameForEach(): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.mkString("\n") + "\n"
-    val df = dc.open(csvDir + "\\data_1.csv")
+//    val df = dc.open(csvDir + "\\data_1.csv")
+    val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     df.foreach { row =>
@@ -82,7 +83,7 @@ class DataFrameOperationTest extends TestBase {
   @ValueSource(ints = Array(10))
   def testDataFrameLimit(num: Int): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.take(num).mkString("\n") + "\n"
-    val df = dc.open(csvDir + "\\data_1.csv")
+    val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     df.limit(num).foreach { row =>
@@ -98,7 +99,7 @@ class DataFrameOperationTest extends TestBase {
   @ValueSource(ints = Array(2))
   def testDataFrameFilter(id: Int): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq(id) + "\n"
-    val df = dc.open(csvDir + "\\data_1.csv")
+    val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     val rowFilter: Row => Boolean = (row: Row) => row.getAs[Int](0).getOrElse(-1) == id
@@ -124,7 +125,7 @@ class DataFrameOperationTest extends TestBase {
         s"$id,${cols.tail.mkString}" // 拼接回剩余列
       }
       .mkString("\n") + "\n"
-    val df = dc.open(csvDir + "\\data_1.csv")
+    val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     val rowMapper: Row => Row = row => Row(row.getAs[Int](0).getOrElse(-1) + 1, row.get(1))

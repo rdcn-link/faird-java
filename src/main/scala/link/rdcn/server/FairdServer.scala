@@ -80,7 +80,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
               if(authenticatedUser.isEmpty){
                throw new Exception(s"The user $userToken is not logged in")
               }
-              if(! authProvider.authorize(authenticatedUser.get, dfName))
+              if(! authProvider.checkPermission(authenticatedUser.get, dfName))
                 throw new DataFrameAccessDeniedException(dfName)
               val dfOperations: List[DFOperation] = List.range(0, rowCount).map(index => {
                 val bytes = root.getFieldVectors.get(2).asInstanceOf[VarBinaryVector].get(index)

@@ -30,7 +30,7 @@ object SharedValue {
       null
     }
 
-    override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String): Boolean = {
       true
     }
   }

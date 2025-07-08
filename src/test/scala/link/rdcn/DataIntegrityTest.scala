@@ -20,10 +20,9 @@ class DataIntegrityTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(1))
   def readBinaryTest(num: Int): Unit = {
-    val df = dc.open(baseDir + "\\bin")
-    val dataFrameName = binDir.resolve(s"binary_data_$num.bin")
-    val attrs = Files.readAttributes(dataFrameName, classOf[BasicFileAttributes])
-    val file = dataFrameName.toFile
+    val absolutePath = binDir.resolve(s"binary_data_$num.bin")
+    val attrs = Files.readAttributes(absolutePath, classOf[BasicFileAttributes])
+    val file = absolutePath.toFile
     val expectedRow: Row = {
       val temp = (
         file.getName,                            // name: String
@@ -42,7 +41,7 @@ class DataIntegrityTest extends TestBase {
     val expectedModifiedTime = expectedRow.getAs[Long](4).getOrElse(null)
     val expectedLastAccessTime = expectedRow.getAs[Long](5).getOrElse(null)
 
-
+    val df = dc.open("/bin")
     df.limit(num).foreach(
       row => {
         println(row)
@@ -64,7 +63,7 @@ class DataIntegrityTest extends TestBase {
         assertEquals(expectedLastAccessTime, lastAccessTime)
       }
     )
-    assertTrue(isFolderContentsMatch(baseDir + "\\bin", outputDir), "Binary file mismatch")
+    assertTrue(isFolderContentsMatch(baseDir.resolve("bin").toString, outputDir), "Binary file mismatch")
   }
 
 }

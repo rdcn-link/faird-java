@@ -3,7 +3,6 @@ package link.rdcn.struct
 import link.rdcn.ConfigLoader
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.vocabulary.RDF
-
 /**
  * @Author renhao
  * @Description:
@@ -12,10 +11,10 @@ import org.apache.jena.vocabulary.RDF
  */
 
 case class DataFrameInfo(
-                        name: String,
-                        inputSource: InputSource,
-                        schema: StructType
-                        ){
+                          name: String,
+                          inputSource: InputSource,
+                          schema: StructType
+                        ) {
   def getSchemaUrl(url: String): String = url + name
 }
 
@@ -26,9 +25,6 @@ case class DataSet(
                   ) {
   /** 生成 RDF 元数据模型 */
   def getMetadata(model: Model): Unit = {
-//    val model: Model = ModelFactory.createDefaultModel()
-    //    dacp://example.org:3101/
-
     val datasetURI = s"dacp://${ConfigLoader.fairdConfig.getHostName}:${ConfigLoader.fairdConfig.getHostPort}/" + dataSetId
     val datasetRes = model.createResource(datasetURI)
 

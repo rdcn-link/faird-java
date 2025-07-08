@@ -14,7 +14,7 @@ class DataParsingTest extends TestBase {
 
   @Test
   def CSVParsingTest(): Unit = {
-    val df = dc.open(baseDir + "\\data_1.csv")
+    val df = dc.open("/csv/data_1.csv")
     df.limit(1).foreach(
       row => {
         println(row)
@@ -60,7 +60,7 @@ class DataParsingTest extends TestBase {
 
   @Test
   def BinaryParsingTest(): Unit = {
-    val df = dc.open(baseDir + "\\bin")
+    val df = dc.open("/bin")
     df.limit(1).foreach(
       row => {
         println(row)

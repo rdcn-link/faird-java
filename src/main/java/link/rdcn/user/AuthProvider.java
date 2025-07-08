@@ -18,5 +18,5 @@ public interface AuthProvider {
     /**
      * 判断用户是否具有某项权限
      */
-    boolean authorize(AuthenticatedUser user, String dataFrameName);
+    boolean checkPermission(AuthenticatedUser user, String dataFrameName);
 }

@@ -79,7 +79,7 @@ public class JProviderTest {
              * @return 如果用户有权限访问指定的DataFrame，则返回true；否则返回false，需要Provider按需求实现。
              */
             @Override
-            public boolean authorize(AuthenticatedUser user, String dataFrameName) {
+            public boolean checkPermission(AuthenticatedUser user, String dataFrameName) {
                 return true;
             }
         };

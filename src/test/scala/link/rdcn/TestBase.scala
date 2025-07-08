@@ -63,7 +63,8 @@ object TestBase {
 
   //权限
   val permissions = Map(
-    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir")
+    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv","/bin",
+    "/bin/data_1.csv","/csv/invalid.csv")
   )
 
   //生成Token
@@ -100,7 +101,7 @@ object TestBase {
       }
     }
 
-    override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
       if (userName == anonymousUsername)
         throw new AuthorizationException(USER_NOT_LOGGED_IN)
