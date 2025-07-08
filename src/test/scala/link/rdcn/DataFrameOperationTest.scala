@@ -129,7 +129,7 @@ class DataFrameOperationTest extends TestBase {
     val printWriter = new PrintWriter(stringWriter)
     val rowMapper: Row => Row = row => Row(row.getAs[Int](0).getOrElse(-1) + 1, row.get(1))
 
-    //匿名函数 输出副作用 判断在哪侧执行
+
     df.map(rowMapper).foreach { row =>
       printWriter.write(getLine(row))
     }
@@ -137,22 +137,5 @@ class DataFrameOperationTest extends TestBase {
     val actualOutput = stringWriter.toString
     assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
   }
-
-  @Test
-  def readBinaryTest(): Unit = {
-    val df = dc.open(baseDir + "\\bin")
-
-    df.limit(1).foreach(
-      row => {
-        println(row)
-        val blob = row.getAs[Blob](6).getOrElse(null)
-        blob.writeToFile(outputDir)
-        blob.releaseContentMemory()
-      }
-    )
-    assertTrue(isFolderContentsMatch(baseDir + "\\bin", outputDir), "Binary file mismatch")
-  }
-  //测所有属性
-
 
 }

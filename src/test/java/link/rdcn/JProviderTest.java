@@ -8,7 +8,7 @@ import link.rdcn.struct.*;
 import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
-import link.rdcn.server.exception.AuthException;
+import link.rdcn.server.exception.AuthorizationException;
 import link.rdcn.util.DataUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
@@ -64,10 +64,10 @@ public class JProviderTest {
              *
              * @param credentials 用户凭证对象，包含用户的登录信息。
              * @return 一个经过验证的用户对象。
-             * @throws AuthException 如果身份验证失败，则抛出此类异常，需要Provider按需求实现。
+             * @throws AuthorizationException 如果身份验证失败，则抛出此类异常，需要Provider按需求实现。
              */
             @Override
-            public AuthenticatedUser authenticate(Credentials credentials) throws AuthException {
+            public AuthenticatedUser authenticate(Credentials credentials) throws AuthorizationException {
                 return new TestAuthenticatedUser(UUID.randomUUID().toString());
             }
 

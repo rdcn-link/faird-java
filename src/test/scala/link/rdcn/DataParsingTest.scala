@@ -1,0 +1,106 @@
+package link.rdcn
+
+import link.rdcn.DataFrameOperationTest.isFolderContentsMatch
+import link.rdcn.TestBase.{baseDir, csvDfInfos, dc}
+import link.rdcn.client.Blob
+import link.rdcn.struct.StructType.binaryStructType
+import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
+import link.rdcn.util.SharedValue.getOutputDir
+import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
+import org.junit.jupiter.api.Test
+
+class DataParsingTest extends TestBase {
+  val outputDir = getOutputDir("test_output\\output").toString
+
+  @Test
+  def CSVParsingTest(): Unit = {
+    val df = dc.open(baseDir + "\\data_1.csv")
+    df.limit(1).foreach(
+      row => {
+        println(row)
+        val rowLength = row.length
+        val schemaLength = convertStructTypeToArrowSchema(csvDfInfos.head.schema).getFields.size
+
+        assertEquals(schemaLength, rowLength, "Row length mismatch")
+
+        assertNotNull(row.get(0), "field should not be null")
+        assertNotNull(row.get(1), "field should not be null")
+        assertNotNull(row.get(2), "field should not be null")
+        assertNotNull(row.get(3), "field should not be null")
+        assertNotNull(row.get(4), "field should not be null")
+        assertNotNull(row.get(5), "field should not be null")
+        assertNotNull(row.get(6), "field should not be null")
+
+        assertTrue(row.get(0).isInstanceOf[String], "field should be a String")
+        assertTrue(row.get(1).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(2).isInstanceOf[String], "field should be a String")
+        assertTrue(row.get(3).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(4).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(5).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(6).isInstanceOf[Blob], "field should be a Blob")
+
+        val name = row.getAs[String](0).orNull
+        val size = row.getAs[Long](1).getOrElse(-1L)
+        val fileType = row.getAs[String](2).orNull
+        val createdTime = row.getAs[Long](3).getOrElse(-1L)
+        val modifiedTime = row.getAs[Long](4).getOrElse(-1L)
+        val lastAccessTime = row.getAs[Long](5).getOrElse(-1L)
+
+        assertTrue(name.nonEmpty, "name should not be empty")
+        assertTrue(size >= 0, "size should not be negative")
+        assertTrue(fileType.nonEmpty, "fileType should not be empty")
+        assertTrue(createdTime > 0, "time should be positive")
+        assertTrue(modifiedTime > 0, "time should be positive")
+        assertTrue(lastAccessTime > 0, "time should be positive")
+
+      }
+    )
+  }
+
+
+  @Test
+  def BinaryParsingTest(): Unit = {
+    val df = dc.open(baseDir + "\\bin")
+    df.limit(1).foreach(
+      row => {
+        println(row)
+        val rowLength = row.length
+        val schemaLength = convertStructTypeToArrowSchema(binaryStructType).getFields.size
+
+        assertEquals(schemaLength, rowLength, "Row length mismatch")
+
+        assertNotNull(row.get(0), "field should not be null")
+        assertNotNull(row.get(1), "field should not be null")
+        assertNotNull(row.get(2), "field should not be null")
+        assertNotNull(row.get(3), "field should not be null")
+        assertNotNull(row.get(4), "field should not be null")
+        assertNotNull(row.get(5), "field should not be null")
+        assertNotNull(row.get(6), "field should not be null")
+
+        assertTrue(row.get(0).isInstanceOf[String], "field should be a String")
+        assertTrue(row.get(1).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(2).isInstanceOf[String], "field should be a String")
+        assertTrue(row.get(3).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(4).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(5).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(6).isInstanceOf[Blob], "field should be a Blob")
+
+        val name = row.getAs[String](0).orNull
+        val size = row.getAs[Long](1).getOrElse(-1L)
+        val fileType = row.getAs[String](2).orNull
+        val createdTime = row.getAs[Long](3).getOrElse(-1L)
+        val modifiedTime = row.getAs[Long](4).getOrElse(-1L)
+        val lastAccessTime = row.getAs[Long](5).getOrElse(-1L)
+
+        assertTrue(name.nonEmpty, "name should not be empty")
+        assertTrue(size >= 0, "size should not be negative")
+        assertTrue(fileType.nonEmpty, "fileType should not be empty")
+        assertTrue(createdTime > 0, "time should be positive")
+        assertTrue(modifiedTime > 0, "time should be positive")
+        assertTrue(lastAccessTime > 0, "time should be positive")
+
+      }
+    )
+  }
+
+}

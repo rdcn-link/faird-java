@@ -83,7 +83,7 @@ object TestBase {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
         if (usernamePassword.userName == null && usernamePassword.password == null) {
           //          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
-          throw new AuthException(USER_NOT_FOUND)
+          throw new AuthorizationException(USER_NOT_FOUND)
         }
         else if (usernamePassword.userName == adminUsername && usernamePassword.password == adminPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
@@ -91,9 +91,9 @@ object TestBase {
           new TestAuthenticatedUser(adminUsername, genToken())
         }
         else if (usernamePassword.userName != "admin") {
-          throw new AuthException(USER_NOT_FOUND)
+          throw new AuthorizationException(USER_NOT_FOUND)
         } else {
-          throw new AuthException(INVALID_CREDENTIALS)
+          throw new AuthorizationException(INVALID_CREDENTIALS)
         }
       } else {
         new TestAuthenticatedUser(anonymousUsername, genToken())
@@ -103,7 +103,7 @@ object TestBase {
     override def authorize(user: AuthenticatedUser, dataFrameName: String): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
       if (userName == anonymousUsername)
-        throw new AuthException(USER_NOT_LOGGED_IN)
+        throw new AuthorizationException(USER_NOT_LOGGED_IN)
       permissions.get(userName) match { // 用 get 避免 NoSuchElementException
         case Some(allowedFiles) => allowedFiles.contains(dataFrameName)
         case None => false // 用户不存在或没有权限

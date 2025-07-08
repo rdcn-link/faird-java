@@ -9,7 +9,7 @@ import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 
-class ClientAuthTest extends TestBase {
+class ClientAuthorizationTest extends TestBase {
 
   @Test()
   def testLoginWhenUsernameIsNotAdmin(): Unit = {

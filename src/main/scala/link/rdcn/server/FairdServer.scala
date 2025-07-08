@@ -8,7 +8,7 @@ import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorLoader, Ve
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataProvider, DataStreamSource}
-import link.rdcn.server.exception.{AuthException, DataFrameAccessDeniedException, DataFrameNotFoundException}
+import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
 import link.rdcn.struct.StructType
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema

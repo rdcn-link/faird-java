@@ -51,9 +51,8 @@ class ServerExceptionTest {
     flightServer.close()
     assertEquals(ErrorCode.SERVER_ALREADY_STARTED, ExceptionHandler.getErrorCode(ServerException))
   }
-
-  //schema不匹配
   //访问时断开连接 server closed
   //url错误（端口和ip）
+  //匿名函数 输出副作用 判断在哪侧执行
 
 }
