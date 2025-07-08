@@ -9,6 +9,8 @@ import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
 import link.rdcn.server.exception.AuthorizationException;
+import link.rdcn.user.DataOperationType;
+import link.rdcn.user.exception.AuthException;
 import link.rdcn.util.DataUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
@@ -16,9 +18,12 @@ import org.apache.arrow.memory.*;
 import java.io.IOException;
 import java.util.*;
 
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.vocabulary.RDF;
+import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 
 /**
@@ -73,7 +78,7 @@ public class JProviderTest {
              * @return 如果用户有权限访问指定的DataFrame，则返回true；否则返回false，需要Provider按需求实现。
              */
             @Override
-            public boolean checkPermission(AuthenticatedUser user, String dataFrameName) {
+            public boolean checkPermission(AuthenticatedUser user, String dataFrameName, List<DataOperationType> opList) {
                 return true;
             }
         };
