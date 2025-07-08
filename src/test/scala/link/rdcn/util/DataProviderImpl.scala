@@ -31,7 +31,7 @@ abstract class DataProviderImpl extends DataProvider{
   }
   def getDataFrameSource(dataFrameName: String): DataStreamSource = {
     val dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return ArrowFlightDataStreamSource(Iterator.empty, StructType.empty))
-    DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, dataFrameInfo.schema, dataFrameInfo.inputSource)
+    DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameInfo.name, dataFrameInfo.schema, dataFrameInfo.inputSource)
   }
 
   def getDataFrameSchema(dataFrameName: String): StructType = {

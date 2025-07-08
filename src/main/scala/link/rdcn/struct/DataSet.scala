@@ -44,7 +44,10 @@ case class DataSet(
   }
 
   def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
-    dataFrames.find(_.name == dataFrameName)
+    dataFrames.find { dfInfo =>
+      val normalizedDfPath: String = dfInfo.name.replace('\\', '/')
+      normalizedDfPath.contains(dataFrameName)
+    }
   }
 }
 
