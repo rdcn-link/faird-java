@@ -18,9 +18,11 @@ public interface DataProvider {
 
     List<String> listDataFrameNames(String dataSetId);  // /mnt/a.csv
 
-    DataStreamSource getDataFrameSource(String dataFrameName);
+    DataStreamSource getDataStreamSource(String dataFrameName);
 
     StructType getDataFrameSchema(String dataFrameName);
 
     String getDataFrameSchemaURL(String dataFrameName);
+
+    Long getDataFrameSize(String dataFrameName);
 }

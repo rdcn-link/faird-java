@@ -11,27 +11,19 @@ import java.util.Objects;
  */
 public class Credentials implements Serializable {
 
-    // 匿名用户单例
-    public static final Credentials ANONYMOUS = new Credentials();
+    private final boolean anonymous;
 
-    // 标识是否为匿名
+    public static final Credentials ANONYMOUS = new Credentials(true);
+
+    public Credentials() {
+        this(false);
+    }
+
+    private Credentials(boolean anonymous) {
+        this.anonymous = anonymous;
+    }
+
     public boolean isAnonymous() {
-        return this == ANONYMOUS;
-    }
-
-    @Override
-    public String toString() {
-        return isAnonymous() ? "AnonymousCredentials" : "Credentials";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        // 所有匿名对象视为等同
-        return obj instanceof Credentials && (this == ANONYMOUS && obj == ANONYMOUS || super.equals(obj));
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash("ANONYMOUS");
+        return anonymous;
     }
 }

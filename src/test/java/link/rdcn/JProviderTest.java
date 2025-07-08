@@ -42,12 +42,6 @@ public class JProviderTest {
         listD.add(dfInfo);
         DataSet ds1 = new DataSet("dd", "1", JavaConverters.asScalaBufferConverter(listD).asScala().toList());
 
-        ConfigLoader.init(JProviderTest.class.getClassLoader().getResource("faird.conf").getPath());
-
-        Location location = Location.forGrpcInsecure(ConfigBridge.getConfig().getHostPosition(), ConfigBridge.getConfig().getHostPort());
-        BufferAllocator allocator = new RootAllocator();
-
-
         // 创建AuthenticatedUser的实现类，用于存储用户登陆凭证，这里通过记录token作为示例
         class TestAuthenticatedUser implements AuthenticatedUser {
             private final String token;
@@ -83,7 +77,7 @@ public class JProviderTest {
              * @return 如果用户有权限访问指定的DataFrame，则返回true；否则返回false，需要Provider按需求实现。
              */
             @Override
-            public boolean authorize(AuthenticatedUser user, String dataFrameName) {
+            public boolean checkPermission(AuthenticatedUser user, String dataFrameName) {
                 return true;
             }
         };
@@ -176,11 +170,11 @@ public class JProviderTest {
              * @return DataStreamSource
              */
             @Override
-            public DataStreamSource getDataFrameSource(String dataFrameName) {
-                DataUtils.inferExcelSchema("");
-                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
+            public DataStreamSource getDataStreamSource(String dataFrameName) {
+//                DataUtils.inferExcelSchema("");
+//                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
                 DirectorySource directorySource = new DirectorySource(false);
-                return DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, getDataFrameSchema(dataFrameName), directorySource);
+                return DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, StructType.binaryStructType(), directorySource);
             }
 
 
@@ -194,14 +188,15 @@ public class JProviderTest {
              */
             @Override
             public StructType getDataFrameSchema(String dataFrameName) {
-                return StructType.empty().add("id", ValueTypeHelper.getIntType(), true)
-                        .add("name", ValueTypeHelper.getStringType(), true)
-                        .add("fileType", ValueTypeHelper.getStringType(), true)
-                        .add("size", ValueTypeHelper.getLongType(), true)
-                        .add("createDate", ValueTypeHelper.getLongType(), true)
-                        .add("lastModifyDate", ValueTypeHelper.getLongType(), true)
-                        .add("lastAccessDate", ValueTypeHelper.getLongType(), true)
-                        .add("fileStream", ValueTypeHelper.getBinaryType(), true);
+//                return StructType.empty().add("id", ValueTypeHelper.getIntType(), true)
+//                        .add("name", ValueTypeHelper.getStringType(), true)
+//                        .add("fileType", ValueTypeHelper.getStringType(), true)
+//                        .add("size", ValueTypeHelper.getLongType(), true)
+//                        .add("createDate", ValueTypeHelper.getLongType(), true)
+//                        .add("lastModifyDate", ValueTypeHelper.getLongType(), true)
+//                        .add("lastAccessDate", ValueTypeHelper.getLongType(), true)
+//                        .add("fileStream", ValueTypeHelper.getBinaryType(), true);
+                return StructType.binaryStructType();
             }
 
             /**
@@ -217,6 +212,11 @@ public class JProviderTest {
                 int port = ConfigBridge.getConfig().getHostPort(); //faird.hostPort=3101
                 String dataFrameSchemaURL = "dacp://" + hostname + ":" + port + "/" + dataFrameName;
                 return dataFrameSchemaURL;
+            }
+
+            @Override
+            public Long getDataFrameSize(String dataFrameName) {
+                return 0L;
             }
         };
 

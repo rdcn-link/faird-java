@@ -31,7 +31,7 @@ class Row (val values: Seq[Any]) {
 
   override def toString: String = {
     val elems = values.map {
-      case null    => "null"
+      case null    => ("null")
       case arr: Array[_] => arr.mkString("Array(", ", ", ")")
       case other   => other.toString
     }

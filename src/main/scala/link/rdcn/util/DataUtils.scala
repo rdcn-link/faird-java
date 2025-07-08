@@ -13,6 +13,7 @@ import org.apache.poi.ss.usermodel.{Cell, CellType, DateUtil}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import java.io.{File, FileInputStream, IOException}
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
@@ -127,6 +128,53 @@ object DataUtils extends Logging{
     new Schema(fields.asJava)
   }
 
+  /** 推断一个值的类型 */
+  def inferValueType(value: String): ValueType = {
+    if (value == null || value.isEmpty) StringType
+    else if (value.matches("^-?\\d+$")) LongType
+    else if (value.matches("^-?\\d+\\.\\d+$")) DoubleType
+    else if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) BooleanType
+    else StringType
+  }
+
+  /** 推断多列的类型（每列保留最大兼容类型） */
+  def inferSchema(lines: Seq[Array[String]], header: Array[String]): StructType = {
+    if (lines.isEmpty)
+      return StructType.empty
+
+    val numCols = lines.head.length
+
+    // 如果 header 为空，则自动生成 col_0, col_1, ...
+    val columnNames: Array[String] =
+      if (header.isEmpty)
+        Array.tabulate(numCols)(i => s"col_$i")
+      else
+        header
+
+    // transpose: 行列互换以便按列推断类型
+    val transposed: Seq[Seq[String]] = lines.transpose.map(_.toSeq)
+
+    val types: Seq[ValueType] = transposed.map { colValues =>
+      val guessedTypes = colValues.map(inferValueType)
+      if (guessedTypes.contains(StringType)) StringType
+      else if (guessedTypes.contains(DoubleType)) DoubleType
+      else if (guessedTypes.contains(LongType)) LongType
+      else BooleanType
+    }
+
+    StructType.fromSeq(columnNames.zip(types).map { case (name, vt) => Column(name.trim, vt) })
+  }
+
+  /** 底层流式统计一个file的行数 */
+  def countLinesFast(file: File): Long = {
+    val reader = Files.newBufferedReader(file.toPath, StandardCharsets.UTF_8)
+    try {
+      reader.lines().count()
+    } finally {
+      reader.close()
+    }
+  }
+
   // 列出目录下所有文件
   def listFiles(directoryPath: String): Seq[File] = {
     val dir = new File(directoryPath)
@@ -137,10 +185,34 @@ object DataUtils extends Logging{
     }
   }
 
-  def listFilesWithAttributes(directoryPath: String): Seq[(File, BasicFileAttributes)] = {
-    val dir = new File(directoryPath)
-    if (dir.exists() && dir.isDirectory) {
-      dir.listFiles()
+  def listAllFilesWithAttrs(directoryFile: File): Iterator[(File, BasicFileAttributes)] = {
+    def walk(file: File): Iterator[File] = {
+      if (file.isDirectory) {
+        // 避免 null 的情况：listFiles 返回 null 时用空数组代替
+        Option(file.listFiles()).getOrElse(Array.empty).iterator.flatMap(walk)
+      } else if (file.isFile) {
+        Iterator.single(file)
+      } else {
+        Iterator.empty
+      }
+    }
+
+    walk(directoryFile).flatMap { file =>
+      val path = file.toPath
+      try {
+        val attrs = Files.readAttributes(path, classOf[BasicFileAttributes])
+        Some((file, attrs))
+      } catch {
+        case _: IOException =>
+          logger.error(s"读取文件 ${file.getAbsolutePath} 失败")
+          None
+      }
+    }
+  }
+
+  def listFilesWithAttributes(directoryFile: File): Seq[(File, BasicFileAttributes)] = {
+    if (directoryFile.exists() && directoryFile.isDirectory) {
+      directoryFile.listFiles()
         .filter(_.isFile)
         .toSeq
         .flatMap { file =>
@@ -191,6 +263,12 @@ object DataUtils extends Logging{
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
     resourceManager.register(source, filePath)
+    source.getLines()
+  }
+
+  //TODO source 资源及时释放
+  def getFileLines(file: File): Iterator[String] = {
+    val source = Source.fromFile(file)
     source.getLines()
   }
 
@@ -323,7 +401,7 @@ object DataUtils extends Logging{
   }
 
   /** 按 schema 读取所有数据为 Iterator[List[Any]] */
-  def readExcelRows(path: String, schema: StructType): java.util.Iterator[java.util.List[Any]] = {
+  def readExcelRows(path: String, schema: StructType): Iterator[List[Any]] = {
     val workbook = new XSSFWorkbook(new FileInputStream(path))
     val sheet = workbook.getSheetAt(0)
     val rowIter = sheet.iterator().asScala
@@ -338,8 +416,8 @@ object DataUtils extends Logging{
       headers.indices.map { idx =>
         val cell = row.getCell(idx, org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
         if (cell == null) "" else readCell(cell, types(idx))
-      }.toList.asJava
-    }.asJava
+      }.toList
+    }
   }
 
   private def detectType(cell: Cell): ValueType = {

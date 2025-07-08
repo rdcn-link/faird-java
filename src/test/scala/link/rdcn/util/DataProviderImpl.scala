@@ -2,7 +2,6 @@ package link.rdcn.provider
 
 import link.rdcn.ConfigLoader
 import link.rdcn.struct.{DataFrameInfo, DataSet, StructType}
-import link.rdcn.user.AuthProvider
 import org.apache.jena.rdf.model.Model
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
