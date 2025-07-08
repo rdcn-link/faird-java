@@ -2,8 +2,6 @@ package link.rdcn.client
 
 import link.rdcn.user.{Credentials, UsernamePassword}
 
-import java.nio.charset.StandardCharsets
-
 /**
  * @Author renhao
  * @Description:
@@ -42,7 +40,7 @@ class FairdClient private (
   protocolClient.login(credentials)
 
   def open(dataFrameName: String): RemoteDataFrameImpl =
-    RemoteDataFrameImpl(dataFrameName, List.empty, protocolClient)
+    RemoteDataFrameImpl(dataFrameName, protocolClient)
 
   def listDataSetNames(): Seq[String] =
     protocolClient.listDataSetNames()
@@ -52,6 +50,15 @@ class FairdClient private (
 
   def getDataSetMetaData(dsName: String): String =
     protocolClient.getDataSetMetaData(dsName)
+
+  def getDataFrameSize(dataFrameName: String): Long =
+    protocolClient.getDataFrameSize(dataFrameName)
+
+  def getHostInfo(): String =
+    protocolClient.getHostInfo()
+
+  def getServerResourceInfo(): String =
+    protocolClient.getServerResourceInfo()
 
   def close(): Unit = protocolClient.close()
 }

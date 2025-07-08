@@ -6,7 +6,7 @@ import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
 import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, FlightRuntimeException, Location}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.arrow.vector.{VarBinaryVector, VarCharVector, VectorSchemaRoot}
+import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 
 import java.util.UUID
@@ -15,6 +15,8 @@ import java.nio.file.{Path, Paths}
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
+import java.lang.management.ManagementFactory
+import com.sun.management.OperatingSystemMXBean
 
 /**
  * @Author renhao
@@ -28,7 +30,10 @@ trait ProtocolClient{
   def listDataFrameNames(dsName: String): Seq[String]
   def getDataSetMetaData(dsName: String): String
   def close(): Unit
-  def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]
+  def getRows(dataFrameName: String, ops: String): Iterator[Row]
+  def getDataFrameSize(dataFrameName: String): Long
+  def getHostInfo(): String
+  def getServerResourceInfo(): String
 }
 class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
@@ -38,7 +43,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
   private val userToken = UUID.randomUUID().toString
 
   def login(credentials: Credentials): Unit = {
-//    try {
       val paramFields: Seq[Field] = List(
         new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
       )
@@ -52,9 +56,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       listener.putNext()
       listener.completed()
       listener.getResult()
-//    } catch {
-//      case e: FlightRuntimeException => throw e
-//    }
   }
 
   def listDataSetNames(): Seq[String] = {
@@ -68,60 +69,66 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
 
   def getSchema(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
-    getStringByFlightInfo(flightInfo)
+    getSingleStringByFlightInfo(flightInfo)
   }
 
   override def getDataSetMetaData(dataSetName: String): String = {
 //    getDataSetMetaData
     val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
-    getStringByFlightInfo(flightInfo)
+    getSingleStringByFlightInfo(flightInfo)
+  }
+
+  override def getDataFrameSize(dataFrameName: String): Long = {
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataFrameSize.$dataFrameName"))
+    getSingleLongByFlightInfo(flightInfo)
+  }
+
+  override def getHostInfo(): String = {
+    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getHostInfo"))
+    getSingleStringByFlightInfo(flightInfo)
+  }
+
+  override def getServerResourceInfo(): String = {
+    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getServerResourceInfo"))
+    getSingleStringByFlightInfo(flightInfo)
   }
 
   def getSchemaURI(dataFrameName: String): String = {
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchemaURI.$dataFrameName"))
-    getStringByFlightInfo(flightInfo)
+    getSingleStringByFlightInfo(flightInfo)
   }
 
   def close(): Unit = {
     flightClient.close()
   }
 
-  def getRows(dataFrameName: String, ops: List[DFOperation]): Iterator[Row]  = {
+  def getRows(dataFrameName: String, operationNode: String): Iterator[Row]  = {
     //上传参数
     val paramFields: Seq[Field] = List(
       new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
       new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
-      new Field("DFOperation", FieldType.nullable(new ArrowType.Binary()), null)
+      new Field("DFOperation", FieldType.nullable(new ArrowType.Utf8()), null)
     )
     val schema = new Schema(paramFields.asJava)
     val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
     val dfNameCharVector = vectorSchemaRoot.getVector("dfName").asInstanceOf[VarCharVector]
     val tokenCharVector = vectorSchemaRoot.getVector("userToken").asInstanceOf[VarCharVector]
-    val DFOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarBinaryVector]
+    val dfOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarCharVector]
     dfNameCharVector.allocateNew(1)
     dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
     tokenCharVector.allocateNew(1)
     tokenCharVector.set(0, userToken.getBytes("UTF-8"))
-    if(ops.length == 0){
-      DFOperationVector.allocateNew(1)
-      vectorSchemaRoot.setRowCount(1)
-    }else{
-      DFOperationVector.allocateNew(ops.length)
-      for(i <- 0 to ops.length -1){
-        DFOperationVector.set(i, SimpleSerializer.serialize(ops(i)))
-      }
-      vectorSchemaRoot.setRowCount(ops.length)
-    }
+    dfOperationVector.allocateNew(1)
+    dfOperationVector.set(0, operationNode.getBytes("UTF-8"))
+    vectorSchemaRoot.setRowCount(1)
 
     val requestSchemaId = UUID.randomUUID().toString
     val listener = flightClient.startPut(FlightDescriptor.path(requestSchemaId), vectorSchemaRoot, new AsyncPutListener())
     listener.putNext()
     listener.completed()
     listener.getResult()
-    //获取数据
+
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(requestSchemaId))
-    //flightInfo 中可以获取schema
-    println(s"Client (Get Metadata): $flightInfo")
     val flightInfoSchema = flightInfo.getSchema
     val isBinaryColumn = flightInfoSchema.getFields.last.getType match {
       case _: ArrowType.Binary => true
@@ -268,12 +275,18 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
       if(flightStream.next()){
         val vectorSchemaRootReceived = flightStream.getRoot
-        val rowCount = vectorSchemaRootReceived.getRowCount
         val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
         fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
       }else null
     }
-
+  private def getSingleLongByFlightInfo(flightInfo: FlightInfo): Long = {
+    val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
+    if(flightStream.next()){
+      val vectorSchemaRootReceived = flightStream.getRoot
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
+    }else 0L
+  }
 }
 
 // 表示完整的二进制文件

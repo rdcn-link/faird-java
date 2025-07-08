@@ -1,10 +1,14 @@
 package link.rdcn.provider
 
-import link.rdcn.Logging
-import link.rdcn.struct.{CSVSource, DataFrameInfo, DirectorySource, InputSource, Row, StructType, StructuredSource, ValueTypeHelper}
-import link.rdcn.util.DataUtils
+import link.rdcn.struct.{Row, StructType}
+import link.rdcn.util.{DataUtils, JdbcUtils}
+import org.apache.poi.ss.formula.udf.UDFFinder
 
+import java.io.File
+import java.nio.file.attribute.BasicFileAttributes
+import java.sql.{Connection, DriverManager, ResultSet}
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter}
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * @Author renhao
@@ -14,25 +18,92 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorC
  */
 
 object DataStreamSourceFactory{
-  def getDataFrameSourceFromInputSource(dataFrameName: String, schema: StructType, inputSource: InputSource): DataStreamSource = {
-    val stream: Iterator[Row] = inputSource match {
-      case CSVSource(delimiter, head) =>
-        val iterLines = DataUtils.getFileLines(dataFrameName)
-          .map(line => Row(line.split(delimiter): _*))
-        if(head) iterLines.next()
-        iterLines.map(DataUtils.convertStringRowToTypedRow(_, schema))
-      case StructuredSource() => DataUtils.getFileLines(dataFrameName).map(line => Row(line))
-      case DirectorySource(false) =>
-        DataUtils.listFilesWithAttributes(dataFrameName).toIterator.zipWithIndex
-          // schema [name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
-          .map{case (file, index) => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,file._1)}
-          .map(Row.fromTuple(_))
+
+  private val sampleSize = 10
+  private val jdbcFetchSize = 500
+
+  def createCsvDataStreamSource(csvFile: File, delimiter: String = ",", header: Boolean = true): DataStreamSource = {
+    val fileRowCount = DataUtils.countLinesFast(csvFile)
+    val iterLines = DataUtils.getFileLines(csvFile)
+    val headerArray = new ArrayBuffer[String]()
+    if(header) iterLines.next().split(delimiter, -1).map(headerArray.append(_))
+
+    val sampleBuffer = iterLines.take(sampleSize).map(_.split(delimiter, -1)).toArray
+    val structType = DataUtils.inferSchema(sampleBuffer, headerArray)
+
+    val sampleRows = sampleBuffer.iterator.map(arr => Row.fromSeq(arr.toSeq))
+    val remainingRows = iterLines.map(_.split(delimiter, -1)).map(arr => Row.fromSeq(arr.toSeq))
+
+    val iterRows = (sampleRows ++ remainingRows).map(DataUtils.convertStringRowToTypedRow(_, structType))
+    new DataStreamSource {
+      override def rowCount: Long = fileRowCount
+
+      override def schema: StructType = structType
+
+      override def iterator: Iterator[Row] = iterRows
     }
-    ArrowFlightDataStreamSource(stream, schema)
   }
 
-  def getDataFrameSourceFromJavaList(stream: java.util.Iterator[java.util.List[Object]], schema: StructType): DataStreamSource = {
-    val rows = stream.asScala.map(_.asScala).map(Row.fromSeq(_))
-    ArrowFlightDataStreamSource(rows, schema)
+  def createExcelDataStreamSource(excelPath: String): DataStreamSource = {
+    val structType = DataUtils.inferExcelSchema(excelPath)
+    val iterRows = DataUtils.readExcelRows(excelPath, structType)
+    new DataStreamSource {
+      override def rowCount: Long = -1
+
+      override def schema: StructType = structType
+
+      override def iterator: Iterator[Row] = iterRows.map(Row.fromSeq(_))
+    }
   }
+
+  def createFileListDataStreamSource(dir: File, recursive: Boolean = false): DataStreamSource = {
+    var iterFiles:Iterator[(File, BasicFileAttributes)] = Iterator.empty
+    if(recursive) iterFiles = DataUtils.listAllFilesWithAttrs(dir)
+    else DataUtils.listFilesWithAttributes(dir)
+    val stream = iterFiles.zipWithIndex
+      // schema [name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
+      //TODO 不能以文件名称判断是否为同一文件
+      .map{case (file, index) => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,file._1)}
+      .map(Row.fromTuple(_))
+    new DataStreamSource {
+      override def rowCount: Long = -1
+
+      override def schema: StructType = StructType.binaryStructType
+
+      override def iterator: Iterator[Row] = stream
+    }
+  }
+
+
+  def createSqlTableDataStreamSource(
+                                      jdbcUrl: String,
+                                      user: String,
+                                      password: String,
+                                      tableName: String,
+                                      driver: String = "com.mysql.cj.jdbc.Driver"
+                                    ): Unit = {
+    Class.forName(driver)
+    val conn: Connection = DriverManager.getConnection(jdbcUrl, user, password)
+    val stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+
+    // 可配置 fetchSize 优化大数据查询
+    stmt.setFetchSize(jdbcFetchSize)
+
+    val rs = stmt.executeQuery(s"SELECT * FROM $tableName")
+    val rsMeta = rs.getMetaData
+    val structType = JdbcUtils.inferSchema(rsMeta)
+    val iterRows = JdbcUtils.resultSetToIterator(rs, stmt, conn, structType)
+
+    new DataStreamSource {
+      override def rowCount: Long = -1 // 行数未知，除非 COUNT 查询
+
+      override def schema: StructType = structType
+
+      override def iterator: Iterator[Row] = new Iterator[Row] {
+        override def hasNext: Boolean = iterRows.hasNext
+        override def next(): Row = iterRows.next()
+      }
+    }
+  }
+
 }

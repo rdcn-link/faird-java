@@ -13,5 +13,4 @@ case class DataFrame(
                       stream: Iterator[Row]
                     ) {
 
-  def execute(ops: List[DFOperation] = List.empty): Iterator[Row] = ops.foldLeft(stream) { (acc, op) => op.transform(acc)}
 }

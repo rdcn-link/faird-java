@@ -4,11 +4,12 @@ import java.io.FileInputStream
 import java.util.Properties
 
 import org.apache.logging.log4j.{Level, LogManager, Logger}
-import org.apache.logging.log4j.core.config.builder.api._
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
 import org.apache.logging.log4j.core.config.Configurator
+import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilder
 
+import java.io.InputStreamReader
 /**
  * @Author renhao
  * @Description:
@@ -16,26 +17,15 @@ import org.apache.logging.log4j.core.config.Configurator
  * @Modified By:
  */
 
-import java.io.{FileInputStream, InputStreamReader}
-import java.util.Properties
-import org.apache.logging.log4j.{Level, LogManager}
-import org.apache.logging.log4j.core.config.{Configurator}
-import org.apache.logging.log4j.core.config.builder.api.{ConfigurationBuilder, ConfigurationBuilderFactory}
-import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
-
 object ConfigLoader {
 
-  @volatile private var initialized = false
   private var props: Properties = _
   var fairdConfig: FairdConfig = _
 
   def init(configFilePath: String): Unit = synchronized {
-    if (!initialized) {
       props = loadProperties(configFilePath)
       fairdConfig = loadFairdConfig(props)
       initLog4j(props)
-      initialized = true
-    }
   }
 
   private def loadProperties(path: String): Properties = {
