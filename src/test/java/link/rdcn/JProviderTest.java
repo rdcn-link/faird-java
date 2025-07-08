@@ -9,6 +9,7 @@ import link.rdcn.struct.*;
 import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
+import link.rdcn.user.DataOperationType;
 import link.rdcn.user.exception.AuthException;
 import link.rdcn.util.DataUtils;
 import org.apache.arrow.flight.*;
@@ -77,7 +78,7 @@ public class JProviderTest {
              * @return 如果用户有权限访问指定的DataFrame，则返回true；否则返回false，需要Provider按需求实现。
              */
             @Override
-            public boolean checkPermission(AuthenticatedUser user, String dataFrameName) {
+            public boolean checkPermission(AuthenticatedUser user, String dataFrameName, List<DataOperationType> opList) {
                 return true;
             }
         };

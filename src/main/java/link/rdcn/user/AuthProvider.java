@@ -18,5 +18,7 @@ public interface AuthProvider {
     /**
      * 判断用户是否具有某项权限
      */
-    boolean checkPermission(AuthenticatedUser user, String dataFrameName);
+    boolean checkPermission(AuthenticatedUser user, String dataFrameName, java.util.List<DataOperationType> opList);
 }
+
+
