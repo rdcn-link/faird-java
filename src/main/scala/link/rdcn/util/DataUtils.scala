@@ -93,7 +93,6 @@ object DataUtils extends Logging{
         case FloatType      => rawValue.toFloat
         case BooleanType    => rawValue.toBoolean
         case StringType     => rawValue
-
         // 你可以继续扩展其他类型
         case _ => throw new UnsupportedOperationException(s"Unsupported type: ${field.colType}")
       }
@@ -128,8 +127,17 @@ object DataUtils extends Logging{
     new Schema(fields.asJava)
   }
 
-  /** 推断一个值的类型 */
-  def inferValueType(value: String): ValueType = {
+  def inferSchemaFromRow(row: Row): StructType = {
+    val columns = row.values.zipWithIndex.map { case (value, idx) =>
+      val name = s"col_$idx"
+      val valueType = inferValueType(value)
+      Column(name, valueType)
+    }
+    StructType.fromSeq(columns)
+  }
+
+//  /** 推断一个值的类型 */
+  def inferStringValueType(value: String): ValueType = {
     if (value == null || value.isEmpty) StringType
     else if (value.matches("^-?\\d+$")) LongType
     else if (value.matches("^-?\\d+\\.\\d+$")) DoubleType
@@ -137,15 +145,26 @@ object DataUtils extends Logging{
     else StringType
   }
 
+  def inferValueType(value: Any): ValueType = value match {
+    case null                   => NullType
+    case _: Int                 => IntType
+    case _: Long                => LongType
+    case _: Double | _: Float   => DoubleType
+    case _: Boolean             => BooleanType
+    case _: Array[Byte]         => BinaryType
+    case _: java.io.File        => BinaryType
+    case _                      => StringType
+  }
+
   /** 推断多列的类型（每列保留最大兼容类型） */
-  def inferSchema(lines: Seq[Array[String]], header: Array[String]): StructType = {
+  def inferSchema(lines: Seq[Array[String]], header: Seq[String]): StructType = {
     if (lines.isEmpty)
       return StructType.empty
 
     val numCols = lines.head.length
 
     // 如果 header 为空，则自动生成 col_0, col_1, ...
-    val columnNames: Array[String] =
+    val columnNames: Seq[String] =
       if (header.isEmpty)
         Array.tabulate(numCols)(i => s"col_$i")
       else
@@ -155,7 +174,7 @@ object DataUtils extends Logging{
     val transposed: Seq[Seq[String]] = lines.transpose.map(_.toSeq)
 
     val types: Seq[ValueType] = transposed.map { colValues =>
-      val guessedTypes = colValues.map(inferValueType)
+      val guessedTypes = colValues.map(inferStringValueType)
       if (guessedTypes.contains(StringType)) StringType
       else if (guessedTypes.contains(DoubleType)) DoubleType
       else if (guessedTypes.contains(LongType)) LongType

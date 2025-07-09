@@ -3,7 +3,7 @@ package link.rdcn
 import java.io.FileInputStream
 import java.util.Properties
 
-import org.apache.logging.log4j.{Level, LogManager, Logger}
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
 import org.apache.logging.log4j.core.config.Configurator
@@ -23,9 +23,9 @@ object ConfigLoader {
   var fairdConfig: FairdConfig = _
 
   def init(configFilePath: String): Unit = synchronized {
-      props = loadProperties(configFilePath)
-      fairdConfig = loadFairdConfig(props)
-      initLog4j(props)
+    props = loadProperties(configFilePath)
+    fairdConfig = FairdConfig.load(props)
+    initLog4j(props)
   }
 
   private def loadProperties(path: String): Properties = {
@@ -33,17 +33,6 @@ object ConfigLoader {
     val fis = new InputStreamReader(new FileInputStream(path), "UTF-8")
     try props.load(fis) finally fis.close()
     props
-  }
-
-  private def loadFairdConfig(props: Properties): FairdConfig = {
-    val config = new FairdConfig
-    config.setHostName(props.getProperty("faird.hostName"))
-    config.setHostTitle(props.getProperty("faird.hostTitle"))
-    config.setHostPosition(props.getProperty("faird.hostPosition"))
-    config.setHostDomain(props.getProperty("faird.hostDomain"))
-    config.setHostPort(props.getProperty("faird.hostPort").toInt)
-    config.setCatdbPort(props.getProperty("faird.catdbPort").toInt)
-    config
   }
 
   private def initLog4j(props: Properties): Unit = {

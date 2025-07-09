@@ -1,6 +1,5 @@
 package link.rdcn
 
-import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
 import org.apache.logging.log4j.{LogManager, Logger}
 
 /**

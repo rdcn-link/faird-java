@@ -11,6 +11,7 @@ import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.struct.{DataFrame, Row, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
+import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.convert.ImplicitConversions.`iterator asJava`
 
 /**
  * @Author renhao
@@ -40,8 +42,8 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
     // 初始化配置
     ConfigLoader.init(s"$fairdHome/conf/faird.conf")
     val location = Location.forGrpcInsecure(
-      ConfigLoader.fairdConfig.getHostPosition,
-      ConfigLoader.fairdConfig.getHostPort
+      ConfigLoader.fairdConfig.hostPosition,
+      ConfigLoader.fairdConfig.hostPort
     )
     allocator = new RootAllocator()
     producer = new FlightProducerImpl(allocator, location, dataProvider, authProvider)
@@ -134,7 +136,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
               if(authenticatedUser.isEmpty){
                throw new Exception(s"The user $userToken is not logged in")
               }
-              if(! authProvider.checkPermission(authenticatedUser.get, dfName))
+              if(!authProvider.checkPermission(authenticatedUser.get, dfName, List.empty.asJava))
                 throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"no access $dfName"))
               val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
               val operationNode: OperationNode = OperationNode.fromJsonString(operationNodeJsonString)
@@ -160,10 +162,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             getSingleStringStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
 
           }
-          case ticketKey if ticketKey.startsWith("getSchema") => {
-            val dfName =  ticketKey.replace("getSchema.","")
-            getSingleStringStream(dataProvider.getDataFrameSchema(dfName).toString,listener)
-          }
           case ticketKey if ticketKey.startsWith("getDataSetMetaData") => {
             val dsName = ticketKey.replace("getDataSetMetaData.","")
             val model: Model = ModelFactory.createDefaultModel()
@@ -172,28 +170,46 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
           }
           case ticketKey if ticketKey.startsWith("getDataFrameSize") => {
             val dfName =  ticketKey.replace("getSchema.","")
-            getSingleLongStream(dataProvider.getDataFrameSize(dfName), listener)
+            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+            getSingleLongStream(dataStreamSource.rowCount, listener)
           }
 
           case ticketKey if ticketKey.startsWith("getHostInfo") =>
             val hostInfo =
               s"""
-                 |faird.hostName: ${ConfigLoader.fairdConfig.getHostName}
-                 |faird.hostTitle: ${ConfigLoader.fairdConfig.getHostTitle}
-                 |faird.hostPosition: ${ConfigLoader.fairdConfig.getHostPosition}
-                 |faird.hostDomain: ${ConfigLoader.fairdConfig.getHostDomain}
-                 |faird.hostPort: ${ConfigLoader.fairdConfig.getHostPort}
+                 |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
+                 |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
+                 |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
+                 |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
+                 |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
                  |""".stripMargin
             getSingleStringStream(hostInfo,listener)
 
           case ticketKey if ticketKey.startsWith("getServerResourceInfo") =>
             getSingleStringStream(getResourceStatusString,listener)
 
+          case ticketKey if ticketKey.startsWith("getSchema") => {
+            val dfName =  ticketKey.replace("getSchema.","")
+            var structType = dataProvider.getDataFrameSchema(dfName)
+            if(structType.isEmpty()){
+              val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+              val iter = dataStreamSource.iterator
+              if(iter.hasNext){
+                 structType = DataUtils.inferSchemaFromRow(iter.next())
+              }
+            }
+            getSingleStringStream(structType.toString,listener)
+          }
+
           case _ => {
             val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
             val request = requestMap.get(flightDescriptor)
+
             val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
-            val structType = dataProvider.getDataFrameSchema(request._1)
+            val dataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+            val stream: Iterator[Row] = request._2.execute(dataFrame)
+            val firstRow: Row = if(stream.hasNext) stream.next() else Row.empty
+            val structType = if(firstRow.isEmpty) DataUtils.inferSchemaFromRow(firstRow) else StructType.empty
             val schema = convertStructTypeToArrowSchema(structType)
 
             //能否支持并发
@@ -202,9 +218,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             val loader = new VectorLoader(root)
             listener.start(root)
 
-            val dataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
-            val stream: Iterator[Row] = request._2.execute(dataFrame)
-            val arrowFlightStreamWriter = ArrowFlightStreamWriter(DataFrame(dataStreamSource.schema, stream))
+            val arrowFlightStreamWriter = ArrowFlightStreamWriter(DataFrame(structType, Seq(firstRow).iterator ++ stream))
             try {
               arrowFlightStreamWriter.process(root, batchLen).foreach(batch => {
                 try {

@@ -3,9 +3,6 @@ package link.rdcn.client
 import link.rdcn.{Logging, dftree}
 import link.rdcn.dftree.{FunctionWrapper, LangType, OperationNode, OperationType, SourceNode, TransformNode}
 import link.rdcn.struct.Row
-import org.apache.jena.rdf.model.{Literal, Model, Resource}
-
-import scala.collection.mutable
 
 /**
  * @Author renhao
@@ -15,7 +12,7 @@ import scala.collection.mutable
  */
 trait SerializableFunction[-T, +R] extends (T => R) with Serializable
 
-trait RemoteDataFrame extends Serializable {
+trait RemoteDataFrame{
   val dataFrameName: String
   val operationNode: OperationNode
 

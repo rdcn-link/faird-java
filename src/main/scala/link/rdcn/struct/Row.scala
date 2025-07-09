@@ -29,6 +29,8 @@ class Row (val values: Seq[Any]) {
   /** 获取迭代器 */
   def iterator: Iterator[Any] = values.iterator
 
+  def isEmpty: Boolean = values.isEmpty
+
   override def toString: String = {
     val elems = values.map {
       case null    => ("null")
