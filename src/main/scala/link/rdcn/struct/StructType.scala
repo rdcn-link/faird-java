@@ -18,6 +18,8 @@ case class StructType(columns: Seq[Column]) {
     pairs.toMap
   }
 
+  def isEmpty(): Boolean = columns.isEmpty
+
   /** 根据列名获取类型（可选） */
   def getType(columnName: String): Option[ValueType] =
     columns.find(_.name == columnName).map(_.colType)
