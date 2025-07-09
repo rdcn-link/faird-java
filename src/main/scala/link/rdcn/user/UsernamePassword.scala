@@ -8,5 +8,5 @@ package link.rdcn.user
  * @Modified By:
  */
 case class UsernamePassword(userName: String, password: String) extends Credentials {
-  override def isAnonymous: Boolean = this == Credentials.ANONYMOUS
+  override def isAnonymous: Boolean = this == Credentials.Anonymous
 }

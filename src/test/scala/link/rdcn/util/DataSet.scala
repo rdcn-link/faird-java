@@ -25,7 +25,7 @@ case class DataSet(
                   ) {
   /** 生成 RDF 元数据模型 */
   def getMetadata(model: Model): Unit = {
-    val datasetURI = s"dacp://${ConfigLoader.fairdConfig.getHostName}:${ConfigLoader.fairdConfig.getHostPort}/" + dataSetId
+    val datasetURI = s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}/" + dataSetId
     val datasetRes = model.createResource(datasetURI)
 
     val hasFile = model.createProperty(datasetURI + "/hasFile")

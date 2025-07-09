@@ -25,7 +25,7 @@ object SharedValue {
   val anonymousUsername = "anonymous"
 
 
-  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.hostPosition, ConfigLoader.fairdConfig.hostPort)
   val allocator: BufferAllocator = new RootAllocator()
   val emptyAuthProvider = new AuthProvider {
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
@@ -45,7 +45,7 @@ object SharedValue {
 
     override def getDataStreamSource(dataFrameName: String): DataStreamSource = ???
 
-    override def getDataFrameSize(dataFrameName: String): lang.Long = ???
+//    override def getDataFrameSize(dataFrameName: String): lang.Long = ???
   }
 
   val producer = new FlightProducerImpl(allocator, location, emptyDataProvider, emptyAuthProvider)

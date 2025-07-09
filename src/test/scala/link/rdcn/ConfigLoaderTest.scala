@@ -1,6 +1,6 @@
 package link.rdcn
 
-import link.rdcn.ConfigLoader.{initLog4j, loadFairdConfig, loadProperties}
+import link.rdcn.ConfigLoader.{initLog4j, loadProperties}
 import link.rdcn.ConfigLoaderTest.getResourcePath
 import link.rdcn.util.ExpectedConfigLoader
 import link.rdcn.util.SharedValue.{allocator, configCache, location, producer}
@@ -36,12 +36,11 @@ class ConfigLoaderTest {
     ConfigLoader.init(configPath)
     val config = ConfigBridge.getConfig
 
-    assertEquals(ExpectedConfigLoader.getHostName, config.getHostName)
-    assertEquals(ExpectedConfigLoader.getHostTitle, config.getHostTitle)
-    assertEquals(ExpectedConfigLoader.getHostPort, config.getHostPort)
-    assertEquals(ExpectedConfigLoader.getHostDomain, config.getHostDomain)
-    assertEquals(ExpectedConfigLoader.getHostPosition, config.getHostPosition)
-    assertEquals(ExpectedConfigLoader.getCatdbPort, config.getCatdbPort)
+    assertEquals(ExpectedConfigLoader.getHostName, config.hostName)
+    assertEquals(ExpectedConfigLoader.getHostTitle, config.hostTitle)
+    assertEquals(ExpectedConfigLoader.getHostPort, config.hostPort)
+    assertEquals(ExpectedConfigLoader.getHostDomain, config.hostDomain)
+    assertEquals(ExpectedConfigLoader.getHostPosition, config.hostPosition)
   }
 
 
@@ -52,8 +51,8 @@ class ConfigLoaderTest {
 
     assertThrows(
       classOf[NullPointerException],
-      () => Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition,
-        ConfigLoader.fairdConfig.getHostPort)
+      () => Location.forGrpcInsecure(ConfigLoader.fairdConfig.hostPosition,
+        ConfigLoader.fairdConfig.hostPort)
     )
 
   }

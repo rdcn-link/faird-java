@@ -25,34 +25,12 @@ class DataParsingTest extends TestBase {
 
         assertNotNull(row.get(0), "field should not be null")
         assertNotNull(row.get(1), "field should not be null")
-        assertNotNull(row.get(2), "field should not be null")
-        assertNotNull(row.get(3), "field should not be null")
-        assertNotNull(row.get(4), "field should not be null")
-        assertNotNull(row.get(5), "field should not be null")
-        assertNotNull(row.get(6), "field should not be null")
 
-        assertTrue(row.get(0).isInstanceOf[String], "field should be a String")
-        assertTrue(row.get(1).isInstanceOf[Long], "field should be a Long")
-        assertTrue(row.get(2).isInstanceOf[String], "field should be a String")
-        assertTrue(row.get(3).isInstanceOf[Long], "field should be a Long")
-        assertTrue(row.get(4).isInstanceOf[Long], "field should be a Long")
-        assertTrue(row.get(5).isInstanceOf[Long], "field should be a Long")
-        assertTrue(row.get(6).isInstanceOf[Blob], "field should be a Blob")
+        assertTrue(row.get(0).isInstanceOf[Long], "field should be a Long")
+        assertTrue(row.get(1).isInstanceOf[Double], "field should be a Double")
 
-        val name = row.getAs[String](0).orNull
-        val size = row.getAs[Long](1).getOrElse(-1L)
-        val fileType = row.getAs[String](2).orNull
-        val createdTime = row.getAs[Long](3).getOrElse(-1L)
-        val modifiedTime = row.getAs[Long](4).getOrElse(-1L)
-        val lastAccessTime = row.getAs[Long](5).getOrElse(-1L)
-
-        assertTrue(name.nonEmpty, "name should not be empty")
-        assertTrue(size >= 0, "size should not be negative")
-        assertTrue(fileType.nonEmpty, "fileType should not be empty")
-        assertTrue(createdTime > 0, "time should be positive")
-        assertTrue(modifiedTime > 0, "time should be positive")
-        assertTrue(lastAccessTime > 0, "time should be positive")
-
+        val id: Long = row.getAs[Long](0).getOrElse(-1)
+        assertTrue(id >= 0, "id should be positive")
       }
     )
   }

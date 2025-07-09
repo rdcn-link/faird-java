@@ -15,17 +15,17 @@ object ExpectedConfigLoader {
     .map(arr => arr(0).trim -> arr(1).trim) // 转换为键值对
     .toMap
 
-  def getHostName: String = expectedConfig("faird.hostName")
+  def getHostName: String = expectedConfig("faird.host.name")
 
-  def getHostTitle: String = expectedConfig("faird.hostTitle")
+  def getHostTitle: String = expectedConfig("faird.host.title")
 
-  def getHostPosition: String = expectedConfig("faird.hostPosition")
+  def getHostPosition: String = expectedConfig("faird.host.position")
 
-  def getHostDomain: String = expectedConfig("faird.hostDomain")
+  def getHostDomain: String = expectedConfig("faird.host.domain")
 
-  def getHostPort: Int = expectedConfig("faird.hostPort").toInt
+  def getHostPort: Int = expectedConfig("faird.host.port").toInt
 
-  def getCatdbPort: Int = expectedConfig("faird.catdbPort").toInt
+  def getCatdbPort: Int = expectedConfig("faird.catdb.port").toInt
 
 }
 

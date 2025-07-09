@@ -47,7 +47,7 @@ abstract class DataProviderImpl extends DataProvider{
   }
 
   def getDataFrameSchemaURL(dataFrameName: String): String = {
-    getDataFrameInfo(dataFrameName).map(_.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.getHostName}:${ConfigLoader.fairdConfig.getHostPort}")).getOrElse("")
+    getDataFrameInfo(dataFrameName).map(_.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}")).getOrElse("")
   }
 
   private def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {

@@ -1,7 +1,6 @@
 package link.rdcn.user
 
 import link.rdcn.server.exception.AuthorizationException
-import link.rdcn.user.DataOperationType.DataOperationType
 
 /**
  * @Author renhao

@@ -115,8 +115,8 @@ public class JProviderTest {
              */
             @Override
             public void getDataSetMetaData(String dataSetName, Model rdfModel) {
-                String hostname = ConfigBridge.getConfig().getHostName(); //配置文件中 faird.hostName=cerndc
-                int port = ConfigBridge.getConfig().getHostPort(); //faird.hostPort=3101
+                String hostname = ConfigBridge.getConfig().hostName(); //配置文件中 faird.hostName=cerndc
+                int port = ConfigBridge.getConfig().hostPort(); //faird.hostPort=3101
                 String dataSetID = "根据dataSetName拿ID";
                 String datasetURI = "dacp://" + hostname + ":" + port + "/" + dataSetID;
                 Resource datasetRes = rdfModel.createResource(datasetURI);
@@ -193,20 +193,10 @@ public class JProviderTest {
              */
             @Override
             public String getDataFrameSchemaURL(String dataFrameName) {
-                String hostname = ConfigBridge.getConfig().getHostName(); //配置文件中 faird.hostName=cerndc
-                int port = ConfigBridge.getConfig().getHostPort(); //faird.hostPort=3101
+                String hostname = ConfigBridge.getConfig().hostName(); //配置文件中 faird.hostName=cerndc
+                int port = ConfigBridge.getConfig().hostPort(); //faird.hostPort=3101
                 String dataFrameSchemaURL = "dacp://" + hostname + ":" + port + "/" + dataFrameName;
                 return dataFrameSchemaURL;
-            }
-
-            /**
-             * 获取DataFrame的大小
-             * @param dataFrameName
-             * @return
-             */
-            @Override
-            public Long getDataFrameSize(String dataFrameName) {
-                return 0L;
             }
 
             /**

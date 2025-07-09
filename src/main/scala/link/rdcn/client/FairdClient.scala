@@ -34,7 +34,7 @@ private object DacpUriParser {
 class FairdClient private (
                             url: String,
                             port: Int,
-                            credentials: Credentials = Credentials.ANONYMOUS
+                            credentials: Credentials = Credentials.Anonymous
                           ) {
   private val protocolClient = new ArrowFlightProtocolClient(url, port)
   protocolClient.login(credentials)
@@ -66,7 +66,7 @@ class FairdClient private (
 
 object FairdClient {
 
-  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient =
+  def connect(url: String, credentials: Credentials = Credentials.Anonymous): FairdClient =
     DacpUriParser.parse(url) match {
       case Right(parsed) =>
         new FairdClient(parsed.host, parsed.port, credentials)

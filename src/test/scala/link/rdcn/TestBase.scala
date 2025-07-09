@@ -44,11 +44,14 @@ object TestBase {
   private val binFileCount = 3
   private val csvFileCount = 3
 
+  //必须在DfInfos前执行一次！！！
+  generateTestData()
+
   //根据文件生成元信息
-  val csvDfInfos = listFiles(csvDir.toString).map(file => {
+  lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
     DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
-  val binDfInfos = Seq(
+  lazy val binDfInfos = Seq(
     DataFrameInfo(binDir.toString, DirectorySource(false), StructType.binaryStructType))
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
@@ -115,7 +118,7 @@ object TestBase {
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       getOutputDir("test_output/bin").resolve(relativePath).toString
     }
-    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
+//    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
 
   }
 

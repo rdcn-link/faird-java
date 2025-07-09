@@ -5,7 +5,10 @@ import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
 import link.rdcn.client.Blob
 import link.rdcn.struct._
+import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.getOutputDir
+import org.apache.arrow.flight.FlightRuntimeException
+import org.apache.logging.log4j.core.ErrorHandler
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.junit.jupiter.params.ParameterizedTest
@@ -102,7 +105,7 @@ class DataFrameOperationTest extends TestBase {
     val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
-    val rowFilter: Row => Boolean = (row: Row) => row.getAs[Int](0).getOrElse(-1) == id
+    val rowFilter: Row => Boolean = (row: Row) => row.getAs[Long](0).getOrElse(-1L) == id
 
     //匿名函数
     df.filter(rowFilter).foreach { row =>
@@ -121,19 +124,24 @@ class DataFrameOperationTest extends TestBase {
       .tail // 跳过标题行
       .map { line =>
         val cols = line.split(",") // 按逗号拆分列
-        val id = cols(0).toInt + 1 // 第一列转Int并+1
+        val id = cols(0).toLong + 1L // 第一列转Int并+1
         s"$id,${cols.tail.mkString}" // 拼接回剩余列
       }
       .mkString("\n") + "\n"
     val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
-    val rowMapper: Row => Row = row => Row(row.getAs[Int](0).getOrElse(-1) + 1, row.get(1))
+    val rowMapper: Row => Row = row => Row(row.getAs[Long](0).getOrElse(-1L) + 1L, row.get(1))
 
-
-    df.map(rowMapper).foreach { row =>
-      printWriter.write(getLine(row))
+    try
+      {
+        df.map(rowMapper).foreach { row =>
+          printWriter.write(getLine(row))
+        }
+      } catch {
+      case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
     }
+
     printWriter.flush()
     val actualOutput = stringWriter.toString
     assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")

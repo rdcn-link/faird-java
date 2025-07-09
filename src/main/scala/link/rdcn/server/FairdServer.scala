@@ -19,6 +19,7 @@ import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperati
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
+import java.lang.Thread.sleep
 import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
@@ -213,7 +214,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             val dataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
             val stream: Iterator[Row] = request._2.execute(dataFrame)
             val firstRow: Row = if(stream.hasNext) stream.next() else Row.empty
-            val structType = if(firstRow.isEmpty) DataUtils.inferSchemaFromRow(firstRow) else StructType.empty
+            val structType = if(firstRow.isEmpty) StructType.empty else DataUtils.inferSchemaFromRow(firstRow)
             val schema = convertStructTypeToArrowSchema(structType)
 
             //能否支持并发
