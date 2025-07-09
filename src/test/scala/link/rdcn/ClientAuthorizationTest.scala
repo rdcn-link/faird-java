@@ -38,7 +38,7 @@ class ClientAuthorizationTest extends TestBase {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101")
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
-      () => dc.open(csvDir + "/data_1.csv").foreach(_ => ())
+      () => dc.open("/csv/data_1.csv").foreach(_ => ())
     )
     assertEquals(ErrorCode.USER_NOT_LOGGED_IN, ExceptionHandler.getErrorCode(serverException))
   }

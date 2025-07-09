@@ -10,11 +10,11 @@ import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
 import link.rdcn.server.exception.AuthorizationException;
 import link.rdcn.user.DataOperationType;
-import link.rdcn.user.exception.AuthException;
 import link.rdcn.util.DataUtils;
 import org.apache.arrow.flight.*;
 import org.apache.arrow.memory.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -23,6 +23,7 @@ import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.vocabulary.RDF;
+import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 
@@ -86,6 +87,7 @@ public class JProviderTest {
 
         // 创建DataProvider的实例，用于处理DataSet和DataFrame的获取逻辑
         DataProvider dataProvider = new DataProvider() {
+            private List<DataSet> dataSetsJavaList;
 
 
             /**
@@ -144,7 +146,8 @@ public class JProviderTest {
             }
 
             /**
-             * 通过DataFrame的名称，根据DataStreamSourceFactory获取DataStreamSource
+             * 通过DataFrame的名称获得文件位置和文件类型，根据DataStreamSourceFactory获取DataStreamSource
+             * 这里使用辅助函数getDataFrameInfo获得名称到文件位置的映射，Provider应根据实际情况实现该映射
              * Provider应当实现DataStreamSourceFactory静态类，根据不同的文件类型获得DataStreamSource
              * 注意：Factory应该设计针对读取一个文件夹下二进制文件的情况，此时DataFrame名称应为文件夹名称而非文件名
              * 并且Schema应该定义为：[name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
@@ -153,19 +156,7 @@ public class JProviderTest {
              * 此处示例为通过Name、Schema、文件类型（csv，json，bin...）获得DataStreamSource
              *
              * DataStreamSource的实现类，用于流式提供DataFrame
-             * process方法产生用于传输DataFrame的迭代器（此处使用Flight协议作为示例）
              * createDataFrame方法用于组装DataFrame对象，实例中包含schema和迭代器作为示例
-             * DataStreamSource dataStreamSource = new DataStreamSource() {
-             *             @Override
-             *             public Iterator<ArrowRecordBatch> process(Iterator<Row> stream, VectorSchemaRoot root, int batchSize) {
-             *                 return null;
-             *             }
-             *
-             *             @Override
-             *             public DataFrame createDataFrame() {
-             *                 return null;
-             *             }
-             *         };
              *
              * @param dataFrameName DataFrame的名称
              * @return DataStreamSource
@@ -175,7 +166,8 @@ public class JProviderTest {
 //                DataUtils.inferExcelSchema("");
 //                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
                 DirectorySource directorySource = new DirectorySource(false);
-                return DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameName, StructType.binaryStructType(), directorySource);
+                DataFrameInfo dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(null);
+                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name()),false);
             }
 
 
@@ -189,14 +181,6 @@ public class JProviderTest {
              */
             @Override
             public StructType getDataFrameSchema(String dataFrameName) {
-//                return StructType.empty().add("id", ValueTypeHelper.getIntType(), true)
-//                        .add("name", ValueTypeHelper.getStringType(), true)
-//                        .add("fileType", ValueTypeHelper.getStringType(), true)
-//                        .add("size", ValueTypeHelper.getLongType(), true)
-//                        .add("createDate", ValueTypeHelper.getLongType(), true)
-//                        .add("lastModifyDate", ValueTypeHelper.getLongType(), true)
-//                        .add("lastAccessDate", ValueTypeHelper.getLongType(), true)
-//                        .add("fileStream", ValueTypeHelper.getBinaryType(), true);
                 return StructType.binaryStructType();
             }
 
@@ -215,9 +199,31 @@ public class JProviderTest {
                 return dataFrameSchemaURL;
             }
 
+            /**
+             * 获取DataFrame的大小
+             * @param dataFrameName
+             * @return
+             */
             @Override
             public Long getDataFrameSize(String dataFrameName) {
                 return 0L;
+            }
+
+            /**
+             * 根据DataFrame名称获取DataFrameInfo，包含DataFrame位置和类型等信息
+             * 此处示例为遍历DataSet列表，查找DataFrameInfo，实际根据Provider需要实现
+             * @param dataFrameName
+             * @return
+             */
+            private Option<DataFrameInfo> getDataFrameInfo(String dataFrameName) {
+                // 遍历 dataSetsJavaList
+                for (DataSet ds : dataSetsJavaList) {
+                    Option<DataFrameInfo> dfInfo = ds.getDataFrameInfo(dataFrameName);
+                    if (dfInfo.isEmpty()) {
+                        return dfInfo;
+                    }
+                }
+                return Option.empty();
             }
         };
 

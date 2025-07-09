@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 class ErrorHandlerTest {
   @Test()
   def testInvalidError(): Unit = {
-    val exception = new ClientException(ErrorCode.NO_SUCH_ERROR)
-    assertEquals(ErrorCode.NO_SUCH_ERROR, exception.getErrorCode)
+    val exception = new ClientException(ErrorCode.UNKNOWN_ERROR)
+    assertEquals(ErrorCode.UNKNOWN_ERROR, exception.getErrorCode)
   }
 
   @Test()

@@ -1,11 +1,13 @@
 package link.rdcn.util
 
 import link.rdcn.ConfigLoader
-import link.rdcn.provider.{ArrowFlightDataStreamSource, DataProvider, DataStreamSource, DataStreamSourceFactory}
-import link.rdcn.struct.{DataFrameInfo, DataSet, StructType}
+import link.rdcn.provider.{DataProvider, DataStreamSource, DataStreamSourceFactory}
+import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, InputSource, StructType}
 import org.apache.jena.rdf.model.Model
 
+import java.io.File
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.reflect.io.Directory
 
 /**
  * @Author renhao
@@ -29,9 +31,15 @@ abstract class DataProviderImpl extends DataProvider{
     val dataSet: DataSet = dataSetsScalaList.find(_.dataSetName == dataSetName).getOrElse(return new java.util.ArrayList)
     dataSet.dataFrames.map(_.name).asJava
   }
-  def getDataFrameSource(dataFrameName: String): DataStreamSource = {
-    val dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return ArrowFlightDataStreamSource(Iterator.empty, StructType.empty))
-    DataStreamSourceFactory.getDataFrameSourceFromInputSource(dataFrameInfo.name, dataFrameInfo.schema, dataFrameInfo.inputSource)
+
+  def getDataStreamSource(dataFrameName: String): DataStreamSource = {
+    val dataFrameInfo:DataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return null)
+    dataFrameInfo.inputSource match {
+      case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.name))
+      case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name))
+      case _: InputSource => ???
+    }
+
   }
 
   def getDataFrameSchema(dataFrameName: String): StructType = {

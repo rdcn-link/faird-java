@@ -11,7 +11,7 @@ class ResourceUnavailableTest extends TestBase {
   //df不存在
   @Test
   def testAccessInvalidDataFrame(): Unit = {
-    val df = dc.open(csvDir + "\\invalid.csv") // 假设没有该文件
+    val df = dc.open("/csv/invalid.csv") // 假设没有该文件
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => df.foreach(_ => {})

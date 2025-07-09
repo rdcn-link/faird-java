@@ -138,14 +138,14 @@ object DataUtils extends Logging{
   }
 
   /** 推断多列的类型（每列保留最大兼容类型） */
-  def inferSchema(lines: Seq[Array[String]], header: Array[String]): StructType = {
+  def inferSchema(lines: Seq[Array[String]], header: Seq[String]): StructType = {
     if (lines.isEmpty)
       return StructType.empty
 
     val numCols = lines.head.length
 
     // 如果 header 为空，则自动生成 col_0, col_1, ...
-    val columnNames: Array[String] =
+    val columnNames: Seq[String] =
       if (header.isEmpty)
         Array.tabulate(numCols)(i => s"col_$i")
       else

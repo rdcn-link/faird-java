@@ -271,7 +271,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
     }else null
   }
 
-  private def getStringByFlightInfo(flightInfo: FlightInfo): String = {
+  private def getSingleStringByFlightInfo(flightInfo: FlightInfo): String = {
       val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
       if(flightStream.next()){
         val vectorSchemaRootReceived = flightStream.getRoot

@@ -21,7 +21,7 @@ case object ErrorCode extends Enum[ErrorCode] {
 
   case object SERVER_NOT_RUNNING extends ErrorCode(301, "Server not running")
 
-  case object NO_SUCH_ERROR extends ErrorCode(901, "No such error")
+  case object UNKNOWN_ERROR extends ErrorCode(901, "Unknown error")
   case object ERROR_CODE_NOT_EXIST extends ErrorCode(902, "Error code not exist")
 
   case object SERVER_ADDRESS_ALREADY_IN_USE extends ErrorCode(301, "Server address already in use")

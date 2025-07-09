@@ -2,6 +2,7 @@ package link.rdcn.server
 
 import com.sun.management.OperatingSystemMXBean
 import io.grpc.StatusRuntimeException
+import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
 import link.rdcn.dftree.OperationNode
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
@@ -9,8 +10,10 @@ import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, Ve
 import org.apache.arrow.vector.types.pojo.Schema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataProvider, DataStreamSource}
+import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
 import link.rdcn.struct.{DataFrame, Row, StructType, ValueType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
+import link.rdcn.user.DataOperationType
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
@@ -132,10 +135,10 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
               val userToken = root.getFieldVectors.get(1).asInstanceOf[VarCharVector].getObject(0).toString
               val authenticatedUser = Option(authenticatedUserMap.get(userToken))
               if(authenticatedUser.isEmpty){
-               throw new Exception(s"The user $userToken is not logged in")
+                throw new AuthorizationException(USER_NOT_LOGGED_IN)
               }
-              if(! authProvider.checkPermission(authenticatedUser.get, dfName))
-                throw new StatusRuntimeException(io.grpc.Status.NOT_FOUND.withDescription(s"no access $dfName"))
+              if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
+                throw new DataFrameAccessDeniedException(dfName)
               val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
               val operationNode: OperationNode = OperationNode.fromJsonString(operationNodeJsonString)
               requestMap.put(flightStream.getDescriptor, (dfName, operationNode))
@@ -239,7 +242,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       val schema =  if (request != null) {
         val dataFrameSchema = dataProvider.getDataFrameSchema(request._1)
         if (dataFrameSchema == StructType.empty) {
-          throw new DataFrameNotFoundException(request.dataFrameName)
+          throw new DataFrameNotFoundException(request._1)
         }
         else
           convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request._1))

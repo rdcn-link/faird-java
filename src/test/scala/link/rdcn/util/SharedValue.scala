@@ -1,20 +1,22 @@
 package link.rdcn.util
 
 import link.rdcn.ConfigLoader
+import link.rdcn.provider.DataStreamSource
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.struct.DataSet
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, UsernamePassword}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.nio.file.{Files, Path, Paths}
+import java.{lang, util}
 import java.util.UUID
 
 object SharedValue {
-  ConfigLoader.init(getResourcePath("faird.conf"))
-  ConfigLoader.init(getResourcePath("faird.conf"))
+  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
 
   val adminUsername = "admin"
   val adminPassword = "admin"
@@ -29,10 +31,10 @@ object SharedValue {
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       null
     }
-
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String): Boolean = {
-      true
-    }
+    /**
+     * 判断用户是否具有某项权限
+     */
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = ???
   }
 
   val emptyDataProvider: DataProviderImpl = new DataProviderImpl() {
@@ -40,6 +42,10 @@ object SharedValue {
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       null
     }
+
+    override def getDataStreamSource(dataFrameName: String): DataStreamSource = ???
+
+    override def getDataFrameSize(dataFrameName: String): lang.Long = ???
   }
 
   val producer = new FlightProducerImpl(allocator, location, emptyDataProvider, emptyAuthProvider)

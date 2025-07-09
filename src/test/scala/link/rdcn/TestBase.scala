@@ -2,11 +2,12 @@ package link.rdcn
 
 import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
-import link.rdcn.server.FlightProducerImpl
+import link.rdcn.provider.DataStreamSource
+import link.rdcn.server.{FairdServer, FlightProducerImpl}
 import link.rdcn.server.exception._
-import link.rdcn.struct.ValueType.{DoubleType, IntType}
+import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, UsernamePassword}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.{DataProviderImpl, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.arrow.flight.{FlightServer, Location}
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll, TestInstance}
 import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
 import java.io.{BufferedWriter, FileWriter}
+import java.{lang, util}
 import java.util.UUID
 import scala.collection.JavaConverters.setAsJavaSetConverter
 
@@ -28,10 +30,10 @@ trait TestBase {
 
 object TestBase {
 
-  ConfigLoader.init(getResourcePath("faird.conf"))
+  //  ConfigLoader.init(getResourcePath("faird.conf"))
 
-  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-  val allocator: BufferAllocator = new RootAllocator()
+  //  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
+  //  val allocator: BufferAllocator = new RootAllocator()
 
   val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
@@ -42,12 +44,9 @@ object TestBase {
   private val binFileCount = 3
   private val csvFileCount = 3
 
-  // 生成测试数据
-  generateTestData()
-
   //根据文件生成元信息
   val csvDfInfos = listFiles(csvDir.toString).map(file => {
-    DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", IntType).add("value", DoubleType))
+    DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   val binDfInfos = Seq(
     DataFrameInfo(binDir.toString, DirectorySource(false), StructType.binaryStructType))
@@ -63,8 +62,8 @@ object TestBase {
 
   //权限
   val permissions = Map(
-    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv","/bin",
-    "/bin/data_1.csv","/csv/invalid.csv")
+    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv", "/bin",
+      "/bin/data_1.csv", "/csv/invalid.csv")
   )
 
   //生成Token
@@ -101,7 +100,7 @@ object TestBase {
       }
     }
 
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String): Boolean = {
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
       if (userName == anonymousUsername)
         throw new AuthorizationException(USER_NOT_LOGGED_IN)
@@ -110,47 +109,53 @@ object TestBase {
         case None => false // 用户不存在或没有权限
       }
     }
-
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-        getOutputDir("test_output/bin").resolve(relativePath).toString
+      getOutputDir("test_output/bin").resolve(relativePath).toString
     }
+    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
+
   }
 
-  val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
-  private var flightServer: Option[FlightServer] = None
-  lazy val dc: FairdClient = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+  //  val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
+  private var fairdServer: Option[FairdServer] = None
+  var dc: FairdClient = _
   val configCache = ConfigLoader.fairdConfig
 
   @BeforeAll
   def startServer(): Unit = {
-      generateTestData()
-      getServer
+    generateTestData()
+    getServer
+    connectClient
+
   }
 
   @AfterAll
   def stop(): Unit = {
-      producer.close()
-      stopServer()
-      DataUtils.closeAllFileSources()
-      cleanupTestData()
+    stopServer()
+    DataUtils.closeAllFileSources()
+    cleanupTestData()
   }
 
-  def getServer: FlightServer = synchronized {
-    if (flightServer.isEmpty) {
-      val s = FlightServer.builder(allocator, location, producer).build()
+  def getServer: FairdServer = synchronized {
+    if (fairdServer.isEmpty) {
+      val s = new FairdServer(dataProvider, authprovider, getResourcePath(""))
       s.start()
-      println(s"Server (Location): Listening on port ${s.getPort}")
-      flightServer = Some(s)
+      //      println(s"Server (Location): Listening on port ${s.getPort}")
+      fairdServer = Some(s)
     }
-    flightServer.get
+    fairdServer.get
+  }
+
+  def connectClient: Unit = synchronized {
+      dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
   }
 
   def stopServer(): Unit = synchronized {
-    flightServer.foreach(_.shutdown())
-    flightServer = None
+    fairdServer.foreach(_.close())
+    fairdServer = None
   }
 
 

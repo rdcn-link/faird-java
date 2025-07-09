@@ -25,15 +25,23 @@ object ExceptionHandler {
         ErrorCode.SERVER_NOT_RUNNING
       else Try(flightEx.status().metadata()) match {
         case Success(metadata) =>
-          Option(metadata.get("error-code"))
-            .flatMap(s => Try(s.toInt).toOption)
-            .flatMap(code => Try(getErrorCode(code)).toOption)
-            .getOrElse(ErrorCode.NO_SUCH_ERROR)
+          // 从 metadata 中获取 error-code 字段，并将其转换为 ErrorCode
+          Try(metadata.get("error-code")) match {
+            case Success(code) =>
+           Option(code).flatMap(s => Try(s.toInt).toOption)
+          .flatMap(code => Try(getErrorCode(code)).toOption)
+          .getOrElse(ErrorCode.UNKNOWN_ERROR)
+            case Failure(e) => getErrorCode(e)
+          }
+
         case Failure(_) => ErrorCode.ERROR_CODE_NOT_EXIST
       }
 
     // 处理 IllegalStateException
     case _: IllegalStateException => ErrorCode.SERVER_ALREADY_STARTED
+
+    // 处理 NoSuchElementException
+    case _: NoSuchElementException => ErrorCode.UNKNOWN_ERROR
 
     // 处理 IOException
     case e: IOException => {
@@ -52,7 +60,7 @@ object ExceptionHandler {
     // 其他 Exception 或未知输入
     case e: Exception => { e.getCause match {
       case _: ConnectException => ErrorCode.SERVER_NOT_RUNNING
-      case _ => ErrorCode.NO_SUCH_ERROR
+      case _ => ErrorCode.UNKNOWN_ERROR
     }
 
     }

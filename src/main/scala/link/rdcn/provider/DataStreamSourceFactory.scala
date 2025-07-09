@@ -1,6 +1,8 @@
 package link.rdcn.provider
 
-import link.rdcn.struct.{Row, StructType}
+import link.rdcn.struct
+import link.rdcn.struct.ValueType.IntType
+import link.rdcn.struct.{Column, Row, StructType}
 import link.rdcn.util.{DataUtils, JdbcUtils}
 import org.apache.poi.ss.formula.udf.UDFFinder
 
@@ -58,8 +60,8 @@ object DataStreamSourceFactory{
 
   def createFileListDataStreamSource(dir: File, recursive: Boolean = false): DataStreamSource = {
     var iterFiles:Iterator[(File, BasicFileAttributes)] = Iterator.empty
-    if(recursive) iterFiles = DataUtils.listAllFilesWithAttrs(dir)
-    else DataUtils.listFilesWithAttributes(dir)
+    iterFiles = if(recursive) DataUtils.listAllFilesWithAttrs(dir)
+    else DataUtils.listFilesWithAttributes(dir).toIterator
     val stream = iterFiles.zipWithIndex
       // schema [name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
       //TODO 不能以文件名称判断是否为同一文件
@@ -68,7 +70,7 @@ object DataStreamSourceFactory{
     new DataStreamSource {
       override def rowCount: Long = -1
 
-      override def schema: StructType = StructType.binaryStructType
+      override def schema: StructType = StructType.fromSeq(Column("index", IntType)+:StructType.binaryStructType.columns)
 
       override def iterator: Iterator[Row] = stream
     }

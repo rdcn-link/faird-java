@@ -1,6 +1,5 @@
 package link.rdcn.user
 
-import link.rdcn.user.Credentials.AnonymousCredentialsHolder
 
 /**
  * @Author renhao
