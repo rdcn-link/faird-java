@@ -2,12 +2,10 @@ package link.rdcn.provider
 
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.util.{DataUtils, JdbcUtils}
-import org.apache.poi.ss.formula.udf.UDFFinder
 
 import java.io.File
 import java.nio.file.attribute.BasicFileAttributes
 import java.sql.{Connection, DriverManager, ResultSet}
-import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter}
 import scala.collection.mutable.ArrayBuffer
 
 /**

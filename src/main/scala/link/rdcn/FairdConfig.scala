@@ -23,11 +23,11 @@ object FairdConfig {
         .getOrElse(throw new IllegalArgumentException(s"Missing config key: $key"))
 
     FairdConfig(
-      hostName = get("host.name"),
-      hostTitle = get("host.title"),
-      hostPosition = get("host.position"),
-      hostDomain = get("host.domain"),
-      hostPort = get("host.port").toInt,
+      hostName = get("faird.host.name"),
+      hostTitle = get("faird.host.title"),
+      hostPosition = get("faird.host.position"),
+      hostDomain = get("faird.host.domain"),
+      hostPort = get("faird.host.port").toInt,
     )
   }
 }
