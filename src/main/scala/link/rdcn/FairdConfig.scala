@@ -18,16 +18,16 @@ object FairdConfig {
 
   /** 从 java.util.Properties 加载配置生成 FairdConfig 实例 */
   def load(props: java.util.Properties): FairdConfig = {
-    def get(key: String): String =
+    def getOrDefault(key: String, default: String): String =
       Option(props.getProperty(key))
-        .getOrElse(throw new IllegalArgumentException(s"Missing config key: $key"))
+        .getOrElse(default)
 
     FairdConfig(
-      hostName = get("faird.host.name"),
-      hostTitle = get("faird.host.title"),
-      hostPosition = get("faird.host.position"),
-      hostDomain = get("faird.host.domain"),
-      hostPort = get("faird.host.port").toInt,
+      hostName = getOrDefault("faird.host.name", ""),
+      hostTitle = getOrDefault("faird.host.title", ""),
+      hostPosition = getOrDefault("faird.host.position","0.0.0.0"),
+      hostDomain = getOrDefault("faird.host.domain",""),
+      hostPort = getOrDefault("faird.host.port","3101").toInt,
     )
   }
 }

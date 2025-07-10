@@ -6,12 +6,9 @@ package link.rdcn.user
  * @Data 2025/7/9 16:55
  * @Modified By:
  */
-trait Credentials extends Serializable {
-  def isAnonymous: Boolean = false
-}
+trait Credentials extends Serializable
 
 object Credentials {
-  case object Anonymous extends Credentials {
-    override def isAnonymous: Boolean = true
-  }
+  case object ANONYMOUS extends Credentials
 }
+

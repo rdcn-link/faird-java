@@ -1,6 +1,6 @@
 package link.rdcn.provider
 
-import link.rdcn.struct.StructType
+import link.rdcn.struct.DataFrameDocument
 import org.apache.jena.rdf.model.Model
 
 import java.util.{List => JList}
@@ -41,16 +41,9 @@ trait DataProvider {
   def getDataStreamSource(dataFrameName: String): DataStreamSource
 
   /**
-   * 获取数据帧的结构（列定义）
+   * 获取数据帧详细信息
    * @param dataFrameName 数据帧名
-   * @return 数据帧的结构定义
+   * @return 数据帧的DataFrameDocument
    */
-  def getDataFrameSchema(dataFrameName: String): StructType
-
-  /**
-   * 获取数据帧 Schema 的 URL 表示
-   * @param dataFrameName 数据帧名
-   * @return Schema URL 字符串
-   */
-  def getDataFrameSchemaURL(dataFrameName: String): String
+  def getDataFrameDocument(dataFrameName: String): DataFrameDocument
 }
