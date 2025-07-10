@@ -156,7 +156,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   }
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-        new String(ticket.getBytes, StandardCharsets.UTF_8) match {
+    new String(ticket.getBytes, StandardCharsets.UTF_8) match {
           case "listDataSetNames" => getListStringStream(dataProvider.listDataSetNames().asScala, listener)
           case ticketKey if ticketKey.startsWith("listDataFrameNames") => {
             val dataSet = ticketKey.replace("listDataFrameNames.","")
@@ -164,7 +164,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
           }
           case ticketKey if ticketKey.startsWith("getSchemaURI") => {
             val dfName = ticketKey.replace("getSchemaURI.","")
-            getSingleStringStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
+            getSingleStringStream(dataProvider.getDataFrameDocument(dfName).getSchemaURL().getOrElse(""),listener)
 
           }
           case ticketKey if ticketKey.startsWith("getDataSetMetaData") => {
@@ -195,9 +195,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
           case ticketKey if ticketKey.startsWith("getSchema") => {
             val dfName =  ticketKey.replace("getSchema.","")
-            var structType = dataProvider.getDataFrameSchema(dfName)
+            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+            var structType = dataStreamSource.schema
             if(structType.isEmpty()){
-              val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
               val iter = dataStreamSource.iterator
               if(iter.hasNext){
                  structType = DataUtils.inferSchemaFromRow(iter.next())
@@ -255,13 +255,14 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
       val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
       val request = requestMap.getOrDefault(descriptor, null)
+      val structType = dataProvider.getDataStreamSource(request._1).schema
       val schema =  if (request != null) {
-        val dataFrameSchema = dataProvider.getDataFrameSchema(request._1)
+        val dataFrameSchema = structType
         if (dataFrameSchema == StructType.empty) {
           throw new DataFrameNotFoundException(request._1)
         }
         else
-          convertStructTypeToArrowSchema(dataProvider.getDataFrameSchema(request._1))
+          convertStructTypeToArrowSchema(structType)
 
       } else new Schema(List.empty.asJava)
       new FlightInfo(schema, descriptor, List(flightEndpoint).asJava, -1L, 0L)
