@@ -2,7 +2,7 @@ package link.rdcn.util
 
 import link.rdcn.ConfigLoader
 import link.rdcn.provider.{DataProvider, DataStreamSource, DataStreamSourceFactory}
-import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, InputSource, StructType}
+import link.rdcn.struct.{CSVSource, DataFrameDocument, DataFrameInfo, DataSet, DirectorySource, InputSource, StructType}
 import org.apache.jena.rdf.model.Model
 
 import java.io.File
@@ -40,6 +40,21 @@ abstract class DataProviderImpl extends DataProvider{
       case _: InputSource => ???
     }
 
+  }
+
+  override def getDataFrameDocument(dataFrameName: String): DataFrameDocument = {
+    val dataFrameInfo:DataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return null)
+    new DataFrameDocument{
+      override def getSchemaURL(): Option[String] = {
+          getDataFrameInfo(dataFrameName).map(_.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}"))
+      }
+
+      override def getColumnURL(colName: String): Option[String] = Some("")
+
+      override def getColumnAlias(colName: String): Option[String] = Some("")
+
+      override def getColumnTitle(colName: String): Option[String] = Some("")
+    }
   }
 
   def getDataFrameSchema(dataFrameName: String): StructType = {

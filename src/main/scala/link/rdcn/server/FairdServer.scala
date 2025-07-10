@@ -150,10 +150,10 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         val dataSet = actionType.replace("listDataFrameNames.","")
         getListBytesStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
       }
-      case actionType if actionType.startsWith("getSchemaURI") => {
-        val dfName =actionType.replace("getSchemaURI.","")
-        getSingleBytesStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
-      }
+//      case actionType if actionType.startsWith("getSchemaURI") => {
+//        val dfName =actionType.replace("getSchemaURI.","")
+//        getSingleBytesStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
+//      }
       case actionType if actionType.startsWith("getDataSetMetaData") => {
         val dsName = actionType.replace("getDataSetMetaData.","")
         val model: Model = ModelFactory.createDefaultModel()
@@ -180,18 +180,18 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getServerResourceInfo") =>
         getSingleBytesStream(getResourceStatusString,listener)
 
-      case actionType if actionType.startsWith("getSchema") => {
-        val dfName =  actionType.replace("getSchema.","")
-        var structType = dataProvider.getDataFrameSchema(dfName)
-        if(structType.isEmpty()){
-          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-          val iter = dataStreamSource.iterator
-          if(iter.hasNext){
-            structType = DataUtils.inferSchemaFromRow(iter.next())
-          }
-        }
-        getSingleBytesStream(structType.toString,listener)
-      }
+//      case actionType if actionType.startsWith("getSchema") => {
+//        val dfName =  actionType.replace("getSchema.","")
+//        var structType = dataProvider.getDataFrameSchema(dfName)
+//        if(structType.isEmpty()){
+//          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+//          val iter = dataStreamSource.iterator
+//          if(iter.hasNext){
+//            structType = DataUtils.inferSchemaFromRow(iter.next())
+//          }
+//        }
+//        getSingleBytesStream(structType.toString,listener)
+//      }
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
           val root = DataUtils.getVectorSchemaRootFromBytes(body,childAllocator)
