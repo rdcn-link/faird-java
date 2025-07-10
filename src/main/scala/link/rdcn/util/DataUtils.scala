@@ -5,6 +5,8 @@ import link.rdcn.Logging
 import scala.collection.mutable
 import link.rdcn.struct.ValueType._
 import link.rdcn.struct.{Column, Row, StructType, ValueType}
+import org.apache.arrow.memory.BufferAllocator
+import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
@@ -12,7 +14,7 @@ import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, Vecto
 import org.apache.poi.ss.usermodel.{Cell, CellType, DateUtil}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
-import java.io.{File, FileInputStream, IOException}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
@@ -192,6 +194,23 @@ object DataUtils extends Logging{
     } finally {
       reader.close()
     }
+  }
+
+  def getBytesFromVectorSchemaRoot(root: VectorSchemaRoot): Array[Byte] = {
+    val outputStream = new ByteArrayOutputStream()
+    val writer = new ArrowStreamWriter(root, null, outputStream)
+    writer.start()
+    writer.writeBatch()
+    writer.end()
+    writer.close()
+    outputStream.toByteArray
+  }
+
+  def getVectorSchemaRootFromBytes(bytes: Array[Byte], allocator: BufferAllocator): VectorSchemaRoot = {
+    val inputStream = new ByteArrayInputStream(bytes)
+    val reader = new ArrowStreamReader(inputStream, allocator)
+    reader.loadNextBatch()
+    reader.getVectorSchemaRoot
   }
 
   // 列出目录下所有文件

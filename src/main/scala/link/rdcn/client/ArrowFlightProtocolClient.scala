@@ -4,19 +4,18 @@ package link.rdcn.client
 import link.rdcn.SimpleSerializer
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
-import org.apache.arrow.flight.{AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, FlightRuntimeException, Location}
+import link.rdcn.util.DataUtils
+import org.apache.arrow.flight.{Action, AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, FlightRuntimeException, Location, Result}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 
 import java.util.UUID
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
-import java.nio.file.{Path, Paths}
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import java.nio.file.Paths
+import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
-import java.lang.management.ManagementFactory
-import com.sun.management.OperatingSystemMXBean
 
 /**
  * @Author renhao
@@ -52,50 +51,48 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       credentialsVector.allocateNew(1)
       credentialsVector.set(0, SimpleSerializer.serialize(credentials))
       vectorSchemaRoot.setRowCount(1)
-      val listener = flightClient.startPut(FlightDescriptor.path(s"login.$userToken"), vectorSchemaRoot, new AsyncPutListener())
-      listener.putNext()
-      listener.completed()
-      listener.getResult()
+      val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
+      val result = flightClient.doAction(new Action(s"login.$userToken",body)).asScala
+      val resultString = getListStringByResult(result)
   }
 
   def listDataSetNames(): Seq[String] = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path("listDataSetNames"))
-    getListStringByFlightInfo(flightInfo)
+      val dataSetNames = flightClient.doAction(new Action("listDataSetNames")).asScala
+      getListStringByResult(dataSetNames)
   }
   def listDataFrameNames(dsName: String): Seq[String] = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"listDataFrameNames.$dsName"))
-    getListStringByFlightInfo(flightInfo)
+    val dataFrameNames = flightClient.doAction(new Action(s"listDataFrameNames.$dsName")).asScala
+    getListStringByResult(dataFrameNames)
   }
 
   def getSchema(dataFrameName: String): String = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchema.$dataFrameName"))
-    getSingleStringByFlightInfo(flightInfo)
+    val schema = flightClient.doAction(new Action(s"getSchema.$dataFrameName")).asScala
+      getSingleStringByResult(schema)
   }
 
   override def getDataSetMetaData(dataSetName: String): String = {
-//    getDataSetMetaData
-    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataSetMetaData.$dataSetName"))
-    getSingleStringByFlightInfo(flightInfo)
+    val dataSetMetaData = flightClient.doAction(new Action(s"getDataSetMetaData.$dataSetName")).asScala
+    getSingleStringByResult(dataSetMetaData)
   }
 
   override def getDataFrameSize(dataFrameName: String): Long = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getDataFrameSize.$dataFrameName"))
-    getSingleLongByFlightInfo(flightInfo)
+    val dataFrameSize = flightClient.doAction(new Action(s"getDataFrameSize.$dataFrameName")).asScala
+    getSingleLongByResult(dataFrameSize)
   }
 
   override def getHostInfo(): String = {
-    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getHostInfo"))
-    getSingleStringByFlightInfo(flightInfo)
+    val hostInfo = flightClient.doAction(new Action(s"getHostInfo")).asScala
+    getSingleStringByResult(hostInfo)
   }
 
   override def getServerResourceInfo(): String = {
-    val flightInfo: FlightInfo = flightClient.getInfo(FlightDescriptor.path(s"getServerResourceInfo"))
-    getSingleStringByFlightInfo(flightInfo)
+    val serverResourceInfo = flightClient.doAction(new Action(s"getServerResourceInfo")).asScala
+    getSingleStringByResult(serverResourceInfo)
   }
 
   def getSchemaURI(dataFrameName: String): String = {
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(s"getSchemaURI.$dataFrameName"))
-    getSingleStringByFlightInfo(flightInfo)
+    val schemaURI = flightClient.doAction(new Action(s"getSchemaURI.$dataFrameName")).asScala
+    getSingleStringByResult(schemaURI)
   }
 
   def close(): Unit = {
@@ -287,6 +284,40 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
     }else 0L
   }
+
+  private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {
+    if(resultIterator.hasNext){
+      val result = resultIterator.next
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
+      val rowCount = vectorSchemaRootReceived.getRowCount
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      Seq.range(0, rowCount).map(index  => {
+        val rowMap = fieldVectors.map(vec =>{
+          vec.asInstanceOf[VarCharVector].getObject(index).toString
+        }).head
+        rowMap
+      })
+    }else null
+  }
+
+  private def getSingleStringByResult(resultIterator: Iterator[Result]): String = {
+    if(resultIterator.hasNext){
+      val result = resultIterator.next
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
+    }else null
+  }
+  private def getSingleLongByResult(resultIterator: Iterator[Result]): Long = {
+    if(resultIterator.hasNext){
+      val result = resultIterator.next
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
+    }else 0L
+  }
+
+
 }
 
 // 表示完整的二进制文件

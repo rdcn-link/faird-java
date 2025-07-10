@@ -1,5 +1,6 @@
 package link.rdcn
 
+import com.sun.management.OperatingSystemMXBean
 import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
 import link.rdcn.provider.DataStreamSource
@@ -10,21 +11,16 @@ import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, Str
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.{DataProviderImpl, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
-import org.apache.arrow.flight.{FlightServer, Location}
-import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.logging.log4j.{LogManager, Logger}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, TestInstance}
 
-import java.io.FileOutputStream
+import java.io.{BufferedWriter, File, FileOutputStream, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-import java.io.{BufferedWriter, FileWriter}
-import java.{lang, util}
 import java.util.UUID
-import scala.collection.JavaConverters.setAsJavaSetConverter
 
 trait TestBase {
+
 
 }
 
@@ -34,6 +30,7 @@ object TestBase {
 
   //  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
   //  val allocator: BufferAllocator = new RootAllocator()
+
 
   val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
@@ -126,6 +123,7 @@ object TestBase {
   private var fairdServer: Option[FairdServer] = None
   var dc: FairdClient = _
   val configCache = ConfigLoader.fairdConfig
+  var expectedHostInfo: String = _
 
   @BeforeAll
   def startServer(): Unit = {
@@ -145,9 +143,17 @@ object TestBase {
   def getServer: FairdServer = synchronized {
     if (fairdServer.isEmpty) {
       val s = new FairdServer(dataProvider, authprovider, getResourcePath(""))
+
       s.start()
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)
+      expectedHostInfo = s"""
+         |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
+         |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
+         |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
+         |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
+         |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
+         |""".stripMargin
     }
     fairdServer.get
   }
@@ -212,6 +218,14 @@ object TestBase {
     Files.createDirectories(binDir)
     Files.createDirectories(csvDir)
     println(s"Created directory structure at ${baseDir.toAbsolutePath}")
+  }
+
+  def getExpectedDataFrameSize(dataFrameName: String): Long = {
+    dataProvider.dataSetsScalaList.foreach(ds => {
+      val dfInfo = ds.getDataFrameInfo(dataFrameName)
+      if (dfInfo.nonEmpty) return DataUtils.countLinesFast(new File(dfInfo.get.name))
+    })
+    -1L
   }
 
   private def generateBinaryFiles(): Unit = {

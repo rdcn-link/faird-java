@@ -15,18 +15,14 @@ import link.rdcn.struct.{DataFrame, Row, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils
 import link.rdcn.user.DataOperationType
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
-import java.lang.Thread.sleep
 import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
-import scala.collection.convert.ImplicitConversions.`iterator asJava`
-
 /**
  * @Author renhao
  * @Description:
@@ -122,16 +118,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       override def run(): Unit = {
         val ticketKey: String = flightStream.getDescriptor.getPath.get(0)
         ticketKey match {
-          case ticketKey if ticketKey.startsWith("login") =>
-            if(flightStream.next()){
-              val root = flightStream.getRoot
-              val credentialsBytes = root.getFieldVectors.get(0).asInstanceOf[VarBinaryVector].getObject(0)
-              val credentials = SimpleSerializer.deserialize(credentialsBytes).asInstanceOf[Credentials]
-              val authenticatedUser: AuthenticatedUser = authProvider.authenticate(credentials)
-              val loginToken: String = ticketKey.split("\\.")(1)
-              authenticatedUserMap.put(loginToken, authenticatedUser)
-              flightStream.getRoot.clear()
-            }
           case _ => {
             while (flightStream.next()) {
               val root = flightStream.getRoot
@@ -155,57 +141,73 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     }
   }
 
+  override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
+    val body = action.getBody
+    action.getType match {
+      case "listDataSetNames" =>
+        getListBytesStream(dataProvider.listDataSetNames().asScala, listener)
+      case actionType if actionType.startsWith("listDataFrameNames") => {
+        val dataSet = actionType.replace("listDataFrameNames.","")
+        getListBytesStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
+      }
+      case actionType if actionType.startsWith("getSchemaURI") => {
+        val dfName =actionType.replace("getSchemaURI.","")
+        getSingleBytesStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
+      }
+      case actionType if actionType.startsWith("getDataSetMetaData") => {
+        val dsName = actionType.replace("getDataSetMetaData.","")
+        val model: Model = ModelFactory.createDefaultModel()
+        dataProvider.getDataSetMetaData(dsName, model)
+        getSingleBytesStream(model.toString,listener)
+      }
+      case actionType if actionType.startsWith("getDataFrameSize") => {
+        val dfName =  actionType.replace("getDataFrameSize.","")
+        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+        getSingleLongBytesStream(dataStreamSource.rowCount, listener)
+      }
+
+      case actionType if actionType.startsWith("getHostInfo") =>
+        val hostInfo =
+          s"""
+             |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
+             |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
+             |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
+             |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
+             |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
+             |""".stripMargin
+        getSingleBytesStream(hostInfo,listener)
+
+      case actionType if actionType.startsWith("getServerResourceInfo") =>
+        getSingleBytesStream(getResourceStatusString,listener)
+
+      case actionType if actionType.startsWith("getSchema") => {
+        val dfName =  actionType.replace("getSchema.","")
+        var structType = dataProvider.getDataFrameSchema(dfName)
+        if(structType.isEmpty()){
+          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+          val iter = dataStreamSource.iterator
+          if(iter.hasNext){
+            structType = DataUtils.inferSchemaFromRow(iter.next())
+          }
+        }
+        getSingleBytesStream(structType.toString,listener)
+      }
+      case actionType if actionType.startsWith("login") =>
+          val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
+          val root = DataUtils.getVectorSchemaRootFromBytes(body,childAllocator)
+          val credentialsBytes = root.getFieldVectors.get(0).asInstanceOf[VarBinaryVector].getObject(0)
+          val credentials = SimpleSerializer.deserialize(credentialsBytes).asInstanceOf[Credentials]
+          val authenticatedUser: AuthenticatedUser = authProvider.authenticate(credentials)
+          val loginToken: String = actionType.split("\\.")(1)
+          authenticatedUserMap.put(loginToken, authenticatedUser)
+          getSingleBytesStream("log in success",listener)
+      case _ =>
+        throw new UnsupportedOperationException("Unsupported action type")
+    }
+  }
+
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
         new String(ticket.getBytes, StandardCharsets.UTF_8) match {
-          case "listDataSetNames" => getListStringStream(dataProvider.listDataSetNames().asScala, listener)
-          case ticketKey if ticketKey.startsWith("listDataFrameNames") => {
-            val dataSet = ticketKey.replace("listDataFrameNames.","")
-            getListStringStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
-          }
-          case ticketKey if ticketKey.startsWith("getSchemaURI") => {
-            val dfName = ticketKey.replace("getSchemaURI.","")
-            getSingleStringStream(dataProvider.getDataFrameSchemaURL(dfName),listener)
-
-          }
-          case ticketKey if ticketKey.startsWith("getDataSetMetaData") => {
-            val dsName = ticketKey.replace("getDataSetMetaData.","")
-            val model: Model = ModelFactory.createDefaultModel()
-            dataProvider.getDataSetMetaData(dsName, model)
-            getSingleStringStream(model.toString,listener)
-          }
-          case ticketKey if ticketKey.startsWith("getDataFrameSize") => {
-            val dfName =  ticketKey.replace("getSchema.","")
-            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-            getSingleLongStream(dataStreamSource.rowCount, listener)
-          }
-
-          case ticketKey if ticketKey.startsWith("getHostInfo") =>
-            val hostInfo =
-              s"""
-                 |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
-                 |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
-                 |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
-                 |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
-                 |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
-                 |""".stripMargin
-            getSingleStringStream(hostInfo,listener)
-
-          case ticketKey if ticketKey.startsWith("getServerResourceInfo") =>
-            getSingleStringStream(getResourceStatusString,listener)
-
-          case ticketKey if ticketKey.startsWith("getSchema") => {
-            val dfName =  ticketKey.replace("getSchema.","")
-            var structType = dataProvider.getDataFrameSchema(dfName)
-            if(structType.isEmpty()){
-              val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-              val iter = dataStreamSource.iterator
-              if(iter.hasNext){
-                 structType = DataUtils.inferSchemaFromRow(iter.next())
-              }
-            }
-            getSingleStringStream(structType.toString,listener)
-          }
-
           case _ => {
             val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
             val request = requestMap.get(flightDescriptor)
@@ -370,4 +372,52 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     }
   }
 
+  private def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("size", ValueType.LongType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("size").asInstanceOf[BigIntVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, long)
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  private def getListBytesStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+      rootAndAllocator._1.allocateNew()
+      var index = 0
+      seq.foreach(d => {
+        nameVector.setSafe(index, d.getBytes("UTF-8"))
+        index += 1
+      })
+      rootAndAllocator._1.setRowCount(index)
+      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  private def getSingleBytesStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, str.getBytes("UTF-8"))
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
 }
