@@ -156,7 +156,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       }
       case actionType if actionType.startsWith("getSchemaURI") => {
         val dfName = actionType.replace("getSchemaURI.","")
-        getSingleBytesStream(dataProvider.getDataFrameDocument(dfName).getSchemaURL,listener)
+        getSingleBytesStream(dataProvider.getDataFrameDocument(dfName).getSchemaURL.getOrElse(""),listener)
       }
       case actionType if actionType.startsWith("getDataSetMetaData") => {
         val dsName = actionType.replace("getDataSetMetaData.","")

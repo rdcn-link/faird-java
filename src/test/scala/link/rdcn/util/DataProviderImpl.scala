@@ -2,7 +2,7 @@ package link.rdcn.util
 
 import link.rdcn.ConfigLoader
 import link.rdcn.provider.{DataProvider, DataStreamSource, DataStreamSourceFactory}
-import link.rdcn.struct.{CSVSource, DataFrameDocument, DataFrameInfo, DataSet, DirectorySource, InputSource, StructType}
+import link.rdcn.struct.{CSVSource, DataFrameDocument, DataFrameInfo, DataSet, DirectorySource, InputSource, Row, StructType}
 import org.apache.jena.rdf.model.Model
 
 import java.io.File
@@ -33,7 +33,13 @@ abstract class DataProviderImpl extends DataProvider{
   }
 
   def getDataStreamSource(dataFrameName: String): DataStreamSource = {
-    val dataFrameInfo:DataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return null)
+    val dataFrameInfo:DataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return new DataStreamSource {
+      override def rowCount: Long = -1
+
+      override def schema: StructType = StructType.empty
+
+      override def iterator: Iterator[Row] = Iterator.empty
+    })
     dataFrameInfo.inputSource match {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.name))
       case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name))

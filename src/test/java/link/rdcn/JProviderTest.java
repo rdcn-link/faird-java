@@ -170,34 +170,21 @@ public class JProviderTest {
                 return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name()),false);
             }
 
-
-
             /**
-             * 获取指定名称的DataFrame的Schema。
-             * 此处展示了生成Schema的方法，实际需要Provider提供DataFrame名称到对应Schema的映射
-             *
-             * @param dataFrameName DataFrame的名称
-             * @return DataFrame的Schema，类型为 {@link StructType}
-             */
-            @Override
-            public StructType getDataFrameSchema(String dataFrameName) {
-                return StructType.binaryStructType();
-            }
-
-            /**
-             * 根据DataFrame名称获取DataFrameSchema的URL
-             * 该URL唯一确定数据帧Schema，由Provider定义对应规则
+             * 根据DataFrame名称获取DataFrameDocument
+             * DataFrameDocument用于封装DataFrameSchemaURL等元数据
              *
              * @param dataFrameName DataFrame的名称
              * @return DataFrameSchema的URL
              */
             @Override
-            public String getDataFrameSchemaURL(String dataFrameName) {
-                String hostname = ConfigBridge.getConfig().hostName(); //配置文件中 faird.hostName=cerndc
-                int port = ConfigBridge.getConfig().hostPort(); //faird.hostPort=3101
-                String dataFrameSchemaURL = "dacp://" + hostname + ":" + port + "/" + dataFrameName;
-                return dataFrameSchemaURL;
+            public DataFrameDocument getDataFrameDocument(String dataFrameName) {
+                return null;
             }
+
+
+
+
 
             /**
              * 根据DataFrame名称获取DataFrameInfo，包含DataFrame位置和类型等信息
