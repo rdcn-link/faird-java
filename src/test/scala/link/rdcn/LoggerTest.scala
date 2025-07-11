@@ -1,19 +1,17 @@
 package link.rdcn
 
 import link.rdcn.util.ExpectedLogger
-import link.rdcn.Logging
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.appender.{ConsoleAppender, FileAppender}
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.{Execution, ExecutionMode}
 
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.util.matching.Regex
 
 
 @Execution(ExecutionMode.SAME_THREAD)

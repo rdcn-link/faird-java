@@ -1,19 +1,17 @@
 package link.rdcn
 
-import com.sun.management.OperatingSystemMXBean
 import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
-import link.rdcn.provider.DataStreamSource
-import link.rdcn.server.{FairdServer, FlightProducerImpl}
+import link.rdcn.server.FairdServer
 import link.rdcn.server.exception._
-import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
+import link.rdcn.struct.ValueType.{DoubleType, LongType}
 import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.{DataProviderImpl, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.junit.jupiter.api.{AfterAll, BeforeAll, TestInstance}
+import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.io.{BufferedWriter, File, FileOutputStream, FileWriter}
 import java.nio.file.{Files, Path, Paths}
@@ -25,11 +23,6 @@ trait TestBase {
 }
 
 object TestBase {
-
-  //  ConfigLoader.init(getResourcePath("faird.conf"))
-
-  //  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-  //  val allocator: BufferAllocator = new RootAllocator()
 
 
   val baseDir = getOutputDir("test_output")
@@ -82,7 +75,6 @@ object TestBase {
       if (credentials.isInstanceOf[UsernamePassword]) {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
         if (usernamePassword.userName == null && usernamePassword.password == null) {
-          //          throw new StatusRuntimeException(io.grpc.Status.UNAUTHENTICATED.withDescription("User not logged in"))
           throw new AuthorizationException(USER_NOT_FOUND)
         }
         else if (usernamePassword.userName == adminUsername && usernamePassword.password == adminPassword) {
@@ -95,8 +87,11 @@ object TestBase {
         } else {
           throw new AuthorizationException(INVALID_CREDENTIALS)
         }
-      } else {
+      } else if (credentials == Credentials.ANONYMOUS) {
         new TestAuthenticatedUser(anonymousUsername, genToken())
+      }
+      else {
+        throw new AuthorizationException(INVALID_CREDENTIALS)
       }
     }
 
@@ -115,7 +110,7 @@ object TestBase {
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       getOutputDir("test_output/bin").resolve(relativePath).toString
     }
-//    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
+    //    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
 
   }
 
@@ -147,19 +142,20 @@ object TestBase {
       s.start()
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)
-      expectedHostInfo = s"""
-         |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
-         |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
-         |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
-         |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
-         |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
-         |""".stripMargin
+      expectedHostInfo =
+        s"""
+           |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
+           |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
+           |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
+           |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
+           |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
+           |""".stripMargin
     }
     fairdServer.get
   }
 
   def connectClient: Unit = synchronized {
-      dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+    dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
   }
 
   def stopServer(): Unit = synchronized {

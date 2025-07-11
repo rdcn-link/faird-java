@@ -1,13 +1,12 @@
 package link.rdcn
 
-import link.rdcn.TestBase.{csvDir, getServer, stopServer}
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.{adminPassword, adminUsername}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
-import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
+import org.junit.jupiter.api.Test
 
 class ClientAuthorizationTest extends TestBase {
 

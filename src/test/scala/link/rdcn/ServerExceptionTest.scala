@@ -1,7 +1,6 @@
 package link.rdcn
 
 import link.rdcn.client.FairdClient
-import link.rdcn.server.FairdServer
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue._

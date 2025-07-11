@@ -1,11 +1,10 @@
 package link.rdcn.server.exception
 
 import io.grpc.{Metadata, Status}
-import io.grpc.StatusRuntimeException
 import link.rdcn.ErrorCode
 import link.rdcn.util.ScalaExtensions.TapAny
 
-class AuthorizationException(errorCode: ErrorCode, status: Status = Status.UNAUTHENTICATED)
+class AuthorizationException(errorCode: ErrorCode, status: Status = Status.UNAUTHENTICATED.withDescription("Authorization Exception"))
   extends ServerException(
     errorCode,
     status,

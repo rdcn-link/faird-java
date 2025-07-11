@@ -1,13 +1,12 @@
 package link.rdcn
 
 import link.rdcn.DataFrameOperationTest.isFolderContentsMatch
-import link.rdcn.TestBase.{baseDir, binDfInfos, binDir, dc}
+import link.rdcn.TestBase.{baseDir, binDir, dc}
 import link.rdcn.client.Blob
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
 import link.rdcn.util.SharedValue.getOutputDir
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -25,12 +24,12 @@ class DataIntegrityTest extends TestBase {
     val file = absolutePath.toFile
     val expectedRow: Row = {
       val temp = (
-        file.getName,                            // name: String
-        attrs.size(),                       // size: Long
-        DataUtils.getFileTypeByExtension(file),  // 文件类型: String
-        attrs.creationTime().toMillis,      // 创建时间: Long (Millis)
-        attrs.lastModifiedTime().toMillis,  // 最后修改时间: Long (Millis)
-        attrs.lastAccessTime().toMillis,    // 最后访问时间: Long (Millis)
+        file.getName, // name: String
+        attrs.size(), // size: Long
+        DataUtils.getFileTypeByExtension(file), // 文件类型: String
+        attrs.creationTime().toMillis, // 创建时间: Long (Millis)
+        attrs.lastModifiedTime().toMillis, // 最后修改时间: Long (Millis)
+        attrs.lastAccessTime().toMillis, // 最后访问时间: Long (Millis)
         file)
       Row.fromTuple(temp)
     }

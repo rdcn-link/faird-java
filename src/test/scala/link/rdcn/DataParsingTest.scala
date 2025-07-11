@@ -1,7 +1,6 @@
 package link.rdcn
 
-import link.rdcn.DataFrameOperationTest.isFolderContentsMatch
-import link.rdcn.TestBase.{baseDir, csvDfInfos, dc}
+import link.rdcn.TestBase.{csvDfInfos, dc}
 import link.rdcn.client.Blob
 import link.rdcn.struct.StructType.binaryStructType
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema

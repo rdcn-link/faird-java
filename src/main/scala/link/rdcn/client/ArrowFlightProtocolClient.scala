@@ -53,7 +53,7 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
       vectorSchemaRoot.setRowCount(1)
       val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
       val result = flightClient.doAction(new Action(s"login.$userToken",body)).asScala
-      val resultString = getListStringByResult(result)
+      result.hasNext
   }
 
   def listDataSetNames(): Seq[String] = {
@@ -153,7 +153,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
             }
           }):_*)
           val r: Seq[Any] = rowMap.values.toList
-          //                    Row(rowMap.toSeq.map(x => x._2): _*)
           r
         })
       }
@@ -209,7 +208,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
                   isExhausted = false
                   isFirstChunk = false
                 }
-                //              println(currentIndex)
 
               } else {
                 // flatIter 耗尽
@@ -247,7 +245,6 @@ class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
             }
           }
           Row(currentSeq.init:+new Blob(blobIter,currentSeq(0).asInstanceOf[String]):_*)
-          //          Row(iter.next())
         }
       }
     }

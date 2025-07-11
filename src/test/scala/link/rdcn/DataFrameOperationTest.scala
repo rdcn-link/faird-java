@@ -3,14 +3,12 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
-import link.rdcn.client.Blob
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.getOutputDir
 import org.apache.arrow.flight.FlightRuntimeException
-import org.apache.logging.log4j.core.ErrorHandler
-import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
-import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -69,7 +67,6 @@ class DataFrameOperationTest extends TestBase {
   @Test
   def testDataFrameForEach(): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.mkString("\n") + "\n"
-//    val df = dc.open(csvDir + "\\data_1.csv")
     val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -118,7 +115,7 @@ class DataFrameOperationTest extends TestBase {
 
   @ParameterizedTest
   @ValueSource(ints = Array(10))
-  def testDataFrameMap(num: Int): Unit = {
+  def testDataFrameMap(num: Long): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
       .toSeq
       .tail // 跳过标题行
@@ -131,14 +128,13 @@ class DataFrameOperationTest extends TestBase {
     val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
-    val rowMapper: Row => Row = row => Row(row.getAs[Long](0).getOrElse(-1L) + 1L, row.get(1))
+    val rowMapper: Row => Row = row => Row(row.getAs[Long](0).getOrElse(-1L) + num, row.get(1))
 
-    try
-      {
-        df.map(rowMapper).foreach { row =>
-          printWriter.write(getLine(row))
-        }
-      } catch {
+    try {
+      df.map(rowMapper).foreach { row =>
+        printWriter.write(getLine(row))
+      }
+    } catch {
       case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
     }
 

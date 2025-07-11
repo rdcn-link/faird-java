@@ -1,10 +1,10 @@
 package link.rdcn
 
-import link.rdcn.TestBase.{csvDir, dc, getServer, stopServer}
+import link.rdcn.TestBase.dc
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
-import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
+import org.junit.jupiter.api.Test
 
 class ResourceUnavailableTest extends TestBase {
 

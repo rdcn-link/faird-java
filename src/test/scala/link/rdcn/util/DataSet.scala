@@ -1,8 +1,9 @@
 package link.rdcn.struct
 
 import link.rdcn.ConfigLoader
-import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.rdf.model.Model
 import org.apache.jena.vocabulary.RDF
+
 /**
  * @Author renhao
  * @Description:

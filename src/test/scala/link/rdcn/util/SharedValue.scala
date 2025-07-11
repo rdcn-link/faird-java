@@ -8,10 +8,8 @@ import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperati
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.nio.file.{Files, Path, Paths}
-import java.{lang, util}
 import java.util.UUID
 
 object SharedValue {
@@ -31,6 +29,7 @@ object SharedValue {
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       null
     }
+
     /**
      * 判断用户是否具有某项权限
      */
@@ -44,8 +43,6 @@ object SharedValue {
     }
 
     override def getDataStreamSource(dataFrameName: String): DataStreamSource = ???
-
-//    override def getDataFrameSize(dataFrameName: String): lang.Long = ???
   }
 
   val producer = new FlightProducerImpl(allocator, location, emptyDataProvider, emptyAuthProvider)

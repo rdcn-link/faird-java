@@ -3,7 +3,7 @@ package link.rdcn
 import link.rdcn.TestBase._
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
-import org.junit.jupiter.api.{AfterAll, AfterEach, BeforeAll, BeforeEach, Test}
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 

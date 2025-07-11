@@ -7,6 +7,7 @@ package link.rdcn.struct
  * @Modified By:
  */
 sealed trait InputSource
+
 case class CSVSource(
                       delimiter: String = ",",
                       head: Boolean = false

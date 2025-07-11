@@ -1,12 +1,9 @@
 package link.rdcn
 
-import link.rdcn.ConfigLoader.{initLog4j, loadProperties}
 import link.rdcn.ConfigLoaderTest.getResourcePath
 import link.rdcn.util.ExpectedConfigLoader
-import link.rdcn.util.SharedValue.{allocator, configCache, location, producer}
-import link.rdcn.util.ExpectedConfigLoader
-import org.apache.arrow.flight.{FlightRuntimeException, FlightServer, Location}
-import org.apache.logging.log4j.{LogManager, Logger}
+import link.rdcn.util.SharedValue.configCache
+import org.apache.arrow.flight.Location
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 

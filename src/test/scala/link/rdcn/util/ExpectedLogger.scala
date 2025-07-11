@@ -1,7 +1,6 @@
 package link.rdcn.util
 
 import link.rdcn.ConfigLoaderTest.getResourcePath
-import link.rdcn.util.ExpectedConfigLoader.expectedConfig
 import org.apache.logging.log4j.Level
 
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter

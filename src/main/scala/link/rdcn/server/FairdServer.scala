@@ -205,7 +205,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
           val authenticatedUser: AuthenticatedUser = authProvider.authenticate(credentials)
           val loginToken: String = actionType.split("\\.")(1)
           authenticatedUserMap.put(loginToken, authenticatedUser)
-          getSingleBytesStream("log in success",listener)
+          listener.onCompleted()
       case _ =>
         throw new UnsupportedOperationException("Unsupported action type")
     }
@@ -259,7 +259,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   }
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
-
       val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
       val request = requestMap.getOrDefault(descriptor, null)
       val structType = dataProvider.getDataStreamSource(request._1).schema
