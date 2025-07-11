@@ -3,7 +3,7 @@ package link.rdcn.server
 import com.sun.management.OperatingSystemMXBean
 import io.grpc.StatusRuntimeException
 import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
-import link.rdcn.dftree.OperationNode
+import link.rdcn.dftree.Operation
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
@@ -112,7 +112,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
 class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataProvider: DataProvider, authProvider: AuthProvider) extends NoOpFlightProducer with Logging {
 
-  private val requestMap = new ConcurrentHashMap[FlightDescriptor, (String, OperationNode)]()
+  private val requestMap = new ConcurrentHashMap[FlightDescriptor, (String, Operation)]()
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
   private val batchLen = 100
 
@@ -134,7 +134,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
               if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
                 throw new DataFrameAccessDeniedException(dfName)
               val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
-              val operationNode: OperationNode = OperationNode.fromJsonString(operationNodeJsonString)
+              val operationNode: Operation = Operation.fromJsonString(operationNodeJsonString)
               requestMap.put(flightStream.getDescriptor, (dfName, operationNode))
               flightStream.getRoot.clear()
             }
@@ -218,11 +218,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             val request = requestMap.get(flightDescriptor)
 
             val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
-            val dataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
-            val stream: Iterator[Row] = request._2.execute(dataFrame)
-            val firstRow: Row = if(stream.hasNext) stream.next() else Row.empty
-            val structType = if(firstRow.isEmpty) StructType.empty else DataUtils.inferSchemaFromRow(firstRow)
-            val schema = convertStructTypeToArrowSchema(structType)
+            val inDataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+            val outDataFrame: DataFrame  = request._2.execute(inDataFrame)
+            val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
 
             //能否支持并发
             val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
@@ -230,7 +228,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             val loader = new VectorLoader(root)
             listener.start(root)
 
-            val arrowFlightStreamWriter = ArrowFlightStreamWriter(DataFrame(structType, Seq(firstRow).iterator ++ stream))
+            val arrowFlightStreamWriter = ArrowFlightStreamWriter(outDataFrame)
             try {
               arrowFlightStreamWriter.process(root, batchLen).foreach(batch => {
                 try {

@@ -1,8 +1,8 @@
 package link.rdcn.util
 
 import link.rdcn.ConfigLoader
-import link.rdcn.provider.{DataProvider, DataStreamSource, DataStreamSourceFactory}
-import link.rdcn.struct.{CSVSource, DataFrameDocument, DataFrameInfo, DataSet, DirectorySource, InputSource, Row, StructType}
+import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
+import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, InputSource, Row, StructType}
 import org.apache.jena.rdf.model.Model
 
 import java.io.File

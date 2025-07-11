@@ -47,12 +47,10 @@ object ConfigLoader {
     val filePattern = props.getProperty("logging.pattern.file", "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n")
 
     val console = builder.newAppender("Console", "CONSOLE")
-      .addAttribute("charset", "UTF-8")
       .add(builder.newLayout("PatternLayout").addAttribute("pattern", consolePattern))
     builder.add(console)
 
     val file = builder.newAppender("File", "FILE")
-      .addAttribute("charset", "UTF-8")
       .addAttribute("fileName", logFile)
       .add(builder.newLayout("PatternLayout").addAttribute("pattern", filePattern))
     builder.add(file)

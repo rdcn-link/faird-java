@@ -1,4 +1,4 @@
-package link.rdcn.struct
+package link.rdcn.provider
 
 /**
  * @Author renhao

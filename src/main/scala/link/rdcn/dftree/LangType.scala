@@ -12,10 +12,10 @@ sealed trait LangType {
 }
 object LangType {
   case object JAVA_BIN extends LangType { val name = "JAVA_BIN" }
-  case object PYTHON extends LangType { val name = "PYTHON" }
-  case object TYPESCRIPT extends LangType { val name = "TYPESCRIPT" }
+  case object PYTHON_CODE extends LangType { val name = "PYTHON_CODE" }
+  case object TYPESCRIPT_CODE extends LangType { val name = "TYPESCRIPT_CODE" }
 
-  val all: List[LangType] = List(JAVA_BIN, PYTHON, TYPESCRIPT)
+  val all: List[LangType] = List(JAVA_BIN, PYTHON_CODE, TYPESCRIPT_CODE)
   def fromName(s: String): LangType = all.find(_.name == s).getOrElse(throw new Exception(s"$s This programming language is not supported"))
 }
 

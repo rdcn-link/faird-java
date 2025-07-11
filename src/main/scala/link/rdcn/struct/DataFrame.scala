@@ -1,7 +1,5 @@
 package link.rdcn.struct
 
-import link.rdcn.client.DFOperation
-
 /**
  * @Author renhao
  * @Description:

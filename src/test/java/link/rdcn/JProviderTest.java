@@ -1,5 +1,6 @@
 package link.rdcn;
 
+import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.provider.DataProvider;
 import link.rdcn.provider.DataStreamSource;
 import link.rdcn.provider.DataStreamSourceFactory;
@@ -10,21 +11,15 @@ import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
 import link.rdcn.server.exception.AuthorizationException;
 import link.rdcn.user.DataOperationType;
-import link.rdcn.util.DataUtils;
-import org.apache.arrow.flight.*;
-import org.apache.arrow.memory.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.message.ArrowRecordBatch;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.vocabulary.RDF;
 import scala.Option;
-import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 
 /**

@@ -4,7 +4,7 @@ import link.rdcn.Logging
 
 import scala.collection.mutable
 import link.rdcn.struct.ValueType._
-import link.rdcn.struct.{Column, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, DataFrame, Row, StructType, ValueType}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
@@ -131,11 +131,18 @@ object DataUtils extends Logging{
 
   def inferSchemaFromRow(row: Row): StructType = {
     val columns = row.values.zipWithIndex.map { case (value, idx) =>
-      val name = s"col_$idx"
+      val name = s"_${idx + 1}"
       val valueType = inferValueType(value)
       Column(name, valueType)
     }
     StructType.fromSeq(columns)
+  }
+
+  def getDataFrameByStream(stream: Iterator[Row]): DataFrame = {
+    if(stream.isEmpty) return DataFrame(StructType.empty, Iterator.empty)
+    val row = stream.next()
+    val structType = inferSchemaFromRow(row)
+    DataFrame(structType, Seq(row).iterator ++ stream)
   }
 
 //  /** 推断一个值的类型 */
@@ -168,7 +175,7 @@ object DataUtils extends Logging{
     // 如果 header 为空，则自动生成 col_0, col_1, ...
     val columnNames: Seq[String] =
       if (header.isEmpty)
-        Array.tabulate(numCols)(i => s"col_$i")
+        Array.tabulate(numCols)(i => s"_${i + 1}")
       else
         header
 
