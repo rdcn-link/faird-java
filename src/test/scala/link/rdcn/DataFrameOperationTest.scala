@@ -143,4 +143,33 @@ class DataFrameOperationTest extends TestBase {
     assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
   }
 
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def testDataFrameMapColumn(num: Long): Unit = {
+    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
+      .toSeq
+      .tail // 跳过标题行
+      .map { line =>
+        val cols = line.split(",") // 按逗号拆分列
+        s"${cols.tail.mkString}" // 拼接剩余列
+      }
+      .mkString("\n") + "\n"
+    val df = dc.open("/csv/data_1.csv")
+    val stringWriter = new StringWriter()
+    val printWriter = new PrintWriter(stringWriter)
+    val rowMapper: Row => Row = row => Row(row.get(1))
+
+    try {
+      df.map(rowMapper).foreach { row =>
+        printWriter.write(getLine(row))
+      }
+    } catch {
+      case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
+    }
+
+    printWriter.flush()
+    val actualOutput = stringWriter.toString
+    assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
+  }
+
 }
