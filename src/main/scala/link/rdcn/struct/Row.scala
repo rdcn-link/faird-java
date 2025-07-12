@@ -84,7 +84,7 @@ object Row {
 
   def fromTuple(tuple: Product): Row = fromSeq(tuple.productIterator.toSeq)
 
-  def fromJavaList(list: java.util.List[Object]): Unit = {
+  def fromJavaList(list: java.util.List[Object]): Row = {
     new Row(list.asScala)
   }
 

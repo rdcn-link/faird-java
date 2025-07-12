@@ -1,5 +1,8 @@
 package link.rdcn.client
 
+import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
+import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
+import link.rdcn.struct.Row
 import link.rdcn.user.{Credentials, UsernamePassword}
 
 /**
@@ -61,6 +64,29 @@ class FairdClient private (
     protocolClient.getServerResourceInfo()
 
   def close(): Unit = protocolClient.close()
+
+  def execute(transformerDAG: TransformerDAG): Seq[RemoteDataFrame] = {
+    val executePaths = transformerDAG.getExecutionPaths()
+    executePaths.map(path => getRemoteDataFrameByDAGPath(path))
+  }
+
+
+  private def getRemoteDataFrameByDAGPath(path: Seq[DAGNode]): RemoteDataFrame = {
+    val dataFrameName = path.head.asInstanceOf[SourceNode].dataFrameName
+    var operation: Operation = SourceOp()
+    path.foreach(node => node match {
+      case f: UDFFunction =>
+        val genericFunctionCall = IteratorRowCall( new SerializableFunction[Iterator[Row], Iterator[Row]] {
+          override def apply(v1: Iterator[Row]): Iterator[Row] = f.transform(v1)
+        })
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
+        operation = transformerNode
+      case s: SourceNode => // 不做处理
+      case _ => throw new IllegalArgumentException(s"This DAGNode ${node} is not supported please extend UDFFunction trait")
+    })
+    RemoteDataFrameImpl(dataFrameName, protocolClient, operation)
+  }
+
 }
 
 

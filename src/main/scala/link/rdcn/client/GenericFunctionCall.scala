@@ -26,3 +26,10 @@ case class RowPairCall(f: SerializableFunction[(Row, Row), Any]) extends Generic
     case _ => throw new IllegalArgumentException(s"Expected (Row, Row) but got ${input}")
   }
 }
+
+case class IteratorRowCall(f: SerializableFunction[Iterator[Row], Any]) extends GenericFunctionCall {
+  override def transform(input: Any): Any = input match {
+    case r: Iterator[Row] => f(r)
+    case _ => throw new IllegalArgumentException(s"Expected Iterator[Row] but got ${input}")
+  }
+}

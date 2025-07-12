@@ -1,7 +1,7 @@
 package link.rdcn.client
 
 import link.rdcn.Logging
-import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, SelectOp, Source}
+import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, SelectOp, SourceOp}
 import link.rdcn.struct.Row
 
 /**
@@ -38,7 +38,7 @@ case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameImpl) {
   //可自定义聚合函数
 }
 
-case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtocolClient, operation: Operation = Source()) extends RemoteDataFrame with Logging {
+case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtocolClient, operation: Operation = SourceOp()) extends RemoteDataFrame with Logging {
 
   override def filter(f: Row => Boolean): RemoteDataFrame = {
     val genericFunctionCall = SingleRowCall( new SerializableFunction[Row, Boolean] {
