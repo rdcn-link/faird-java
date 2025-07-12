@@ -47,6 +47,29 @@ class Row (val values: Seq[Any]) {
       catch { case _: ClassCastException => None }
     case _ => None
   }
+
+  def _1: Any = get(0)
+  def _2: Any = get(1)
+  def _3: Any = get(2)
+  def _4: Any = get(3)
+  def _5: Any = get(4)
+  def _6: Any = get(5)
+  def _7: Any = get(6)
+  def _8: Any = get(7)
+  def _9: Any = get(8)
+  def _10: Any = get(9)
+  def _11: Any = get(10)
+  def _12: Any = get(11)
+  def _13: Any = get(12)
+  def _14: Any = get(13)
+  def _15: Any = get(14)
+  def _16: Any = get(15)
+  def _17: Any = get(16)
+  def _18: Any = get(17)
+  def _19: Any = get(18)
+  def _20: Any = get(19)
+  def _21: Any = get(20)
+  def _22: Any = get(21)
 }
 
 object Row {

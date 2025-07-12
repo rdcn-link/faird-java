@@ -1,7 +1,7 @@
 package link.rdcn.client
 
 import link.rdcn.Logging
-import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, Source}
+import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, SelectOp, Source}
 import link.rdcn.struct.Row
 
 /**
@@ -48,7 +48,9 @@ case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtoco
     copy(operation = filterOp)
   }
 
-  override def select(columns: String*): RemoteDataFrame = ???
+  override def select(columns: String*): RemoteDataFrame = {
+    copy(operation =  SelectOp(operation, columns: _*))
+  }
 
   override def limit(n: Int): RemoteDataFrame = copy(operation = LimitOp(n, operation))
 

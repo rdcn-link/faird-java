@@ -6,7 +6,7 @@ import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 
 /**
  * @Author renhao
@@ -33,6 +33,7 @@ object Operation {
         case "Map" => MapOp(FunctionWrapper(parsed.getJSONObject("function")), input)
         case "Filter" => FilterOp(FunctionWrapper(parsed.getJSONObject("function")), input)
         case "Limit" => LimitOp(parsed.getJSONArray("args").getInt(0), input)
+        case "Select" => SelectOp(input, parsed.getJSONArray("args").toList.asScala.map(_.toString): _*)
       }
     }
   }
@@ -113,5 +114,19 @@ case class LimitOp(limit: Int, input: Operation) extends Operation {
   override def execute(dataFrame: DataFrame): DataFrame = {
     val in = input.execute(dataFrame)
     DataFrame(in.schema, in.stream.take(limit))
+  }
+}
+
+case class SelectOp(input: Operation, columns: String*) extends Operation {
+
+  override def operationType: String = "Select"
+
+  override def toJson: JSONObject = new JSONObject().put("type", operationType)
+    .put("args", new JSONArray(columns.asJava))
+    .put("input", input.toJson)
+
+  override def execute(dataFrame: DataFrame): DataFrame = {
+    val in = input.execute(dataFrame)
+    DataFrame(in.schema.select(columns: _*), in.stream)
   }
 }

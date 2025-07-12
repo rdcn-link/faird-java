@@ -46,6 +46,16 @@ case class StructType(columns: Seq[Column]) {
   def add(name: String, colType: ValueType, nullable: Boolean = true): StructType =
     this.copy(columns = columns :+ Column(name, colType, nullable))
 
+  def select(columnNames: String*): StructType = {
+    val selected = columnNames.map { name =>
+      nameToIndex.get(name) match {
+        case Some(idx) => columns(idx)
+        case None => throw new IllegalArgumentException(s"StructType.select: 列名 '$name' 不存在")
+      }
+    }
+    StructType.fromSeq(selected)
+  }
+
   override def toString: String =
       columns.map(c => s"${c.name}: ${c.colType}").mkString("schema(", ", ", ")")
 }
