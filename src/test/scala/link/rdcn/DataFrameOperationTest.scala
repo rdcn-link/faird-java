@@ -361,5 +361,26 @@ class DataFrameOperationTest extends TestBase {
     assertEquals(expectedOutputAC, actualOutputs(1))
   }
 
+  @Test
+  def testDataFrameRowIndexAccess(): Unit = {
+    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val expectedOutput = lines.mkString("\n") + "\n"
+
+    val df = dc.open("/csv/data_1.csv")
+    val stringWriter = new StringWriter()
+    val printWriter = new PrintWriter(stringWriter)
+
+    try {
+      df.foreach { row: Row =>
+        printWriter.write(s"${row._1},${row._2}\n")
+      }
+    } catch {
+      case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
+    }
+
+    printWriter.flush()
+    val actualOutput = stringWriter.toString
+    assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
+  }
 
 }

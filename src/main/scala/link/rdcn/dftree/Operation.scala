@@ -17,8 +17,11 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
 
 sealed trait Operation {
   def operationType: String
+
   def toJson: JSONObject
+
   def toJsonString: String = toJson.toString
+
   def execute(dataFrame: DataFrame): DataFrame
 }
 
@@ -26,7 +29,7 @@ object Operation {
   def fromJsonString(json: String): Operation = {
     val parsed: JSONObject = new JSONObject(json)
     val opType = parsed.getString("type")
-    if(opType == "SourceOp") SourceOp()
+    if (opType == "SourceOp") SourceOp()
     else {
       val input: Operation = fromJsonString(parsed.getJSONObject("input").toString)
       opType match {
@@ -49,7 +52,7 @@ case class SourceOp() extends Operation {
   override def execute(dataFrame: DataFrame): DataFrame = dataFrame
 }
 
-case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Operation{
+case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Operation {
 
   override def operationType: String = "Map"
 
@@ -65,11 +68,11 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
         getDataFrameByStream(stream)
       case JsonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
-        try{
+        try {
           val in = input.execute(dataFrame)
           val stream = in.stream.map(functionWrapper.applyToInput(_, Some(interp))).map(_.asInstanceOf[Row])
           getDataFrameByStream(stream)
-        }finally {
+        } finally {
           interp.close()
         }
     }
@@ -92,11 +95,11 @@ case class FilterOp(functionWrapper: FunctionWrapper, input: Operation) extends 
         DataFrame(in.schema, stream)
       case JsonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
-        try{
+        try {
           val in = input.execute(dataFrame)
           val stream = in.stream.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
           DataFrame(in.schema, stream)
-        }finally {
+        } finally {
           interp.close()
         }
     }
@@ -127,7 +130,17 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
 
   override def execute(dataFrame: DataFrame): DataFrame = {
     val in = input.execute(dataFrame)
-    DataFrame(in.schema.select(columns: _*), in.stream)
+    val selectedSchema = in.schema.select(columns: _*)
+    val selectedStream = in.stream.map { row =>
+      val selectedValues = columns.map { colName =>
+        val idx = in.schema.indexOf(colName).getOrElse {
+          throw new IllegalArgumentException(s"列名 '$colName' 不存在")
+        }
+        row.get(idx)
+      }
+      Row.fromSeq(selectedValues)
+    }
+    DataFrame(selectedSchema, selectedStream)
   }
 }
 
@@ -147,11 +160,11 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         getDataFrameByStream(stream)
       case JsonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
-        try{
+        try {
           val in = input.execute(dataFrame)
           val stream = functionWrapper.applyToInput(in.stream, Some(interp)).asInstanceOf[Iterator[Row]]
           getDataFrameByStream(stream)
-        }finally {
+        } finally {
           interp.close()
         }
     }
