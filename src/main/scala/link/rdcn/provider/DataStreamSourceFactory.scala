@@ -68,7 +68,9 @@ object DataStreamSourceFactory{
     new DataStreamSource {
       override def rowCount: Long = -1
 
-      override def schema: StructType = StructType.fromSeq(Column("index", IntType)+:StructType.binaryStructType.columns)
+//      override def schema: StructType = StructType.fromSeq(Column("index", IntType)+:StructType.binaryStructType.columns)
+      override def schema: StructType = StructType.binaryStructType
+
 
       override def iterator: Iterator[Row] = stream
     }

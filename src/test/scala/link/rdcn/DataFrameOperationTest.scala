@@ -3,6 +3,8 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
+import link.rdcn.client.RemoteDataFrame
+import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.getOutputDir
@@ -121,7 +123,7 @@ class DataFrameOperationTest extends TestBase {
       .tail // 跳过标题行
       .map { line =>
         val cols = line.split(",") // 按逗号拆分列
-        val id = cols(0).toLong + 1L // 第一列转Int并+1
+        val id = cols(0).toLong + num // 第一列转Int并+1
         s"$id,${cols.tail.mkString}" // 拼接回剩余列
       }
       .mkString("\n") + "\n"
@@ -143,9 +145,8 @@ class DataFrameOperationTest extends TestBase {
     assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
   }
 
-  @ParameterizedTest
-  @ValueSource(ints = Array(10))
-  def testDataFrameMapColumn(num: Long): Unit = {
+  @Test
+  def testDataFrameMapColumn(): Unit = {
     val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
       .toSeq
       .tail // 跳过标题行
@@ -171,5 +172,194 @@ class DataFrameOperationTest extends TestBase {
     val actualOutput = stringWriter.toString
     assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
   }
+
+  @Test
+  def testDataFrameSelect(): Unit = {
+    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
+      .toSeq
+      .tail // 跳过标题行
+      .map { line =>
+        val cols = line.split(",") // 按逗号拆分列
+        s"${cols.tail.mkString}" // 拼接剩余列
+      }
+      .mkString("\n") + "\n"
+    val df = dc.open("/csv/data_1.csv")
+    val stringWriter = new StringWriter()
+    val printWriter = new PrintWriter(stringWriter)
+
+    try {
+      df.select("value").foreach { row =>
+        printWriter.write(getLine(row))
+      }
+    } catch {
+      case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
+    }
+
+    printWriter.flush()
+    val actualOutput = stringWriter.toString
+    assertEquals(expectedOutput, actualOutput, "Unexpected output from map operation")
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def testDataFrameUDFTake(num: Int): Unit = {
+    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val expectedOutput = lines.take(num).mkString("\n") + "\n"
+
+    val udf = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.take(num)
+      }
+    }
+
+    val transformerDAG = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf
+      ),
+      Map(
+        "A" -> Seq("B")
+      )
+    )
+    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map { df =>
+      val stringWriter = new StringWriter()
+      val printWriter = new PrintWriter(stringWriter)
+
+      df.foreach { row =>
+        printWriter.write(getLine(row))
+      }
+      printWriter.flush()
+      stringWriter.toString
+    }
+    assertEquals(expectedOutput, actualOutputs(0))
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def testDataFrameUDFFilter(num: Int): Unit = {
+    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val expectedOutput = lines.take(num).mkString("\n") + "\n"
+
+    val udf = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.filter(row=>row.getAs[Long](0).get <= num)
+      }
+    }
+
+    val transformerDAG = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf
+      ),
+      Map(
+        "A" -> Seq("B")
+      )
+    )
+    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map { df =>
+      val stringWriter = new StringWriter()
+      val printWriter = new PrintWriter(stringWriter)
+
+      df.foreach { row =>
+        printWriter.write(getLine(row))
+      }
+      printWriter.flush()
+      stringWriter.toString
+    }
+    assertEquals(expectedOutput, actualOutputs(0))
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def testDataFrameUDFMap(num: Int): Unit = {
+    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val expectedOutput = lines.take(5).map { line =>
+      val cols = line.split(",")
+      val id = cols(0).toLong
+      val rest = cols.tail.mkString
+      s"${id + num},$rest,$num"
+    }.mkString("\n") + "\n"
+
+    val udf = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1), num))
+      }
+    }
+
+    val transformerDAG = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf
+      ),
+      Map(
+        "A" -> Seq("B")
+      )
+    )
+    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map { df =>
+      val stringWriter = new StringWriter()
+      val printWriter = new PrintWriter(stringWriter)
+
+      df.limit(5).foreach { row =>
+        printWriter.write(getLine(row))
+      }
+      printWriter.flush()
+      stringWriter.toString
+    }
+    assertEquals(expectedOutput, actualOutputs(0))
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def testDataFrameUDFMapDAG(num: Int): Unit = {
+    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val (expectedOutputABCSeq, expectedOutputACSeq) = lines.take(5).map { line =>
+      val cols = line.split(",")
+      val id = cols(0).toLong
+      val rest = cols.tail.mkString
+      val lineABC = s"${id + num},$rest,$num"
+      val lineAC = s"$id,$rest,$num"
+      (lineABC, lineAC)
+    }.unzip
+    val expectedOutputABC = expectedOutputABCSeq.mkString("\n") + "\n"
+    val expectedOutputAC = expectedOutputACSeq.mkString("\n") + "\n"
+
+    val udf1 = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
+      }
+    }
+    val udf2 = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
+      }
+    }
+    val transformerDAG = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf1,
+        "C" -> udf2
+      ),
+      Map(
+        "A" -> Seq("B", "C"),
+        "B" -> Seq("C")
+      )
+    )
+    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map { df =>
+      val stringWriter = new StringWriter()
+      val printWriter = new PrintWriter(stringWriter)
+
+      df.limit(5).foreach { row =>
+        printWriter.write(getLine(row))
+      }
+      printWriter.flush()
+      stringWriter.toString
+    }
+    assertEquals(expectedOutputABC, actualOutputs(0))
+    assertEquals(expectedOutputAC, actualOutputs(1))
+  }
+
 
 }
