@@ -1,6 +1,6 @@
 package link.rdcn
 
-import link.rdcn.DataFrameOperationTest.isFolderContentsMatch
+import link.rdcn.DataIntegrityTest.isFolderContentsMatch
 import link.rdcn.TestBase.{baseDir, binDir, dc}
 import link.rdcn.client.Blob
 import link.rdcn.struct.Row
@@ -10,8 +10,38 @@ import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-import java.nio.file.Files
+import java.io.InputStream
+import java.nio.file.{Files, Path, Paths}
 import java.nio.file.attribute.BasicFileAttributes
+import java.security.MessageDigest
+
+object DataIntegrityTest {
+  def isFolderContentsMatch(dirPath1: String, dirPath2: String): Boolean = {
+    val files1 = Files.list(Paths.get(dirPath1)).sorted.toArray
+    val files2 = Files.list(Paths.get(dirPath2)).sorted.toArray
+    files2.zip(files1).forall { case (f1, f2) =>
+      computeFileHash(f1.asInstanceOf[Path]) == computeFileHash(f2.asInstanceOf[Path])
+    }
+  }
+
+  def computeFileHash(file: Path, algorithm: String = "MD5"): String = {
+    val digest = MessageDigest.getInstance(algorithm)
+    val buffer = new Array[Byte](8192)
+    var in: InputStream = null
+
+    try {
+      in = Files.newInputStream(file)
+      var bytesRead = in.read(buffer)
+      while (bytesRead != -1) {
+        digest.update(buffer, 0, bytesRead)
+        bytesRead = in.read(buffer)
+      }
+      digest.digest().map(b => f"${b & 0xff}%02x").mkString
+    } finally {
+      if (in != null) in.close() // 确保关闭
+    }
+  }
+}
 
 class DataIntegrityTest extends TestBase {
   val outputDir = getOutputDir("test_output\\output").toString
