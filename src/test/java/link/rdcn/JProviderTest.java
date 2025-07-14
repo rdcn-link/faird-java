@@ -200,7 +200,7 @@ public class JProviderTest {
         };
 
         //设置一个路径存放faird相关外部文件，其中faird.conf 存放到 $fairdHome/conf 路径下
-        String fairdHome = "./";
+        String fairdHome = "/Users/renhao/IdeaProjects/faird-java/target/test-classes/";
         FairdServer fairdServer = new FairdServer(dataProvider, authProvider, fairdHome);
 
         //启动faird服务

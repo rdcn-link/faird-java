@@ -20,6 +20,7 @@ import org.apache.jena.rdf.model.{Model, ModelFactory}
 import java.io.File
 import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -42,8 +43,11 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
   private def buildServer(): Unit = {
     // 初始化配置
-    ConfigLoader.init(s"$fairdHome/conf/faird.conf")
-    val location = Location.forGrpcInsecure(
+    ConfigLoader.init(s"$fairdHome"+File.separator+"conf"+File.separator+"faird.conf")
+    val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
+      ConfigLoader.fairdConfig.hostPosition,
+      ConfigLoader.fairdConfig.hostPort
+    ) else Location.forGrpcInsecure(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort
     )
@@ -51,7 +55,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
     producer = new FlightProducerImpl(allocator, location, dataProvider, authProvider)
     if(ConfigLoader.fairdConfig.useTLS){
       flightServer = FlightServer.builder(allocator, location, producer)
-        .useTls(new File(s"$fairdHome/conf/server.crt"), new File(s"$fairdHome/conf/server.pem"))
+        .useTls(new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.certPath).toString), new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.keyPath).toString))
         .build()
     }else{
       flightServer = FlightServer.builder(allocator, location, producer).build()
