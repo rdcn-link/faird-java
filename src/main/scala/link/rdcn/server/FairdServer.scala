@@ -1,7 +1,6 @@
 package link.rdcn.server
 
 import com.sun.management.OperatingSystemMXBean
-import io.grpc.StatusRuntimeException
 import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
 import link.rdcn.dftree.Operation
 import org.apache.arrow.flight._
@@ -15,17 +14,16 @@ import link.rdcn.struct.{DataFrame, Row, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
 import link.rdcn.util.DataUtils
 import link.rdcn.user.DataOperationType
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
-import java.lang.Thread.sleep
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
-import scala.collection.convert.ImplicitConversions.`iterator asJava`
 
 /**
  * @Author renhao
@@ -45,14 +43,24 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
   private def buildServer(): Unit = {
     // 初始化配置
-    ConfigLoader.init(s"$fairdHome/conf/faird.conf")
-    val location = Location.forGrpcInsecure(
+    ConfigLoader.init(s"$fairdHome"+File.separator+"conf"+File.separator+"faird.conf")
+    val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
+      ConfigLoader.fairdConfig.hostPosition,
+      ConfigLoader.fairdConfig.hostPort
+    ) else Location.forGrpcInsecure(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort
     )
     allocator = new RootAllocator()
     producer = new FlightProducerImpl(allocator, location, dataProvider, authProvider)
-    flightServer = FlightServer.builder(allocator, location, producer).build()
+    if(ConfigLoader.fairdConfig.useTLS){
+      flightServer = FlightServer.builder(allocator, location, producer)
+        .useTls(new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.certPath).toString), new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.keyPath).toString))
+        .build()
+    }else{
+      flightServer = FlightServer.builder(allocator, location, producer).build()
+    }
+
   }
 
   def start(): Unit = synchronized {

@@ -9,7 +9,7 @@ import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.getOutputDir
 import org.apache.arrow.flight.FlightRuntimeException
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -528,6 +528,85 @@ class DataFrameOperationTest extends TestBase {
     }
     assertEquals(expectedOutputABDE, actualOutputs(0))
     assertEquals(expectedOutputACDE, actualOutputs(1))
+  }
+
+  @Test
+  def transformerDAGPathDetectionTest(): Unit = {
+    val udf1 = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1)))
+      }
+    }
+    val udf2 = new UDFFunction {
+      override def transform(iter: Iterator[Row]): Iterator[Row] = {
+        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1)))
+      }
+    }
+    val dagNoStartEnd = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf1,
+        "C" -> udf2
+      ),
+      Map(
+        "A" -> Seq("B", "C"),
+        "B" -> Seq("C"),
+        "C" -> Seq("A")
+      )
+    )
+    val exceptionNoRoot = assertThrows(classOf[IllegalArgumentException], () => {
+      dc.execute(dagNoStartEnd)
+    })
+    assertTrue(exceptionNoRoot.getMessage.contains("graph might contain cycles or be empty"))
+
+    val dagCycle = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf1,
+        "C" -> udf2
+      ),
+      Map(
+        "A" -> Seq("B", "C"),
+        "B" -> Seq("C"),
+        "C" -> Seq("B")
+      )
+    )
+    val exceptionCycle = assertThrows(classOf[IllegalArgumentException], () => {
+      dc.execute(dagCycle)
+    })
+    assertTrue(exceptionCycle.getMessage.contains("Cycle detected"))
+
+    val notBeginWithSource = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf1,
+        "C" -> udf2
+      ),
+      Map(
+        "B" -> Seq("A", "C"),
+        "A" -> Seq("C"),
+      )
+    )
+    val exceptionNotBeginWithSource = assertThrows(classOf[IllegalArgumentException], () => {
+      dc.execute(notBeginWithSource)
+    })
+    assertTrue(exceptionNotBeginWithSource.getMessage.contains("not of type SourceOp"))
+
+    val opNotFoundByKey = TransformerDAG(
+      Map(
+        "A" -> SourceNode("/csv/data_1.csv"),
+        "B" -> udf1,
+        "C" -> udf2
+      ),
+      Map(
+        "J" -> Seq("N", "C"),
+        "F" -> Seq("C"),
+      )
+    )
+    val exceptionOpNotFoundByKey = assertThrows(classOf[IllegalArgumentException], () => {
+      dc.execute(opNotFoundByKey)
+    })
+    assertTrue(exceptionOpNotFoundByKey.getMessage.contains("not defined in the node map"))
   }
 
   @Test

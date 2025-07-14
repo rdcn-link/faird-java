@@ -37,9 +37,10 @@ private object DacpUriParser {
 class FairdClient private (
                             url: String,
                             port: Int,
-                            credentials: Credentials = Credentials.ANONYMOUS
+                            credentials: Credentials = Credentials.ANONYMOUS,
+                            useTLS: Boolean = false
                           ) {
-  private val protocolClient = new ArrowFlightProtocolClient(url, port)
+  private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
   protocolClient.login(credentials)
 
   def open(dataFrameName: String): RemoteDataFrameImpl =
@@ -92,11 +93,21 @@ class FairdClient private (
 
 object FairdClient {
 
-  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient =
+  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
     DacpUriParser.parse(url) match {
       case Right(parsed) =>
         new FairdClient(parsed.host, parsed.port, credentials)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
+  }
+
+  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
+    DacpUriParser.parse(url) match {
+      case Right(parsed) =>
+        new FairdClient(parsed.host, parsed.port, credentials, true)
+      case Left(err) =>
+        throw new IllegalArgumentException(s"Invalid DACP URL: $err")
+    }
+  }
 }

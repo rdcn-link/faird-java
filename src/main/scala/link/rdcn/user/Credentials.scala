@@ -10,5 +10,7 @@ trait Credentials extends Serializable
 
 object Credentials {
   case object ANONYMOUS extends Credentials
+
+  def anonymous: Credentials = ANONYMOUS
 }
 
