@@ -11,7 +11,10 @@ case class FairdConfig(
                         hostTitle: String,
                         hostPosition: String,
                         hostDomain: String,
-                        hostPort: Int
+                        hostPort: Int,
+                        useTLS: Boolean,
+                        certPath: String,
+                        keyPath: String
                       )
 
 object FairdConfig {
@@ -28,6 +31,9 @@ object FairdConfig {
       hostPosition = getOrDefault("faird.host.position","0.0.0.0"),
       hostDomain = getOrDefault("faird.host.domain",""),
       hostPort = getOrDefault("faird.host.port","3101").toInt,
+      useTLS = getOrDefault("faird.tls.enabled", "false").toBoolean,
+      certPath = getOrDefault("faird.tls.cert.path","./conf/server.crt"),
+      keyPath = getOrDefault("faird.tls.key.path,", "./conf/server.key")
     )
   }
 }

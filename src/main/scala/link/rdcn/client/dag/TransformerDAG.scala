@@ -56,16 +56,20 @@ case class TransformerDAG(
         )
     })
 
-    def dfs(path: Seq[String], current: String): Seq[Seq[String]] = {
+    def dfs(path: Seq[String], current: String, visitedInPath: Set[String]): Seq[Seq[String]] = {
+      if (visitedInPath.contains(current)) {
+        throw new IllegalArgumentException(s"Cycle detected: node '$current' is revisited in path ${path.mkString(" -> ")}")
+      }
+
       edges.get(current) match {
         case Some(children) =>
-          children.flatMap(child => dfs(path :+ child, child))
+          children.flatMap(child => dfs(path :+ child, child, visitedInPath + current))
         case None =>
-          Seq(path) // 当前节点没有 children，是终点
+          Seq(path)
       }
     }
 
-    rootNodes.toSeq.flatMap(root => dfs(Seq(root), root))
+    rootNodes.toSeq.flatMap(root => dfs(Seq(root), root, Set.empty))
   }
 }
 

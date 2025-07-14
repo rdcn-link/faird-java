@@ -34,9 +34,12 @@ trait ProtocolClient{
   def getHostInfo(): String
   def getServerResourceInfo(): String
 }
-class ArrowFlightProtocolClient(url: String, port:Int) extends ProtocolClient{
+class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) extends ProtocolClient{
 
-  val location = Location.forGrpcInsecure(url, port)
+  val location = {
+    if(useTLS) Location.forGrpcTls(url, port) else
+      Location.forGrpcInsecure(url, port)
+  }
   val allocator: BufferAllocator = new RootAllocator()
   private val flightClient = FlightClient.builder(allocator, location).build()
   private val userToken = UUID.randomUUID().toString
