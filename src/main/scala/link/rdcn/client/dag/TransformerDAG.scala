@@ -44,6 +44,7 @@ case class TransformerDAG(
     val allTargets = edges.values.flatten.toSet
     val allSources = edges.keySet
     val rootNodes = allSources.diff(allTargets) // 没有被其他节点指向的起始节点
+    if(rootNodes.isEmpty) throw new IllegalArgumentException("Invalid DAG: no root nodes found, graph might contain cycles or be empty")
     rootNodes.foreach(rootKey => nodes.get(rootKey) match {
       case Some(s: SourceNode) => // 合法，继续
       case Some(other) =>
