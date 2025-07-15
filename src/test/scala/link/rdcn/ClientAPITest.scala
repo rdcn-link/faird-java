@@ -64,17 +64,13 @@ class ClientAPITest extends TestBase {
 
   @Test
   def testGetServerResourceInfo(): Unit = {
-    val statusString = dc.getServerResourceInfo()
+    val statusMap = dc.getServerResourceInfo()
 
-    assertNotNull(statusString)
-    assertTrue(statusString.contains("服务器资源使用情况:"))
-    assertTrue(statusString.contains("CPU核心数"))
-    assertTrue(statusString.contains("CPU使用率"))
-    assertTrue(statusString.contains("JVM内存 (MB):"))
-    assertTrue(statusString.contains("系统物理内存 (MB):"))
-
-    assertTrue(statusString.matches("(?s).*CPU核心数\\s*:\\s*\\d+.*"))
-    assertTrue(statusString.matches("(?s).*CPU使用率\\s*:\\s*\\d+\\.\\d{2}%.*"))
+    assertNotNull(statusMap)
+    assertTrue(statusMap.containsKey("cpuCores"))
+    assertTrue(statusMap.containsKey("cpuUsagePercent"))
+    assertTrue(statusMap.containsKey("jvmMemory"))
+    assertTrue(statusMap.containsKey("systemPhysicalMemory"))
   }
 
 

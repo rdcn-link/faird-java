@@ -6,6 +6,8 @@ import link.rdcn.user.Credentials;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
+import java.util.Map;
+
 /**
  * ServerTest Description
  *
@@ -16,7 +18,7 @@ import scala.collection.Seq;
 public class ClientTlsTest {
     public static void main(String[] args) {
         System.setProperty("javax.net.ssl.trustStore", "/Users/renhao/Downloads/faird-java-http2/src/main/resources/conf/faird");
-        FairdClient dc = FairdClient.connectTLS("dacp://localhost:3101", Credentials.anonymous());
+        FairdClient dc = FairdClient.connectTLS("dacp://localhost:3101", Credentials.ANONYMOUS());
         Seq<String> stringSeq = dc.listDataSetNames();
         Iterator<String> iterator = stringSeq.iterator();
 
@@ -26,7 +28,7 @@ public class ClientTlsTest {
             System.out.println(iterator.next());
         }
 
-        String serverResourceInfo = dc.getServerResourceInfo();
+        Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
         System.out.println(serverResourceInfo);
     }
 }

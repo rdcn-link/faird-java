@@ -8,9 +8,10 @@ package link.rdcn.user
  */
 trait Credentials extends Serializable
 
-object Credentials {
-  case object ANONYMOUS extends Credentials
+object AnonymousCredentials extends Credentials
 
-  def anonymous: Credentials = ANONYMOUS
+object Credentials {
+    val ANONYMOUS = AnonymousCredentials
 }
+
 
