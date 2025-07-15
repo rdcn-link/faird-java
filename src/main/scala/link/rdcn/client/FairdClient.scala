@@ -5,6 +5,8 @@ import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
 import link.rdcn.struct.Row
 import link.rdcn.user.{Credentials, UsernamePassword}
 
+import scala.collection.JavaConverters._
+
 /**
  * @Author renhao
  * @Description:
@@ -58,11 +60,11 @@ class FairdClient private (
   def getDataFrameSize(dataFrameName: String): Long =
     protocolClient.getDataFrameSize(dataFrameName)
 
-  def getHostInfo(): String =
-    protocolClient.getHostInfo()
+  def getHostInfo(): java.util.Map[String,String] =
+    protocolClient.getHostInfo().asJava
 
-  def getServerResourceInfo(): String =
-    protocolClient.getServerResourceInfo()
+  def getServerResourceInfo(): java.util.Map[String,String] =
+    protocolClient.getServerResourceInfo().asJava
 
   def close(): Unit = protocolClient.close()
 

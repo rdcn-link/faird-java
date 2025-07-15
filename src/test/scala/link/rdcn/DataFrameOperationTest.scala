@@ -62,35 +62,39 @@ object DataFrameOperationTest extends TestBase {
       val cols = line.split(",")
       val id = cols(0).toLong
       val rest = cols.tail.mkString(",")
-      s"${id + transformationNum},$rest,$transformationNum" + "\n"
+      s"${id + transformationNum},$rest"
     }
   }
 
   def transformC(lines: Seq[String], transformationNum: Int): Seq[String] = {
-    lines.take(5).map { line =>
+    lines.map { line =>
       val cols = line.split(",")
       val id = cols(0).toLong
       val rest = cols.tail.mkString(",")
-      s"${id + transformationNum},$rest,$transformationNum" + "\n"
+      s"$id,$rest,$transformationNum"
     }
   }
 
   def transformD(lines: Seq[String]): Seq[String] = {
-    lines.take(5).map { line =>
+    lines.map { line =>
       val cols = line.split(",")
       val id = cols(0).toLong
       val rest = cols.tail.mkString(",")
-      s"$id,$rest" + "\n"
+      s"${id*2},$rest"
     }
   }
 
   def transformE(lines: Seq[String]): Seq[String] = {
-    lines.take(5).map { line =>
+    lines.map { line =>
       val cols = line.split(",")
       val id = cols(0).toLong
       val rest = cols.tail.mkString(",")
-      s"$id,$rest" + "\n"
+      s"$id"
     }
+  }
+
+  def addLineBreak(lines: Seq[String]): Seq[String] = {
+    lines.map { line => line + "\n"}
   }
 
 }
@@ -167,6 +171,7 @@ class DataFrameOperationTest extends TestBase {
 
     try {
       df.map(rowMapper).foreach { row =>
+
         printWriter.write(getLine(row))
       }
     } catch {
@@ -310,23 +315,12 @@ class DataFrameOperationTest extends TestBase {
   @ValueSource(ints = Array(10))
   def testDataFrameUDFMap(num: Int): Unit = {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
-    val expectedOutput = lines.take(5).map { line =>
-      val cols = line.split(",")
-      val id = cols(0).toLong
-      val rest = cols.tail.mkString
-      s"${id + num},$rest,$num"
-    }.mkString("\n") + "\n"
-
-    val udf = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1), num))
-      }
-    }
+    val expectedOutput = addLineBreak(transformB(lines,num)).mkString("")
 
     val transformerDAG = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf
+        "B" -> udfB(num)
       ),
       Map(
         "A" -> Seq("B")
@@ -337,7 +331,7 @@ class DataFrameOperationTest extends TestBase {
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
-      df.limit(5).foreach { row =>
+      df.foreach { row =>
         printWriter.write(getLine(row))
       }
       printWriter.flush()
@@ -351,12 +345,7 @@ class DataFrameOperationTest extends TestBase {
   @ValueSource(ints = Array(10))
   def testDataFrameUDFLinearDAG(num: Int): Unit = {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
-    val expectedOutput = lines.take(5).map { line =>
-      val cols = line.split(",")
-      val id = cols(0).toLong
-      val rest = cols.tail.mkString
-      s"${id + num},$rest,$num"
-    }
+    val expectedOutput = addLineBreak(transformC(transformB(lines,num),num)).mkString("")
 
 
     val transformerDAG = TransformerDAG(
@@ -375,7 +364,7 @@ class DataFrameOperationTest extends TestBase {
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
-      df.limit(5).foreach { row =>
+      df.foreach { row =>
         printWriter.write(getLine(row))
       }
       printWriter.flush()
@@ -391,36 +380,17 @@ class DataFrameOperationTest extends TestBase {
   @ValueSource(ints = Array(10))
   def testDataFrameUDFForkDAG(num: Int): Unit = {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
-    val (expectedOutputABSeq, expectedOutputACSeq) = lines.take(5).map { line =>
-      val cols = line.split(",")
-      val id = cols(0).toLong
-      val rest = cols.tail.mkString
-      val lineAB = s"${id + num},$rest"+"\n"
-      val lineAC = s"$id,$rest,$num"+"\n"
-      (lineAB, lineAC)
-    }.unzip
-    val expectedOutputAB = expectedOutputABSeq.mkString("")
-    val expectedOutputAC = expectedOutputACSeq.mkString("")
+    val expectedOutputAB = addLineBreak(transformB(lines,num)).mkString("")
+    val expectedOutputAC = addLineBreak(transformC(lines,num)).mkString("")
 
-    val udf1 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
-      }
-    }
-    val udf2 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
-      }
-    }
     val transformerDAG = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf1,
-        "C" -> udf2
+        "B" -> udfB(num),
+        "C" -> udfC(num)
       ),
       Map(
-        "A" -> Seq("B"),
-        "A" -> Seq("C")
+        "A" -> Seq("B","C"),
       )
     )
     val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
@@ -428,7 +398,7 @@ class DataFrameOperationTest extends TestBase {
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
-      df.limit(5).foreach { row =>
+      df.foreach { row =>
         printWriter.write(getLine(row))
       }
       printWriter.flush()
@@ -445,26 +415,16 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFJoinDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.take(5)
-    val lines2 = Source.fromFile(csvDir + "\\data_2.csv").getLines().toSeq.tail.take(5)
-    val expectedOutputAC = transformC(lines1, num).mkString
-    val expectedOutputBC = transformC(lines2, num).mkString
+    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines2 = Source.fromFile(csvDir + "\\data_2.csv").getLines().toSeq.tail
+    val expectedOutputAC = addLineBreak(transformC(lines1, num)).mkString
+    val expectedOutputBC = addLineBreak(transformC(lines2, num)).mkString
 
-    val udf1 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
-      }
-    }
-    val udf2 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
-      }
-    }
     val transformerDAG = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> SourceNode("/csv/data_2.csv"),
-        "C" -> udf2
+        "C" -> udfC(num)
       ),
       Map(
         "A" -> Seq("C"),
@@ -476,7 +436,7 @@ class DataFrameOperationTest extends TestBase {
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
-      df.limit(5).foreach { row =>
+      df.foreach { row =>
         printWriter.write(getLine(row))
       }
       printWriter.flush()
@@ -495,10 +455,10 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFHybridDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.take(5)
-    val lines2 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.take(5)
-    val expectedOutputABDE = transformE(transformD(transformB(lines1,num))).mkString
-    val expectedOutputACDE = transformE(transformD(transformC(lines2,num))).mkString
+    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines2 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val expectedOutputABDE = addLineBreak(transformE(transformD(transformB(lines1,num)))).mkString
+    val expectedOutputACDE = addLineBreak(transformE(transformD(transformC(lines2,num)))).mkString
 
     val transformerDAG = TransformerDAG(
       Map(
@@ -520,7 +480,7 @@ class DataFrameOperationTest extends TestBase {
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
-      df.limit(5).foreach { row =>
+      df.foreach { row =>
         printWriter.write(getLine(row))
       }
       printWriter.flush()
@@ -634,16 +594,13 @@ class DataFrameOperationTest extends TestBase {
 
   @Test
   def testDataFrameRowIndexOutOfBound(): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
     val df = dc.open("/csv/data_1.csv")
-
-    try {
+    val exceptionRowIndexOutOfBound = assertThrows(classOf[java.lang.IndexOutOfBoundsException], () => {
       df.foreach { row: Row =>
         println(row._3)
       }
-    } catch {
-      case e: FlightRuntimeException => println(ExceptionHandler.getErrorCode(e))
-    }
+    })
+    assertEquals(exceptionRowIndexOutOfBound.getMessage,"2")
   }
 
 }

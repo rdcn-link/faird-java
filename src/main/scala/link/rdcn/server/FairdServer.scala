@@ -181,12 +181,12 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getHostInfo") =>
         val hostInfo =
           s"""
-             |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
-             |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
-             |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
-             |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
-             |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
-             |""".stripMargin
+             {"faird.hostName": "${ConfigLoader.fairdConfig.hostName}",
+             "faird.hostTitle": "${ConfigLoader.fairdConfig.hostTitle}",
+             "faird.hostPosition": "${ConfigLoader.fairdConfig.hostPosition}",
+             "faird.hostDomain": "${ConfigLoader.fairdConfig.hostDomain}",
+             "faird.hostPort": "${ConfigLoader.fairdConfig.hostPort}"
+             }""".stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
         getSingleBytesStream(hostInfo,listener)
 
       case actionType if actionType.startsWith("getServerResourceInfo") =>
@@ -305,23 +305,22 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     val systemMemoryUsed = systemMemoryTotal - systemMemoryFree
 
     s"""
-       |服务器资源使用情况:
-       |-------------------------
-       |CPU核心数         : $availableProcessors
-       |CPU使用率         : $cpuLoadPercent%
-       |
-       |JVM内存 (MB):
-       |  - 最大可用内存    : $maxMemory MB
-       |  - 已分配内存      : $totalMemory MB
-       |  - 已使用内存      : $usedMemory MB
-       |  - 空闲内存        : $freeMemory MB
-       |
-       |系统物理内存 (MB):
-       |  - 总内存          : $systemMemoryTotal MB
-       |  - 已使用          : $systemMemoryUsed MB
-       |  - 空闲            : $systemMemoryFree MB
-       |-------------------------
-       |""".stripMargin
+       |   {
+       |    "cpuCores"        : "$availableProcessors",
+       |    "cpuUsagePercent" : "$cpuLoadPercent%",
+       |    "jvmMemory":{
+       |    "maxAvailableMB" : "$maxMemory MB",
+       |    "allocatedMB" : "$totalMemory MB",
+       |    "usedMB" : "$usedMemory MB",
+       |    "freeMB" : "$freeMemory MB"
+       |},
+       |    "systemPhysicalMemory" : {
+       |    "totalMB" : "$systemMemoryTotal MB",
+       |    "usedMB" : "$systemMemoryUsed MB",
+       |    "freeMB" : "$systemMemoryFree MB"
+       |   }
+       |}
+       |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
   }
 
   private def getRootByStructType(structType: StructType): (VectorSchemaRoot, BufferAllocator) = {

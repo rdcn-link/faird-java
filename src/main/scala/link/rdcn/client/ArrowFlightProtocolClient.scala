@@ -1,6 +1,8 @@
 package link.rdcn.client
 
 
+import io.circe.{DecodingFailure, Json, parser}
+import io.circe.syntax.EncoderOps
 import link.rdcn.SimpleSerializer
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
@@ -24,20 +26,28 @@ import scala.collection.mutable
  * @Modified By:
  */
 
-trait ProtocolClient{
+trait ProtocolClient {
   def listDataSetNames(): Seq[String]
+
   def listDataFrameNames(dsName: String): Seq[String]
+
   def getDataSetMetaData(dsName: String): String
+
   def close(): Unit
+
   def getRows(dataFrameName: String, ops: String): Iterator[Row]
+
   def getDataFrameSize(dataFrameName: String): Long
-  def getHostInfo(): String
-  def getServerResourceInfo(): String
+
+  def getHostInfo(): Map[String, String]
+
+  def getServerResourceInfo(): Map[String, String]
 }
-class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) extends ProtocolClient{
+
+class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false) extends ProtocolClient {
 
   val location = {
-    if(useTLS) Location.forGrpcTls(url, port) else
+    if (useTLS) Location.forGrpcTls(url, port) else
       Location.forGrpcInsecure(url, port)
   }
   val allocator: BufferAllocator = new RootAllocator()
@@ -45,24 +55,25 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
   private val userToken = UUID.randomUUID().toString
 
   def login(credentials: Credentials): Unit = {
-      val paramFields: Seq[Field] = List(
-        new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
-      )
-      val schema = new Schema(paramFields.asJava)
-      val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-      val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
-      credentialsVector.allocateNew(1)
-      credentialsVector.set(0, SimpleSerializer.serialize(credentials))
-      vectorSchemaRoot.setRowCount(1)
-      val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
-      val result = flightClient.doAction(new Action(s"login.$userToken",body)).asScala
-      result.hasNext
+    val paramFields: Seq[Field] = List(
+      new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
+    )
+    val schema = new Schema(paramFields.asJava)
+    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
+    val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
+    credentialsVector.allocateNew(1)
+    credentialsVector.set(0, SimpleSerializer.serialize(credentials))
+    vectorSchemaRoot.setRowCount(1)
+    val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
+    val result = flightClient.doAction(new Action(s"login.$userToken", body)).asScala
+    result.hasNext
   }
 
   def listDataSetNames(): Seq[String] = {
-      val dataSetNames = flightClient.doAction(new Action("listDataSetNames")).asScala
-      getListStringByResult(dataSetNames)
+    val dataSetNames = flightClient.doAction(new Action("listDataSetNames")).asScala
+    getListStringByResult(dataSetNames)
   }
+
   def listDataFrameNames(dsName: String): Seq[String] = {
     val dataFrameNames = flightClient.doAction(new Action(s"listDataFrameNames.$dsName")).asScala
     getListStringByResult(dataFrameNames)
@@ -70,7 +81,7 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
 
   def getSchema(dataFrameName: String): String = {
     val schema = flightClient.doAction(new Action(s"getSchema.$dataFrameName")).asScala
-      getSingleStringByResult(schema)
+    getSingleStringByResult(schema)
   }
 
   override def getDataSetMetaData(dataSetName: String): String = {
@@ -83,14 +94,14 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
     getSingleLongByResult(dataFrameSize)
   }
 
-  override def getHostInfo(): String = {
+  override def getHostInfo(): Map[String, String] = {
     val hostInfo = flightClient.doAction(new Action(s"getHostInfo")).asScala
-    getSingleStringByResult(hostInfo)
+    getMapByJsonString(getSingleStringByResult(hostInfo))
   }
 
-  override def getServerResourceInfo(): String = {
+  override def getServerResourceInfo(): Map[String, String] = {
     val serverResourceInfo = flightClient.doAction(new Action(s"getServerResourceInfo")).asScala
-    getSingleStringByResult(serverResourceInfo)
+    getMapByJsonString(getSingleStringByResult(serverResourceInfo))
   }
 
   def getSchemaURI(dataFrameName: String): String = {
@@ -102,7 +113,7 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
     flightClient.close()
   }
 
-  def getRows(dataFrameName: String, operationNode: String): Iterator[Row]  = {
+  def getRows(dataFrameName: String, operationNode: String): Iterator[Row] = {
     //上传参数
     val paramFields: Seq[Field] = List(
       new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
@@ -154,7 +165,7 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
               case v: org.apache.arrow.vector.VarBinaryVector => (vec.getName, v.get(index))
               case _ => throw new UnsupportedOperationException(s"Unsupported vector type: ${vec.getClass}")
             }
-          }):_*)
+          }): _*)
           val r: Seq[Any] = rowMap.values.toList
           r
         })
@@ -168,7 +179,7 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
     } else {
 
       var isFirstChunk: Boolean = true
-      var currentSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
+      var currentSeq: Seq[Any] = if (flatIter.hasNext) flatIter.next() else Seq.empty[Any]
       var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
       var cachedChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
@@ -187,7 +198,7 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
             private def readNextChunk(): Unit = {
               if (flatIter.hasNext) {
                 if (!isFirstChunk) {
-                  val nextSeq: Seq[Any] = if(flatIter.hasNext) flatIter.next() else Seq.empty[Any]
+                  val nextSeq: Seq[Any] = if (flatIter.hasNext) flatIter.next() else Seq.empty[Any]
                   val nextName: String = nextSeq(0).asInstanceOf[String]
                   val nextChunk: Array[Byte] = nextSeq.last.asInstanceOf[Array[Byte]]
                   if (nextName != currentName) {
@@ -247,81 +258,68 @@ class ArrowFlightProtocolClient(url: String, port:Int, useTLS: Boolean = false) 
 
             }
           }
-          Row(currentSeq.init:+new Blob(blobIter,currentSeq(0).asInstanceOf[String]):_*)
+          Row(currentSeq.init :+ new Blob(blobIter, currentSeq(0).asInstanceOf[String]): _*)
         }
       }
     }
   }
 
-  private def getListStringByFlightInfo(flightInfo: FlightInfo): Seq[String] = {
-    val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
-    if(flightStream.next()){
-      val vectorSchemaRootReceived = flightStream.getRoot
-      val rowCount = vectorSchemaRootReceived.getRowCount
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      Seq.range(0, rowCount).map(index  => {
-        val rowMap = fieldVectors.map(vec =>{
-          vec.asInstanceOf[VarCharVector].getObject(index).toString
-        }).head
-        rowMap
-      })
-    }else null
-  }
-
-  private def getSingleStringByFlightInfo(flightInfo: FlightInfo): String = {
-      val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
-      if(flightStream.next()){
-        val vectorSchemaRootReceived = flightStream.getRoot
-        val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-        fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
-      }else null
-    }
-  private def getSingleLongByFlightInfo(flightInfo: FlightInfo): Long = {
-    val flightStream = flightClient.getStream(flightInfo.getEndpoints.get(0).getTicket)
-    if(flightStream.next()){
-      val vectorSchemaRootReceived = flightStream.getRoot
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
-    }else 0L
-  }
-
   private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {
-    if(resultIterator.hasNext){
+    if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val rowCount = vectorSchemaRootReceived.getRowCount
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      Seq.range(0, rowCount).map(index  => {
-        val rowMap = fieldVectors.map(vec =>{
+      Seq.range(0, rowCount).map(index => {
+        val rowMap = fieldVectors.map(vec => {
           vec.asInstanceOf[VarCharVector].getObject(index).toString
         }).head
         rowMap
       })
-    }else null
+    } else null
   }
 
   private def getSingleStringByResult(resultIterator: Iterator[Result]): String = {
-    if(resultIterator.hasNext){
+    if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
-    }else null
-  }
-  private def getSingleLongByResult(resultIterator: Iterator[Result]): Long = {
-    if(resultIterator.hasNext){
-      val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody,allocator)
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
-    }else 0L
+    } else null
   }
 
+  private def getSingleLongByResult(resultIterator: Iterator[Result]): Long = {
+    if (resultIterator.hasNext) {
+      val result = resultIterator.next
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
+    } else 0L
+  }
+
+  private def getMapByJsonString(hostInfoString: String): Map[String, String] = {
+    val parseResult: Either[io.circe.Error, Map[String, String]] = parser.parse(hostInfoString).flatMap { json =>
+      json.asObject.toRight(
+        // 如果不是对象，则返回一个 DecodingFailure
+        DecodingFailure("JSON is not an object", List.empty)
+      ).map { jsonObject =>
+        // 将 JsonObject 转换为 Map[String, Json]
+        jsonObject.toMap.mapValues {
+          case jsonValue if jsonValue.isString => jsonValue.asString.get // 如果是 JSON 字符串，直接取其值
+          case other => other.toString() // 修改为 toString() 以兼容其他 Json 类型
+        }
+      }
+    }
+    parseResult.fold(
+      error => throw new RuntimeException(s"Error parsing JSON: $error"),
+      identity // 如果解析成功，直接返回结果
+    )
+  }
 
 }
 
 // 表示完整的二进制文件
-class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends Serializable {
+class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends Serializable {
   // 缓存加载后的完整数据
   private var _content: Option[Array[Byte]] = None
   // 缓存文件大小（独立于_content，避免获取大数组长度）
@@ -332,7 +330,7 @@ class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends S
   private var _memoryReleased: Boolean = false
 
   private def loadLazily(): Unit = {
-//    println("loadLazily")
+    //    println("loadLazily")
     if (_content.isEmpty && _size.isEmpty && _chunkCount.isEmpty) {
       val byteStream = new ByteArrayOutputStream()
       var totalSize: Long = 0L
@@ -340,14 +338,14 @@ class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends S
 
       while (chunkIterator.hasNext) {
         val chunk = chunkIterator.next()
-//        println(chunk.mkString("Array(", ", ", ")"))
+        //        println(chunk.mkString("Array(", ", ", ")"))
         totalSize += chunk.length
-        chunkCount+=1
+        chunkCount += 1
         byteStream.write(chunk)
-//        byteStream.reset()
+        //        byteStream.reset()
 
       }
-//      println("loaded Lazily")
+      //      println("loaded Lazily")
       _content = Some(byteStream.toByteArray)
       _size = Some(totalSize)
       _chunkCount = Some(chunkCount)
@@ -391,9 +389,10 @@ class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends S
     if (_content.isEmpty) loadLazily()
     new ByteArrayInputStream(_content.get)
   }
+
   // 将 Blob 内容写入指定文件（返回写入的字节数）
   def writeToFile(pathString: String): Long = {
-    val path = Paths.get(pathString+name)
+    val path = Paths.get(pathString + name)
     if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
     if (_size.isEmpty) loadLazily()
     val inputStream = getInputStream
@@ -419,7 +418,7 @@ class Blob( val chunkIterator:Iterator[Array[Byte]], val name: String) extends S
 
 
   /** 获取分块迭代器 */
-//  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
+  //  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
 
   override def toString: String = {
     loadLazily()

@@ -1,7 +1,7 @@
 package link.rdcn
 
 import link.rdcn.client.FairdClient
-import link.rdcn.user.UsernamePassword
+import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.util.SharedValue.{adminPassword, adminUsername}
 import org.apache.arrow.flight.FlightRuntimeException
@@ -34,7 +34,7 @@ class ClientAuthorizationTest extends TestBase {
   //匿名访问DataFrame失败
   @Test
   def testAnonymousAccessDataFrameFalse(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
+    val dc = FairdClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => dc.open("/csv/data_1.csv").foreach(_ => ())
