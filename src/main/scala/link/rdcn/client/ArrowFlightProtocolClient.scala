@@ -1,23 +1,24 @@
 package link.rdcn.client
 
 
-import io.circe.{DecodingFailure, Json, parser}
-import io.circe.syntax.EncoderOps
+import io.circe.{DecodingFailure, parser}
 import link.rdcn.SimpleSerializer
+import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
 import link.rdcn.util.DataUtils
-import org.apache.arrow.flight.{Action, AsyncPutListener, FlightClient, FlightDescriptor, FlightInfo, FlightRuntimeException, Location, Result}
+import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
+import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
 
-import java.util.UUID
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
 import java.nio.file.Paths
+import java.util.UUID
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
+
 
 /**
  * @Author renhao
@@ -107,6 +108,11 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   def getSchemaURI(dataFrameName: String): String = {
     val schemaURI = flightClient.doAction(new Action(s"getSchemaURI.$dataFrameName")).asScala
     getSingleStringByResult(schemaURI)
+  }
+
+  def getDataFrameDocument(dataFrameName: String): DataFrameDocument = {
+    val dataFrameDocument = flightClient.doAction(new Action(s"getDataFrameDocument.$dataFrameName")).asScala
+    SimpleSerializer.deserialize(getArrayBytesResult(dataFrameDocument)).asInstanceOf[DataFrameDocument]
   }
 
   def close(): Unit = {
@@ -316,6 +322,15 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     )
   }
 
+  private def getArrayBytesResult(resultIterator: Iterator[Result]): Array[Byte] = {
+    if (resultIterator.hasNext) {
+      val result = resultIterator.next
+      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+      fieldVectors.head.asInstanceOf[VarBinaryVector].getObject(0)
+    } else null
+  }
+
 }
 
 // 表示完整的二进制文件
@@ -325,32 +340,35 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
   // 缓存文件大小（独立于_content，避免获取大数组长度）
   private var _size: Option[Long] = None
 
-  private var _chunkCount: Option[Int] = None
-
   private var _memoryReleased: Boolean = false
 
   private def loadLazily(): Unit = {
-    //    println("loadLazily")
-    if (_content.isEmpty && _size.isEmpty && _chunkCount.isEmpty) {
-      val byteStream = new ByteArrayOutputStream()
-      var totalSize: Long = 0L
-      var chunkCount = 0
+    val byteStream = new ByteArrayOutputStream()
+    var totalSize: Long = 0L
+    var chunkCount = 0
+    try {
+      if (_content.isEmpty && _size.isEmpty) {
+        while (chunkIterator.hasNext) {
+          val chunk = chunkIterator.next()
+          totalSize += chunk.length
+          chunkCount += 1
+          byteStream.write(chunk)
 
-      while (chunkIterator.hasNext) {
-        val chunk = chunkIterator.next()
-        //        println(chunk.mkString("Array(", ", ", ")"))
-        totalSize += chunk.length
-        chunkCount += 1
-        byteStream.write(chunk)
-        //        byteStream.reset()
-
+        }
+        _content = Some(byteStream.toByteArray)
+        _size = Some(totalSize)
       }
-      //      println("loaded Lazily")
-      _content = Some(byteStream.toByteArray)
-      _size = Some(totalSize)
-      _chunkCount = Some(chunkCount)
+    }
+    catch{
+        case e: OutOfMemoryError => {
+          _size = Some(writeToFile(name))
+          _content = None
+        }
+    } finally {
       byteStream.close()
     }
+
+
   }
 
 
@@ -370,12 +388,6 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
     _size.get
   }
 
-  /** 获取分块数量 */
-  def chunkCount: Int = {
-    if (_chunkCount.isEmpty) loadLazily()
-    _chunkCount.get
-  }
-
   /** 释放content占用的内存 */
   def releaseContentMemory(): Unit = {
     _content = None
@@ -391,8 +403,8 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
   }
 
   // 将 Blob 内容写入指定文件（返回写入的字节数）
-  def writeToFile(pathString: String): Long = {
-    val path = Paths.get(pathString + name)
+  def writeToFile(pathString: String = Paths.get("src","test","demo","data","output").toString, nameString: String = name): Long = {
+    val path = Paths.get(pathString,nameString)
     if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
     if (_size.isEmpty) loadLazily()
     val inputStream = getInputStream
@@ -415,7 +427,6 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
       outputStream.close()
     }
   }
-
 
   /** 获取分块迭代器 */
   //  def chunkIterator: Iterator[Array[Byte]] = chunkIterator

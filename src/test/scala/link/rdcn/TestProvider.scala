@@ -1,35 +1,33 @@
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/7/16 14:19
+ * @Modified By:
+ */
 package link.rdcn
 
 import link.rdcn.ErrorCode._
-import link.rdcn.client.FairdClient
-import link.rdcn.server.FairdServer
 import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
 import link.rdcn.struct._
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
-import link.rdcn.util.{DataProviderImpl, DataUtils, SharedValue}
-import link.rdcn.util.DataUtils.listFiles
-import link.rdcn.util.SharedValue.getOutputDir
-import org.apache.commons.io.FileUtils
+import link.rdcn.user._
+import link.rdcn.util.DataUtils._
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
-import java.io.{BufferedWriter, File, FileOutputStream, FileWriter}
+import java.io.File
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 
-trait Server {
+//用于Demo的Provider
+class TestProvider(baseDirString: String = "src/test/demo", subDirString: String = "data") {
 
 
-}
+  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
 
-object Server {
-
-
-  val baseDir = getOutputDir("data")
+  val baseDir = getOutputDir(baseDirString, subDirString)
   // 生成的临时目录结构
-  val binDir = getOutputDir("data/bin")
-  val csvDir = getOutputDir("data/csv")
+  val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))
+  val csvDir = getOutputDir(baseDirString, Seq(subDirString, "csv").mkString(File.separator))
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
@@ -49,8 +47,8 @@ object Server {
 
   //权限
   val permissions = Map(
-    adminUsername -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv", "/bin",
-      "/csv/data_2.csv", "/bin/data_1.csv", "/csv/invalid.csv")
+    adminUsername -> Set("/csv/data_1.csv", "/bin",
+      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv")
   )
 
   //生成Token
@@ -63,7 +61,7 @@ object Server {
   }
 
 
-  val authprovider = new AuthProvider {
+  val authProvider = new AuthProvider {
 
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       if (credentials.isInstanceOf[UsernamePassword]) {
@@ -102,60 +100,34 @@ object Server {
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-      getOutputDir("data/bin").resolve(relativePath).toString
+      getOutputDir("", "").resolve(relativePath).toString
     }
 
   }
 
-  private var fairdServer: Option[FairdServer] = None
-  val configCache = ConfigLoader.fairdConfig
-  var expectedHostInfo: String = _
 
-
-  def runServer: FairdServer = synchronized {
-    if (fairdServer.isEmpty) {
-      val s = new FairdServer(dataProvider, authprovider, getResourcePath(""))
-
-      s.start()
-      //      println(s"Server (Location): Listening on port ${s.getPort}")
-      fairdServer = Some(s)
-    }
-      fairdServer.get
+  // 默认构造函数
+  def this() = {
+    this("src/test/demo", "data") // 调用主构造函数
   }
 
+  def genModel: Model = {
+    ModelFactory.createDefaultModel()
+  }
 
-    def stopServer(): Unit = synchronized {
-      fairdServer.foreach(_.close())
-      fairdServer = None
-    }
+  def getOutputDir(dir: String, subDirString: String): Path = {
+    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
+    val outDir = baseDir.resolve(dir).resolve(subDirString)
+    Files.createDirectories(outDir)
+    outDir
+  }
 
-
-    def genModel: Model = {
-      ModelFactory.createDefaultModel()
-    }
-
-    def getOutputDir(subdir: String): Path = {
-      val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-      val outDir = baseDir.resolve("demo").resolve(subdir)
-      Files.createDirectories(outDir)
-      outDir
-    }
-
-    def getResourcePath(resourceName: String): String = {
-      val url = Option(getClass.getClassLoader.getResource(resourceName))
-        .orElse(Option(getClass.getResource(resourceName)))
-        .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
-      url.getPath
-    }
-
-    // 生成所有测试数据
-    def getExpectedDataFrameSize(dataFrameName: String): Long = {
-      dataProvider.dataSetsScalaList.foreach(ds => {
-        val dfInfo = ds.getDataFrameInfo(dataFrameName)
-        if (dfInfo.nonEmpty) return DataUtils.countLinesFast(new File(dfInfo.get.name))
-      })
-      -1L
-    }
+  def getResourcePath(resourceName: String): String = {
+    val url = Option(getClass.getClassLoader.getResource(resourceName))
+      .orElse(Option(getClass.getResource(resourceName)))
+      .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
+    url.getPath
+  }
 
 }
 

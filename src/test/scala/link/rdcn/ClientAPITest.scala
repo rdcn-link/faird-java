@@ -67,10 +67,10 @@ class ClientAPITest extends TestBase {
     val statusMap = dc.getServerResourceInfo()
 
     assertNotNull(statusMap)
-    assertTrue(statusMap.containsKey("cpuCores"))
-    assertTrue(statusMap.containsKey("cpuUsagePercent"))
-    assertTrue(statusMap.containsKey("jvmMemory"))
-    assertTrue(statusMap.containsKey("systemPhysicalMemory"))
+    assertTrue(statusMap.containsKey("cpu.cores"))
+    assertTrue(statusMap.containsKey("cpu.usage.percent"))
+    assertTrue(statusMap.containsKey("jvm.memory"))
+    assertTrue(statusMap.containsKey("system.physical.memory"))
   }
 
 

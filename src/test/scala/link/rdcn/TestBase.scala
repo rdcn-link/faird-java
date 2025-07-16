@@ -1,41 +1,56 @@
 package link.rdcn
 
+import link.rdcn.ConfigLoaderTest.getResourcePath
 import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
+import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.server.FairdServer
 import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
-import link.rdcn.struct.{CSVSource, DataFrameInfo, DataSet, DirectorySource, StructType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
-import link.rdcn.util.{DataProviderImpl, DataUtils}
+import link.rdcn.struct.{Row, StructType}
+import link.rdcn.user._
+import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.vocabulary.RDF
 import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.io.{BufferedWriter, File, FileOutputStream, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
+//所有需要数据生成的测试的Provider和相关公共类
 trait TestBase {
-
 
 }
 
 object TestBase {
 
 
+  // 文件数量配置
+  private val binFileCount = 3
+  private val csvFileCount = 3
+
+  val adminUsername = "admin"
+  val adminPassword = "admin"
+  val userUsername = "user"
+  val userPassword = "user"
+  val anonymousUsername = "anonymous"
+
+  //生成Token
+  val genToken = () => UUID.randomUUID().toString
+
   val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
   val binDir = getOutputDir("test_output/bin")
   val csvDir = getOutputDir("test_output/csv")
 
-  // 文件数量配置
-  private val binFileCount = 3
-  private val csvFileCount = 3
 
   //必须在DfInfos前执行一次！！！
   generateTestData()
+
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
@@ -47,27 +62,16 @@ object TestBase {
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
 
-  val adminUsername = "admin"
-  val adminPassword = "admin"
-  val userUsername = "user"
-  val userPassword = "user"
-  val anonymousUsername = "anonymous"
-
   //权限
   val permissions = Map(
     "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv", "/bin",
       "/csv/data_2.csv","/bin/data_1.csv", "/csv/invalid.csv")
   )
 
-  //生成Token
-  val genToken = () => UUID.randomUUID().toString
-
-
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
 
   }
-
 
   val authprovider = new AuthProvider {
 
@@ -110,11 +114,8 @@ object TestBase {
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       getOutputDir("test_output/bin").resolve(relativePath).toString
     }
-    //    override def getDataFrameSize(dataFrameName: String): lang.Long = 0L
-
   }
 
-  //  val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
   private var fairdServer: Option[FairdServer] = None
   var dc: FairdClient = _
   val configCache = ConfigLoader.fairdConfig
@@ -312,4 +313,130 @@ object TestBase {
   }
 
 }
+
+
+abstract class DataProviderImpl extends DataProvider {
+  val dataSetsScalaList: List[DataSet]
+  val dataFramePaths: (String => String)
+
+  def listDataSetNames(): java.util.List[String] = {
+    dataSetsScalaList.map(_.dataSetName).asJava
+  }
+
+  def getDataSetMetaData(dataSetName: String, rdfModel: Model): Unit = {
+    val dataSet: DataSet = dataSetsScalaList.find(_.dataSetName == dataSetName).getOrElse(return rdfModel)
+    dataSet.getMetadata(rdfModel)
+  }
+
+  def listDataFrameNames(dataSetName: String): java.util.List[String] = {
+    val dataSet: DataSet = dataSetsScalaList.find(_.dataSetName == dataSetName).getOrElse(return new java.util.ArrayList)
+    dataSet.dataFrames.map(_.name).asJava
+  }
+
+  def getDataStreamSource(dataFrameName: String): DataStreamSource = {
+    val dataFrameInfo: DataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(return new DataStreamSource {
+      override def rowCount: Long = -1
+
+      override def schema: StructType = StructType.empty
+
+      override def iterator: Iterator[Row] = Iterator.empty
+    })
+    dataFrameInfo.inputSource match {
+      case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.name))
+      case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name))
+      case _: InputSource => ???
+    }
+
+  }
+
+  override def getDataFrameDocument(dataFrameName: String): DataFrameDocument = {
+    new DataFrameDocument {
+      override def getSchemaURL(): Option[String] = {
+        //客户端也需要初始化因为是不同进程
+        ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+        Some(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}"+
+          dataFrameName)
+      }
+
+      override def getColumnURL(colName: String): Option[String] = Some("[ColumnURL defined by provider]")
+
+      override def getColumnAlias(colName: String): Option[String] = Some("[ColumnAlias defined by provider]")
+
+      override def getColumnTitle(colName: String): Option[String] = Some("[ColumnTitle defined by provider]")
+    }
+  }
+
+  def getDataFrameSchema(dataFrameName: String): StructType = {
+    getDataFrameInfo(dataFrameName).map(_.schema).getOrElse(StructType.empty)
+  }
+
+  def getDataFrameSchemaURL(dataFrameName: String): String = {
+    getDataFrameInfo(dataFrameName).map(_.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}")).getOrElse("")
+  }
+
+  private def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
+    dataSetsScalaList.foreach(ds => {
+      val dfInfo = ds.getDataFrameInfo(dataFrameName)
+      if (dfInfo.nonEmpty) return dfInfo
+    })
+    None
+  }
+
+}
+
+
+case class DataFrameInfo(
+                          name: String,
+                          inputSource: InputSource,
+                          schema: StructType
+                        ) {
+  def getSchemaUrl(url: String): String = url + name
+}
+
+case class DataSet(
+                    dataSetName: String,
+                    dataSetId: String,
+                    dataFrames: List[DataFrameInfo]
+                  ) {
+  /** 生成 RDF 元数据模型 */
+  def getMetadata(model: Model): Unit = {
+    val datasetURI = s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}/" + dataSetId
+    val datasetRes = model.createResource(datasetURI)
+
+    val hasFile = model.createProperty(datasetURI + "/hasFile")
+    val hasName = model.createProperty(datasetURI + "/name")
+
+    datasetRes.addProperty(RDF.`type`, model.createResource("DataSet"))
+    datasetRes.addProperty(hasName, dataSetName)
+
+    dataFrames.foreach { df =>
+      datasetRes.addProperty(hasFile, df.name)
+    }
+  }
+
+  def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
+    dataFrames.find { dfInfo =>
+      val normalizedDfPath: String = dfInfo.name.replace('\\', '/')
+      normalizedDfPath.contains(dataFrameName)
+    }
+  }
+}
+
+sealed trait InputSource
+
+case class CSVSource(
+                      delimiter: String = ",",
+                      head: Boolean = false
+                    ) extends InputSource
+
+case class JSONSource(
+                       multiline: Boolean = false
+                     ) extends InputSource
+
+case class DirectorySource(
+                            recursive: Boolean = true
+                          ) extends InputSource
+
+case class StructuredSource() extends InputSource
+
 

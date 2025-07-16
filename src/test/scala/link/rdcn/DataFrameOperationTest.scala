@@ -7,7 +7,7 @@ import link.rdcn.client.RemoteDataFrame
 import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.util.SharedValue.getOutputDir
+import link.rdcn.TestEmptyProvider.getOutputDir
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.Test

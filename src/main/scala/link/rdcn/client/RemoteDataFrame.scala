@@ -2,6 +2,7 @@ package link.rdcn.client
 
 import link.rdcn.Logging
 import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, SelectOp, SourceOp}
+import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.Row
 
 /**
@@ -14,9 +15,7 @@ trait RemoteDataFrame{
   val dataFrameName: String
   val operation: Operation
 
-  def getSchema: String
-
-  def getSchemaURI: String
+  def getDataFrameDocument: DataFrameDocument
 
   def map(f: Row => Row): RemoteDataFrame
 
@@ -70,9 +69,7 @@ case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtoco
 
   override def collect(): List[Row] = records.toList
 
-  override def getSchema: String = client.getSchema(dataFrameName)
-
-  override def getSchemaURI: String = client.getSchemaURI(dataFrameName)
+  override def getDataFrameDocument: DataFrameDocument = client.getDataFrameDocument(dataFrameName)
 
   private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)
 }

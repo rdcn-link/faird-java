@@ -3,7 +3,7 @@ package link.rdcn
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.util.SharedValue._
+import link.rdcn.TestEmptyProvider._
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test

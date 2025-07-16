@@ -1,13 +1,14 @@
 package link.rdcn
 
-import link.rdcn.util.ExpectedLogger
-import org.apache.logging.log4j.{LogManager, Logger}
+import link.rdcn.ConfigLoaderTest.getResourcePath
+import org.apache.logging.log4j.{Level, LogManager, Logger}
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.appender.{ConsoleAppender, FileAppender}
 import org.junit.jupiter.api.Assertions._
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.{Execution, ExecutionMode}
 
+import java.io.File
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -94,3 +95,22 @@ class LoggerTest extends Logging {
   private def validateMessage(msg: String): Boolean = msg == expectedMessage
 
 }
+
+object ExpectedLogger {
+  private val confPath = new File(getResourcePath("faird.conf")).toPath
+  private val expectedConfig: Map[String, String] = Files.readAllLines(confPath).asScala
+    .filter(_.contains("=")) // 过滤有效行
+    .map(_.split("=", 2)) // 按第一个=分割
+    .map(arr => arr(0).trim -> arr(1).trim) // 转换为键值对
+    .toMap
+
+  def getLevel: Level = Level.toLevel(expectedConfig("logging.level.root"))
+
+  def getFileName: String = expectedConfig("logging.file.name")
+
+  def getConsoleLayout: String = expectedConfig("logging.pattern.console")
+
+  def getFileLayout: String = expectedConfig("logging.pattern.file")
+
+}
+

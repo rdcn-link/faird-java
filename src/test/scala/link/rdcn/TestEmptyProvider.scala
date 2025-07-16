@@ -1,18 +1,35 @@
-package link.rdcn.util
-
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/7/16 13:34
+ * @Modified By:
+ */
+package link.rdcn
+import link.rdcn.struct.{Row, StructType}
 import link.rdcn.ConfigLoader
-import link.rdcn.provider.DataStreamSource
+import link.rdcn.ConfigLoaderTest.getResourcePath
+import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.server.FlightProducerImpl
-import link.rdcn.struct.DataSet
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
+import link.rdcn.TestEmptyProvider.getClass
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
+
+import java.io.File
+import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.vocabulary.RDF
+import org.apache.logging.log4j.Level
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 
-object SharedValue {
+trait TestEmptyProvider{
+
+}
+
+//用于不需要生成数据的测试的Provider
+object TestEmptyProvider {
   ConfigLoader.init(getResourcePath("/conf/faird.conf"))
   ConfigLoader.init(getResourcePath("/conf/faird.conf"))
 
@@ -51,7 +68,7 @@ object SharedValue {
 
   def getOutputDir(subdir: String): Path = {
     val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-    val outDir = baseDir.resolve("demo").resolve(subdir)
+    val outDir = baseDir.resolve("target").resolve(subdir)
     Files.createDirectories(outDir)
     outDir
   }

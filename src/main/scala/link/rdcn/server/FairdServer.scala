@@ -3,18 +3,17 @@ package link.rdcn.server
 import com.sun.management.OperatingSystemMXBean
 import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
 import link.rdcn.dftree.Operation
-import org.apache.arrow.flight._
-import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorLoader, VectorSchemaRoot, VectorUnloader}
-import org.apache.arrow.vector.types.pojo.Schema
-import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
-import link.rdcn.struct.{DataFrame, Row, StructType, ValueType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials}
+import link.rdcn.struct.{DataFrame, StructType, ValueType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils
-import link.rdcn.user.DataOperationType
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
+import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
+import org.apache.arrow.flight._
+import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
+import org.apache.arrow.vector.types.pojo.Schema
+import org.apache.arrow.vector._
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
 import java.io.File
@@ -157,20 +156,16 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     val body = action.getBody
     action.getType match {
       case "listDataSetNames" =>
-        getListBytesStream(dataProvider.listDataSetNames().asScala, listener)
+        getListStringStream(dataProvider.listDataSetNames().asScala, listener)
       case actionType if actionType.startsWith("listDataFrameNames") => {
         val dataSet = actionType.replace("listDataFrameNames.","")
-        getListBytesStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
-      }
-      case actionType if actionType.startsWith("getSchemaURI") => {
-        val dfName = actionType.replace("getSchemaURI.","")
-        getSingleBytesStream(dataProvider.getDataFrameDocument(dfName).getSchemaURL.getOrElse(""),listener)
+        getListStringStream(dataProvider.listDataFrameNames(dataSet).asScala, listener)
       }
       case actionType if actionType.startsWith("getDataSetMetaData") => {
         val dsName = actionType.replace("getDataSetMetaData.","")
         val model: Model = ModelFactory.createDefaultModel()
         dataProvider.getDataSetMetaData(dsName, model)
-        getSingleBytesStream(model.toString,listener)
+        getSingleStringStream(model.toString,listener)
       }
       case actionType if actionType.startsWith("getDataFrameSize") => {
         val dfName =  actionType.replace("getDataFrameSize.","")
@@ -181,29 +176,20 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getHostInfo") =>
         val hostInfo =
           s"""
-             {"faird.hostName": "${ConfigLoader.fairdConfig.hostName}",
-             "faird.hostTitle": "${ConfigLoader.fairdConfig.hostTitle}",
-             "faird.hostPosition": "${ConfigLoader.fairdConfig.hostPosition}",
-             "faird.hostDomain": "${ConfigLoader.fairdConfig.hostDomain}",
-             "faird.hostPort": "${ConfigLoader.fairdConfig.hostPort}"
+             {"faird.host.name": "${ConfigLoader.fairdConfig.hostName}",
+             "faird.host.title": "${ConfigLoader.fairdConfig.hostTitle}",
+             "faird.host.position": "${ConfigLoader.fairdConfig.hostPosition}",
+             "faird.host.domain": "${ConfigLoader.fairdConfig.hostDomain}",
+             "faird.host.port": "${ConfigLoader.fairdConfig.hostPort}"
              }""".stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
-        getSingleBytesStream(hostInfo,listener)
+        getSingleStringStream(hostInfo,listener)
 
       case actionType if actionType.startsWith("getServerResourceInfo") =>
-        getSingleBytesStream(getResourceStatusString,listener)
-
-      case actionType if actionType.startsWith("getSchema") => {
-        val dfName =  actionType.replace("getSchema.","")
-        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-        var structType = dataStreamSource.schema
-        if(structType.isEmpty()){
-          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-          val iter = dataStreamSource.iterator
-          if(iter.hasNext){
-            structType = DataUtils.inferSchemaFromRow(iter.next())
-          }
-        }
-        getSingleBytesStream(structType.toString,listener)
+        getSingleStringStream(getResourceStatusString,listener)
+      case actionType if actionType.startsWith("getDataFrameDocument") => {
+        val dfName = actionType.replace("getDataFrameDocument.","")
+        val dataFrameDocumentBytes = SimpleSerializer.serialize(dataProvider.getDataFrameDocument(dfName))
+        getArrayBytesStream(dataFrameDocumentBytes,listener)
       }
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
@@ -330,58 +316,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     (root, childAllocator)
   }
 
-  private def getSingleLongStream(long: Long, listener: FlightProducer.ServerStreamListener): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("size", ValueType.LongType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("size").asInstanceOf[BigIntVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, long)
-      rootAndAllocator._1.setRowCount(1)
-      listener.start(rootAndAllocator._1)
-      listener.putNext()
-      listener.completed()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
-  private def getListStringStream(seq: Seq[String], listener: FlightProducer.ServerStreamListener): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      var index = 0
-      seq.foreach(d => {
-        nameVector.setSafe(index, d.getBytes("UTF-8"))
-        index += 1
-      })
-      rootAndAllocator._1.setRowCount(index)
-      listener.start(rootAndAllocator._1)
-      listener.putNext()
-      listener.completed()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
-  private def getSingleStringStream(str: String, listener: FlightProducer.ServerStreamListener): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, str.getBytes("UTF-8"))
-      rootAndAllocator._1.setRowCount(1)
-      listener.start(rootAndAllocator._1)
-      listener.putNext()
-      listener.completed()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
   private def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
     val rootAndAllocator = getRootByStructType(StructType.empty.add("size", ValueType.LongType))
     try {
@@ -397,7 +331,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     }
   }
 
-  private def getListBytesStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
+  private def getListStringStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
     val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
     try {
       val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
@@ -416,12 +350,27 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     }
   }
 
-  private def getSingleBytesStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
+  private def getSingleStringStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
     val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
     try {
       val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
       rootAndAllocator._1.allocateNew()
       nameVector.setSafe(0, str.getBytes("UTF-8"))
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  private def getArrayBytesStream(bytes: Array[Byte], listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.BinaryType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarBinaryVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, bytes)
       rootAndAllocator._1.setRowCount(1)
       listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
       listener.onCompleted()

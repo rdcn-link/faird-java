@@ -5,7 +5,7 @@ import link.rdcn.TestBase.{baseDir, binDir, dc}
 import link.rdcn.client.Blob
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
-import link.rdcn.util.SharedValue.getOutputDir
+import link.rdcn.TestEmptyProvider.getOutputDir
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
