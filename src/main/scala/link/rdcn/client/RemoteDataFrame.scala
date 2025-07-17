@@ -1,9 +1,9 @@
 package link.rdcn.client
 
 import link.rdcn.Logging
-import link.rdcn.dftree.{FilterOp, FunctionWrapper, LimitOp, MapOp, Operation, SelectOp, SourceOp}
+import link.rdcn.dftree._
 import link.rdcn.provider.DataFrameDocument
-import link.rdcn.struct.Row
+import link.rdcn.struct.{Row, StructType}
 
 /**
  * @Author renhao
@@ -14,6 +14,7 @@ import link.rdcn.struct.Row
 trait RemoteDataFrame{
   val dataFrameName: String
   val operation: Operation
+  val schema: StructType
 
   def getDataFrameDocument: DataFrameDocument
 
@@ -57,8 +58,8 @@ case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtoco
     val genericFunctionCall = SingleRowCall( new SerializableFunction[Row, Row] {
       override def apply(v1: Row): Row = f(v1)
     })
-    val mapOperationNoe = MapOp(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
-    copy(operation = mapOperationNoe)
+    val mapOperationNode = MapOp(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
+    copy(operation = mapOperationNode)
   }
 
   override def reduce(f: ((Row, Row)) => Row): RemoteDataFrame = ???
@@ -72,6 +73,10 @@ case class RemoteDataFrameImpl(dataFrameName: String, client: ArrowFlightProtoco
   override def getDataFrameDocument: DataFrameDocument = client.getDataFrameDocument(dataFrameName)
 
   private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)
+
+  private def getSchema: String = client.getSchema(dataFrameName)
+
+  override val schema: StructType = StructType.fromString(getSchema)
 }
 
 

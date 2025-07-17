@@ -32,8 +32,8 @@ object FairdConfig {
       hostDomain = getOrDefault("faird.host.domain",""),
       hostPort = getOrDefault("faird.host.port","3101").toInt,
       useTLS = getOrDefault("faird.tls.enabled", "false").toBoolean,
-      certPath = getOrDefault("faird.tls.cert.path","./conf/server.crt"),
-      keyPath = getOrDefault("faird.tls.key.path,", "./conf/server.pem")
+      certPath = getOrDefault("faird.tls.cert.path","server.crt"),
+      keyPath = getOrDefault("faird.tls.key.path,", "server.pem")
     )
   }
 }

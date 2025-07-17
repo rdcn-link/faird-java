@@ -53,9 +53,12 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   }
   val allocator: BufferAllocator = new RootAllocator()
   private val flightClient = FlightClient.builder(allocator, location).build()
-  private val userToken = UUID.randomUUID().toString
+  private var userToken:Option[String] = None
 
   def login(credentials: Credentials): Unit = {
+    val clientAuthHandler = new FlightClientAuthHandler(credentials)
+    flightClient.authenticate(clientAuthHandler)
+    userToken = Some(clientAuthHandler.getSessionToken)
     val paramFields: Seq[Field] = List(
       new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
     )
@@ -66,7 +69,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     credentialsVector.set(0, SimpleSerializer.serialize(credentials))
     vectorSchemaRoot.setRowCount(1)
     val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
-    val result = flightClient.doAction(new Action(s"login.$userToken", body)).asScala
+    val result = flightClient.doAction(new Action(s"login.${userToken.orNull}", body)).asScala
     result.hasNext
   }
 
@@ -134,7 +137,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     dfNameCharVector.allocateNew(1)
     dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
     tokenCharVector.allocateNew(1)
-    tokenCharVector.set(0, userToken.getBytes("UTF-8"))
+    tokenCharVector.set(0, userToken.orNull.getBytes("UTF-8"))
     dfOperationVector.allocateNew(1)
     dfOperationVector.set(0, operationNode.getBytes("UTF-8"))
     vectorSchemaRoot.setRowCount(1)

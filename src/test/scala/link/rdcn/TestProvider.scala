@@ -8,7 +8,7 @@ package link.rdcn
 
 import link.rdcn.ErrorCode._
 import link.rdcn.server.exception._
-import link.rdcn.struct.ValueType.{DoubleType, LongType}
+import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
 import link.rdcn.struct._
 import link.rdcn.user._
 import link.rdcn.util.DataUtils._
@@ -28,6 +28,7 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
   // 生成的临时目录结构
   val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))
   val csvDir = getOutputDir(baseDirString, Seq(subDirString, "csv").mkString(File.separator))
+  val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
@@ -35,9 +36,13 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
   })
   lazy val binDfInfos = Seq(
     DataFrameInfo(binDir.toString, DirectorySource(false), StructType.binaryStructType))
+  lazy val excelDfInfos = listFiles(excelDir.toString).map(file => {
+    DataFrameInfo(file.getAbsolutePath, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
+  })
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
+  val dataSetExcel = DataSet("excel", "3", excelDfInfos.toList)
 
   val adminUsername = "admin@instdb.cn"
   val adminPassword = "admin001"
@@ -48,7 +53,7 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
   //权限
   val permissions = Map(
     adminUsername -> Set("/csv/data_1.csv", "/bin",
-      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv")
+      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv", "/excel/data.xlsx")
   )
 
   //生成Token
@@ -98,7 +103,7 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
     }
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
-    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       getOutputDir("", "").resolve(relativePath).toString
     }
@@ -126,7 +131,8 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
     val url = Option(getClass.getClassLoader.getResource(resourceName))
       .orElse(Option(getClass.getResource(resourceName)))
       .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
-    url.getPath
+    val nativePath: Path = Paths.get(url.toURI())
+    nativePath.toString
   }
 
 }

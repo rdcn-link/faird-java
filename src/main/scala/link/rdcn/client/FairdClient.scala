@@ -3,7 +3,7 @@ package link.rdcn.client
 import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
 import link.rdcn.struct.Row
-import link.rdcn.user.{Credentials, UsernamePassword}
+import link.rdcn.user.Credentials
 
 import scala.collection.JavaConverters._
 
@@ -36,12 +36,12 @@ private object DacpUriParser {
   }
 }
 
-class FairdClient private (
-                            url: String,
-                            port: Int,
-                            credentials: Credentials = Credentials.ANONYMOUS,
-                            useTLS: Boolean = false
-                          ) {
+class FairdClient private(
+                           url: String,
+                           port: Int,
+                           credentials: Credentials = Credentials.ANONYMOUS,
+                           useTLS: Boolean = false
+                         ) {
   private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
   protocolClient.login(credentials)
 
@@ -60,10 +60,10 @@ class FairdClient private (
   def getDataFrameSize(dataFrameName: String): Long =
     protocolClient.getDataFrameSize(dataFrameName)
 
-  def getHostInfo(): java.util.Map[String,String] =
+  def getHostInfo(): java.util.Map[String, String] =
     protocolClient.getHostInfo().asJava
 
-  def getServerResourceInfo(): java.util.Map[String,String] =
+  def getServerResourceInfo(): java.util.Map[String, String] =
     protocolClient.getServerResourceInfo().asJava
 
   def close(): Unit = protocolClient.close()
@@ -79,7 +79,7 @@ class FairdClient private (
     var operation: Operation = SourceOp()
     path.foreach(node => node match {
       case f: UDFFunction =>
-        val genericFunctionCall = IteratorRowCall( new SerializableFunction[Iterator[Row], Iterator[Row]] {
+        val genericFunctionCall = IteratorRowCall(new SerializableFunction[Iterator[Row], Iterator[Row]] {
           override def apply(v1: Iterator[Row]): Iterator[Row] = f.transform(v1)
         })
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
@@ -103,6 +103,7 @@ object FairdClient {
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
   }
+
 
   def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
     DacpUriParser.parse(url) match {

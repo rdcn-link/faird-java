@@ -55,9 +55,12 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
     if(ConfigLoader.fairdConfig.useTLS){
       flightServer = FlightServer.builder(allocator, location, producer)
         .useTls(new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.certPath).toString), new File(Paths.get(fairdHome, ConfigLoader.fairdConfig.keyPath).toString))
+        .authHandler(new FlightServerAuthHandler())
         .build()
     }else{
-      flightServer = FlightServer.builder(allocator, location, producer).build()
+      flightServer = FlightServer.builder(allocator, location, producer)
+        .authHandler(new FlightServerAuthHandler())
+        .build()
     }
 
   }
@@ -191,6 +194,19 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         val dataFrameDocumentBytes = SimpleSerializer.serialize(dataProvider.getDataFrameDocument(dfName))
         getArrayBytesStream(dataFrameDocumentBytes,listener)
       }
+      case actionType if actionType.startsWith("getSchema") => {
+        val dfName =  actionType.replace("getSchema.","")
+        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+        var structType = dataStreamSource.schema
+        if(structType.isEmpty()){
+          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+          val iter = dataStreamSource.iterator
+          if(iter.hasNext){
+            structType = DataUtils.inferSchemaFromRow(iter.next())
+          }
+        }
+        getSingleStringStream(structType.toString,listener)
+      }
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
           val root = DataUtils.getVectorSchemaRootFromBytes(body,childAllocator)
@@ -292,18 +308,18 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
     s"""
        |   {
-       |    "cpuCores"        : "$availableProcessors",
-       |    "cpuUsagePercent" : "$cpuLoadPercent%",
-       |    "jvmMemory":{
-       |    "maxAvailableMB" : "$maxMemory MB",
-       |    "allocatedMB" : "$totalMemory MB",
-       |    "usedMB" : "$usedMemory MB",
-       |    "freeMB" : "$freeMemory MB"
+       |    "cpu.cores"        : "$availableProcessors",
+       |    "cpu.usage.percent" : "$cpuLoadPercent%",
+       |    "jvm.memory":{
+       |    "max.available" : "$maxMemory MB",
+       |    "allocated" : "$totalMemory MB",
+       |    "used" : "$usedMemory MB",
+       |    "free" : "$freeMemory MB"
        |},
-       |    "systemPhysicalMemory" : {
-       |    "totalMB" : "$systemMemoryTotal MB",
-       |    "usedMB" : "$systemMemoryUsed MB",
-       |    "freeMB" : "$systemMemoryFree MB"
+       |    "system.physical.memory" : {
+       |    "total" : "$systemMemoryTotal MB",
+       |    "used" : "$systemMemoryUsed MB",
+       |    "free" : "$systemMemoryFree MB"
        |   }
        |}
        |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")

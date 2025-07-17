@@ -180,7 +180,8 @@ object TestBase {
     val url = Option(getClass.getClassLoader.getResource(resourceName))
       .orElse(Option(getClass.getResource(resourceName)))
       .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
-    url.getPath
+    val nativePath: Path = Paths.get(url.toURI())
+    nativePath.toString
   }
 
   // 生成所有测试数据
@@ -344,6 +345,7 @@ abstract class DataProviderImpl extends DataProvider {
     dataFrameInfo.inputSource match {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.name))
       case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name))
+      case _: ExcelSource => DataStreamSourceFactory.createExcelDataStreamSource(dataFrameInfo.name)
       case _: InputSource => ???
     }
 
@@ -354,7 +356,7 @@ abstract class DataProviderImpl extends DataProvider {
       override def getSchemaURL(): Option[String] = {
         //客户端也需要初始化因为是不同进程
         ConfigLoader.init(getResourcePath("/conf/faird.conf"))
-        Some(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}"+
+        Some(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}/schemaURL"+
           dataFrameName)
       }
 
@@ -364,14 +366,6 @@ abstract class DataProviderImpl extends DataProvider {
 
       override def getColumnTitle(colName: String): Option[String] = Some("[ColumnTitle defined by provider]")
     }
-  }
-
-  def getDataFrameSchema(dataFrameName: String): StructType = {
-    getDataFrameInfo(dataFrameName).map(_.schema).getOrElse(StructType.empty)
-  }
-
-  def getDataFrameSchemaURL(dataFrameName: String): String = {
-    getDataFrameInfo(dataFrameName).map(_.getSchemaUrl(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}")).getOrElse("")
   }
 
   private def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
@@ -438,5 +432,7 @@ case class DirectorySource(
                           ) extends InputSource
 
 case class StructuredSource() extends InputSource
+
+case class ExcelSource() extends InputSource
 
 

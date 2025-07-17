@@ -1,15 +1,13 @@
 package link.rdcn;
 
-import link.rdcn.client.Blob;
-import link.rdcn.client.FairdClient;
-import link.rdcn.client.RemoteDataFrame;
-import link.rdcn.client.RemoteDataFrameImpl;
+import link.rdcn.client.*;
 import link.rdcn.client.dag.DAGNode;
 import link.rdcn.client.dag.SourceNode;
 import link.rdcn.client.dag.TransformerDAG;
 import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.Row;
+import link.rdcn.user.Credentials;
 import link.rdcn.user.UsernamePassword;
 import scala.Function1;
 import scala.Option;
@@ -30,8 +28,13 @@ import java.util.*;
 public class ClientDemo {
 
     public static void main(String[] args) {
-        // 通过用户名密码连接FairdClient
+        // 通过用户名密码非加密连接FairdClient
         FairdClient dc = FairdClient.connect("dacp://0.0.0.0:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+        // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
+        System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"),"src/main/resources/faird").toString());
+//       FairdClient dc = FairdClient.connectTLS("dacp://0.0.0.0:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+        // 匿名连接FairdClient
+        FairdClient dcAnonymous = FairdClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS());
 
         //获得所有的数据集名称
         System.out.println("--------------打印数据集列表--------------");
@@ -69,12 +72,12 @@ public class ClientDemo {
         System.out.println(serverResourceInfo.get("jvm.memory"));
         System.out.println(serverResourceInfo.get("system.physical.memory"));
 
-        //获得指定数据帧的大小 比如一个csv文件数据帧
+        //获得数据帧大小
         System.out.println("--------------打印数据帧大小--------------");
         Long dataFrameSize =  dc.getDataFrameSize("/csv/data_1.csv");
         System.out.println(dataFrameSize);
 
-        //打开数据帧 比如打开一个非结构化数据的文件列表数据帧
+        //打开非结构化数据的文件列表数据帧
         RemoteDataFrame dfBin = dc.open("/bin");
 
         //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
@@ -89,6 +92,7 @@ public class ClientDemo {
         System.out.println(columnURL);
         System.out.println(columnAlias);
         System.out.println(columnTitle);
+        System.out.println(dfBin.schema());
 
         //可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
         System.out.println("--------------打印非结构化数据文件列表数据帧--------------");
@@ -97,6 +101,7 @@ public class ClientDemo {
             String name = (String) row._1();
             //通过下标访问
             Blob blob = (Blob) row.get(6);
+            //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
             //得到blob的InputStream用于读取blob内容
             InputStream inputStream = blob.getInputStream();
             //或者直接将blob写入指定路径和文件名
@@ -111,6 +116,16 @@ public class ClientDemo {
             return null;
         });
 
+        //还打开Excel文件数据帧
+        System.out.println("--------------打印Excel文件数据帧--------------");
+        RemoteDataFrameImpl dfExcel = dc.open("/excel/data.xlsx");
+        //获取数据
+        java.util.List<Row> rows = convertToJavaList(dfExcel.limit(1).collect());
+        for(Row row: rows){
+            System.out.println(row);
+        }
+
+        //还可以打开CSV文件数据帧
         //对数据进行collect操作可以将数据帧的所有行收集到内存中，但是要注意内存溢出的问题
         //limit操作可以限制返回的数据行数，防止内存溢出
         RemoteDataFrame dfCsv = dc.open("/csv/data_1.csv");
@@ -121,22 +136,57 @@ public class ClientDemo {
         }
 
 
+
         //编写map算子的匿名函数对数据帧进行操作
-        scala.Function1<Row, Row> mapFunction = row -> Row.fromJavaList(Arrays.asList(row._1()));
-        List<Row> rowsMap = convertToJavaList(dfCsv.map(mapFunction).collect());
+        //Function1是scala函数类接口，需要实现apply方法并在其中编写函数体
+        //SerializableFunction是FairdClient提供的序列化函数接口，继承自Function1
+        Function1<Row, Row> mapFunction = new SerializableFunction<Row, Row>() {
+
+            @Override
+            public Row apply(Row v1) {
+                return Row.apply(convertToScalaSeq(Arrays.asList(v1._1())));
+            }
+
+            //两个函数的从右到左组合，一般不用特殊处理
+            @Override
+            public <A> Function1<A, Row> compose(Function1<A, Row> g) {
+                return SerializableFunction.super.compose(g);
+            }
+
+            //两个函数的从左到右组合，一般不用特殊处理
+            @Override
+            public <A> Function1<Row, A> andThen(Function1<Row, A> g) {
+                return SerializableFunction.super.andThen(g);
+            }
+        };
+        List<Row> rowsMap = convertToJavaList(dfCsv.limit(3).map(mapFunction).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------");
         for(Row row: rowsMap){
             System.out.println(row);
         }
 
         //编写filter算子的匿名函数对数据帧进行操作
-        scala.Function1<Row, Object> filterFunction = row -> {
-            long value = (long) row._1();
-            return value <= 10;
+        Function1<Row, Object> filterFunction = new SerializableFunction<Row, Object>() {
+
+            @Override
+            public Object apply(Row row) {
+                long id = (long) row._1();
+                return id <= 1;
+            }
+
+            @Override
+            public <A> Function1<A, Object> compose(Function1<A, Row> g) {
+                return SerializableFunction.super.compose(g);
+            }
+
+            @Override
+            public <A> Function1<Row, A> andThen(Function1<Object, A> g) {
+                return SerializableFunction.super.andThen(g);
+            }
         };
-        List<Row> rows = convertToJavaList(dfCsv.filter(filterFunction).collect());
+        List<Row> rowsFilter = convertToJavaList(dfCsv.filter(filterFunction).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过filter操作后的数据帧--------------");
-        for(Row row: rows){
+        for(Row row: rowsFilter){
             System.out.println(row);
         }
 
@@ -149,12 +199,9 @@ public class ClientDemo {
         DAGNode udfFilter = new UDFFunction() {
             @Override
             public Iterator<Row> transform(Iterator<Row> iter) {
-                return iter.filter(new Function1<Row, Object>() {
-                    @Override
-                    public Object apply(Row row) {
-                        long value = (long) row._1();
-                        return value <= 10;
-                    }
+                return iter.filter(row -> {
+                    long value = (long) row._1();
+                    return value <= 10;
                 });
             }
         };
@@ -183,6 +230,10 @@ public class ClientDemo {
         return JavaConverters.seqAsJavaListConverter(scalaSeq).asJava();
     }
 
+    public static <T> Seq<T> convertToScalaSeq(java.util.List<T> javaList) {
+        return JavaConverters.asScalaBufferConverter(javaList).asScala().toSeq();
+    }
+
     public static <T> java.util.Optional<T> convertToJavaOptional(Option<T> scalaOption) {
         return Optional.ofNullable(scalaOption.getOrElse(null));
     }
@@ -202,13 +253,7 @@ public class ClientDemo {
 
     public void getExcelDataFrame(){
         FairdClient dc = FairdClient.connect("dacp://10.0.82.71:8232", new UsernamePassword("admin@instdb.cn", "admin001"));
-        RemoteDataFrameImpl df = dc.open("64db30f117abe320a0cee7e5/Sheet1_vhtz.xlsx");
-        //获取数据
-        java.util.List<Row> rows = convertToJavaList(df.limit(10).collect());
 
-        for(Row row: rows){
-            System.out.println(row);
-        }
     }
 
 }

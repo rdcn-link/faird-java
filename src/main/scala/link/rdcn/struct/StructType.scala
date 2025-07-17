@@ -73,6 +73,45 @@ object StructType {
   def fromNamesAsAny(names: Seq[String]): StructType =
     new StructType(names.map(n => Column(n, ValueType.StringType)))
 
+  /**
+   * 从字符串解析 StructType。
+   * 期望的格式: "schema(col1: Type1, col2: Type2, ...)"
+   * 例如: "schema(id: IntType, name: StringType)"
+   */
+  def fromString(schemaString: String): StructType = {
+    if (schemaString == "schema()") {
+      return StructType.empty
+    }
+
+    // 检查并移除前缀和后缀
+    val prefix = "schema("
+    val suffix = ")"
+    if (!schemaString.startsWith(prefix) || !schemaString.endsWith(suffix)) {
+      throw new IllegalArgumentException(s"无效的 StructType 字符串格式: '$schemaString'。期望格式: 'schema(col1: Type1, ...)'")
+    }
+
+    val content = schemaString.substring(prefix.length, schemaString.length - suffix.length).trim
+    val columnPattern = "(.+):\\s*([a-zA-Z]+)".r // 匹配列名和类型，例如 "id: IntType"
+
+    if (content.isEmpty) { // 处理 "schema()" 的情况
+      StructType.empty
+    } else {
+      // 按逗号和空格 ", " 分割每个列定义
+      val columnDefs = content.split(",\\s*").map(_.trim)
+
+      val parsedColumns = columnDefs.map { colDef =>
+        colDef match {
+          case columnPattern(name, typeName) =>
+            val colType = ValueTypeHelper.fromName(typeName) // 使用 ValueType 的 fromString 方法
+            Column(name, colType) // 默认 nullable 为 true
+          case _ =>
+            throw new IllegalArgumentException(s"无效的列定义格式: '$colDef'。期望格式: 'name: Type'")
+        }
+      }
+      StructType.fromSeq(parsedColumns.toSeq)
+    }
+  }
+
   val empty: StructType = new StructType(Seq.empty)
 
   def binaryStructType: StructType = {
