@@ -29,12 +29,12 @@ public class ClientDemo {
 
     public static void main(String[] args) {
         // 通过用户名密码非加密连接FairdClient
-        FairdClient dc = FairdClient.connect("dacp://0.0.0.0:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+//        FairdClient dc = FairdClient.connect("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
         System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"),"src/main/resources/faird").toString());
-//       FairdClient dc = FairdClient.connectTLS("dacp://0.0.0.0:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+       FairdClient dc = FairdClient.connectTLS("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 匿名连接FairdClient
-        FairdClient dcAnonymous = FairdClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS());
+//        FairdClient dcAnonymous = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 
         //获得所有的数据集名称
         System.out.println("--------------打印数据集列表--------------");
