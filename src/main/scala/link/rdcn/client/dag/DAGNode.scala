@@ -1,6 +1,5 @@
 package link.rdcn.client.dag
 
-import link.rdcn.client.RemoteDataFrame
 import link.rdcn.struct.Row
 
 /**

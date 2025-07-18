@@ -1,7 +1,7 @@
 package link.rdcn.dftree
 
 import jep.SharedInterpreter
-import link.rdcn.dftree.FunctionWrapper.{JavaBin, JsonCode}
+import link.rdcn.dftree.FunctionWrapper.{JavaBin, PythonCode}
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
@@ -66,7 +66,7 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
         val in = input.execute(dataFrame)
         val stream = in.stream.map(functionWrapper.applyToInput(_, None)).map(_.asInstanceOf[Row])
         getDataFrameByStream(stream)
-      case JsonCode(pythonCode, batchSize) =>
+      case PythonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
         try {
           val in = input.execute(dataFrame)
@@ -93,7 +93,7 @@ case class FilterOp(functionWrapper: FunctionWrapper, input: Operation) extends 
         val in = input.execute(dataFrame)
         val stream = in.stream.filter(functionWrapper.applyToInput(_, None).asInstanceOf[Boolean])
         DataFrame(in.schema, stream)
-      case JsonCode(pythonCode, batchSize) =>
+      case PythonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
         try {
           val in = input.execute(dataFrame)
@@ -158,7 +158,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         val in = input.execute(dataFrame)
         val stream = functionWrapper.applyToInput(in.stream, None).asInstanceOf[Iterator[Row]]
         getDataFrameByStream(stream)
-      case JsonCode(pythonCode, batchSize) =>
+      case PythonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
         try {
           val in = input.execute(dataFrame)
