@@ -2,17 +2,17 @@ package link.rdcn
 
 import link.rdcn.DataIntegrityTest.isFolderContentsMatch
 import link.rdcn.TestBase.{baseDir, binDir, dc}
+import link.rdcn.TestEmptyProvider.outputDir
 import link.rdcn.client.Blob
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
-import link.rdcn.TestEmptyProvider.getOutputDir
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 import java.io.InputStream
-import java.nio.file.{Files, Path, Paths}
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
 
 object DataIntegrityTest {
@@ -44,12 +44,11 @@ object DataIntegrityTest {
 }
 
 class DataIntegrityTest extends TestBase {
-  val outputDir = getOutputDir("test_output\\output").toString
 
   @ParameterizedTest
   @ValueSource(ints = Array(1))
   def readBinaryTest(num: Int): Unit = {
-    val absolutePath = binDir.resolve(s"binary_data_$num.bin")
+    val absolutePath = Paths.get(binDir,s"binary_data_$num.bin")
     val attrs = Files.readAttributes(absolutePath, classOf[BasicFileAttributes])
     val file = absolutePath.toFile
     val expectedRow: Row = {
@@ -92,7 +91,7 @@ class DataIntegrityTest extends TestBase {
         assertEquals(expectedLastAccessTime, lastAccessTime)
       }
     )
-    assertTrue(isFolderContentsMatch(baseDir.resolve("bin").toString, outputDir), "Binary file mismatch")
+    assertTrue(isFolderContentsMatch(Paths.get(baseDir,"bin").toString,outputDir), "Binary file mismatch")
   }
 
 }

@@ -20,10 +20,6 @@ import java.util.UUID
 
 //用于Demo的Provider
 class TestProvider(baseDirString: String = "src/test/demo", subDirString: String = "data") {
-
-
-  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
-
   val baseDir = getOutputDir(baseDirString, subDirString)
   // 生成的临时目录结构
   val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))
@@ -105,7 +101,7 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-      getOutputDir("", "").resolve(relativePath).toString
+      Paths.get(baseDir,relativePath).toString
     }
 
   }
@@ -120,11 +116,11 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
     ModelFactory.createDefaultModel()
   }
 
-  def getOutputDir(dir: String, subDirString: String): Path = {
-    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-    val outDir = baseDir.resolve(dir).resolve(subDirString)
+
+  def getOutputDir(subDirs: String*): String = {
+    val outDir = Paths.get(System.getProperty("user.dir"), subDirs: _*) // 项目根路径
     Files.createDirectories(outDir)
-    outDir
+    outDir.toString
   }
 
   def getResourcePath(resourceName: String): String = {

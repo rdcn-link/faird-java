@@ -37,3 +37,14 @@ object FairdConfig {
     )
   }
 }
+
+object FairdConfigKeys {
+  val faird_host_name: String     = "faird.host.name"
+  val faird_host_port: String     = "faird.host.port"
+  val faird_host_title: String    = "faird.host.title"
+  val faird_host_position: String = "faird.host.position"
+  val faird_host_domain: String   = "faird.host.domain"
+  val faird_tls_enabled: String   = "faird.tls.enabled"
+  val faird_tls_cert_path: String = "faird.tls.cert.path"
+  val faird_tls_key_path: String  = "faird.tls.key.path"
+}

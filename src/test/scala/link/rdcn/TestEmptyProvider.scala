@@ -5,33 +5,27 @@
  * @Modified By:
  */
 package link.rdcn
-import link.rdcn.struct.{Row, StructType}
-import link.rdcn.ConfigLoader
-import link.rdcn.ConfigLoaderTest.getResourcePath
-import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
+import link.rdcn.provider.DataStreamSource
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
-import link.rdcn.TestEmptyProvider.getClass
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-
-import java.io.File
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.apache.jena.vocabulary.RDF
-import org.apache.logging.log4j.Level
 
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Paths}
 import java.util.UUID
 
 trait TestEmptyProvider{
 
 }
 
-//用于不需要生成数据的测试的Provider
+/***
+ * 用于不需要生成数据的测试的Provider
+ */
 object TestEmptyProvider {
   ConfigLoader.init(getResourcePath("/conf/faird.conf"))
-  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+
+  val outputDir = getOutputDir("test_output","output")
 
   val adminUsername = "admin"
   val adminPassword = "admin"
@@ -66,18 +60,10 @@ object TestEmptyProvider {
   val configCache = ConfigLoader.fairdConfig
 
 
-  def getOutputDir(subdir: String): Path = {
-    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-    val outDir = baseDir.resolve("target").resolve(subdir)
+  def getOutputDir(subDirs: String*): String = {
+    val outDir = Paths.get(System.getProperty("user.dir"), subDirs: _*) // 项目根路径
     Files.createDirectories(outDir)
-    outDir
-  }
-
-  def getHomeDir: Path = {
-    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-    val outDir = baseDir.resolve("src").resolve("main").resolve("resources")
-    Files.createDirectories(outDir)
-    outDir
+    outDir.toString
   }
 
   def getResourcePath(resourceName: String): String = {

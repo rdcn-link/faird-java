@@ -7,7 +7,6 @@ import link.rdcn.client.dag.TransformerDAG;
 import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.Row;
-import link.rdcn.user.Credentials;
 import link.rdcn.user.UsernamePassword;
 import scala.Function1;
 import scala.Option;
@@ -18,6 +17,8 @@ import scala.collection.Seq;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.*;
+
+import static link.rdcn.TestFairdConfigKeys.*;
 
 /**
  * @Author Yomi
@@ -31,7 +32,8 @@ public class ClientDemo {
         // 通过用户名密码非加密连接FairdClient
 //        FairdClient dc = FairdClient.connect("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
-        System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"),"src/main/resources/faird").toString());
+        // 客户端证书路径配置
+        System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"),"target/test-classes/tls/faird").toString());
        FairdClient dc = FairdClient.connectTLS("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 匿名连接FairdClient
 //        FairdClient dcAnonymous = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
@@ -58,11 +60,15 @@ public class ClientDemo {
         //获得host基本信息
         System.out.println("--------------打印host基本信息--------------");
         Map<String,String> hostInfo =  dc.getHostInfo();
-        System.out.println(hostInfo.get("faird.host.title"));
-        System.out.println(hostInfo.get("faird.host.domain"));
-        System.out.println(hostInfo.get("faird.host.position"));
-        System.out.println(hostInfo.get("faird.host.port"));
-        System.out.println(hostInfo.get("faird.host.name"));
+        System.out.println(hostInfo.get(faird_host_title));
+        System.out.println(hostInfo.get(faird_host_port));
+        System.out.println(hostInfo.get(faird_host_position));
+        System.out.println(hostInfo.get(faird_host_port));
+        System.out.println(hostInfo.get(faird_host_name));
+        System.out.println(hostInfo.get(faird_host_domain));
+        System.out.println(hostInfo.get(faird_tls_enabled));
+        System.out.println(hostInfo.get(faird_tls_cert_path));
+        System.out.println(hostInfo.get(faird_tls_key_path));
 
         //获得服务器资源信息
         System.out.println("--------------打印服务器资源信息--------------");
@@ -115,6 +121,8 @@ public class ClientDemo {
             System.out.println(bytes.hashCode());
             return null;
         });
+
+
 
         //还打开Excel文件数据帧
         System.out.println("--------------打印Excel文件数据帧--------------");

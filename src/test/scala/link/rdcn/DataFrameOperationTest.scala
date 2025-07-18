@@ -7,16 +7,14 @@ import link.rdcn.client.RemoteDataFrame
 import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.TestEmptyProvider.getOutputDir
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-import java.io.{InputStream, PrintWriter, StringWriter}
-import java.nio.file.{Files, Path, Paths}
-import java.security.MessageDigest
+import java.io.{PrintWriter, StringWriter}
+import java.nio.file.Paths
 import scala.io.Source
 
 /**
@@ -100,12 +98,12 @@ object DataFrameOperationTest extends TestBase {
 }
 
 class DataFrameOperationTest extends TestBase {
-  val outputDir = getOutputDir("test_output\\output").toString
+  val outputDir = getOutputDir("test_output","output")
 
 
   @Test
   def testDataFrameForEach(): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.mkString("\n") + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.mkString("\n") + "\n"
     val df = dc.open("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)

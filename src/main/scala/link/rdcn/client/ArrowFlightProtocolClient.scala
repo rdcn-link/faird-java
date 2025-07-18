@@ -14,7 +14,6 @@ import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, Ve
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
 import java.nio.file.Paths
-import java.util.UUID
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
@@ -124,31 +123,33 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
 
   def getRows(dataFrameName: String, operationNode: String): Iterator[Row] = {
     //上传参数
-    val paramFields: Seq[Field] = List(
-      new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
-      new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
-      new Field("DFOperation", FieldType.nullable(new ArrowType.Utf8()), null)
-    )
-    val schema = new Schema(paramFields.asJava)
-    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-    val dfNameCharVector = vectorSchemaRoot.getVector("dfName").asInstanceOf[VarCharVector]
-    val tokenCharVector = vectorSchemaRoot.getVector("userToken").asInstanceOf[VarCharVector]
-    val dfOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarCharVector]
-    dfNameCharVector.allocateNew(1)
-    dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
-    tokenCharVector.allocateNew(1)
-    tokenCharVector.set(0, userToken.orNull.getBytes("UTF-8"))
-    dfOperationVector.allocateNew(1)
-    dfOperationVector.set(0, operationNode.getBytes("UTF-8"))
-    vectorSchemaRoot.setRowCount(1)
+//    val paramFields: Seq[Field] = List(
+//      new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
+//      new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
+//      new Field("DFOperation", FieldType.nullable(new ArrowType.Utf8()), null)
+//    )
+//    val schema = new Schema(paramFields.asJava)
+//    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
+//    val dfNameCharVector = vectorSchemaRoot.getVector("dfName").asInstanceOf[VarCharVector]
+//    val tokenCharVector = vectorSchemaRoot.getVector("userToken").asInstanceOf[VarCharVector]
+//    val dfOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarCharVector]
+//    dfNameCharVector.allocateNew(1)
+//    dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
+//    tokenCharVector.allocateNew(1)
+//    tokenCharVector.set(0, userToken.orNull.getBytes("UTF-8"))
+//    dfOperationVector.allocateNew(1)
+//    dfOperationVector.set(0, operationNode.getBytes("UTF-8"))
+//    vectorSchemaRoot.setRowCount(1)
+//
+//    val requestSchemaId = UUID.randomUUID().toString
+//    val listener = flightClient.startPut(FlightDescriptor.path(requestSchemaId), vectorSchemaRoot, new AsyncPutListener())
+//    listener.putNext()
+//    listener.completed()
+//    listener.getResult()
 
-    val requestSchemaId = UUID.randomUUID().toString
-    val listener = flightClient.startPut(FlightDescriptor.path(requestSchemaId), vectorSchemaRoot, new AsyncPutListener())
-    listener.putNext()
-    listener.completed()
-    listener.getResult()
-
-    val flightInfo = flightClient.getInfo(FlightDescriptor.path(requestSchemaId))
+    val result = flightClient.doAction(new Action(s"putRequest:$dataFrameName:${userToken.orNull}", operationNode.getBytes("UTF-8"))).asScala
+    result.hasNext
+    val flightInfo = flightClient.getInfo(FlightDescriptor.path(userToken.orNull))
     val flightInfoSchema = flightInfo.getSchema
     val isBinaryColumn = flightInfoSchema.getFields.last.getType match {
       case _: ArrowType.Binary => true

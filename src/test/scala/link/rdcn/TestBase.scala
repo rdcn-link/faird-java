@@ -1,7 +1,7 @@
 package link.rdcn
 
-import link.rdcn.ConfigLoaderTest.getResourcePath
 import link.rdcn.ErrorCode._
+import link.rdcn.FairdConfigKeys._
 import link.rdcn.client.FairdClient
 import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.server.FairdServer
@@ -21,7 +21,10 @@ import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
-//所有需要数据生成的测试的Provider和相关公共类
+
+/** *
+ * 所有需要数据生成的测试的Provider和相关公共类和变量
+ */
 trait TestBase {
 
 }
@@ -44,28 +47,30 @@ object TestBase {
 
   val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
-  val binDir = getOutputDir("test_output/bin")
-  val csvDir = getOutputDir("test_output/csv")
+  val binDir = Paths.get(baseDir, "bin").toString
+  val csvDir = Paths.get(baseDir, "csv").toString
 
+  //初始化配置信息
+  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
 
   //必须在DfInfos前执行一次！！！
   generateTestData()
 
 
   //根据文件生成元信息
-  lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
+  lazy val csvDfInfos = listFiles(csvDir).map(file => {
     DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   lazy val binDfInfos = Seq(
-    DataFrameInfo(binDir.toString, DirectorySource(false), StructType.binaryStructType))
+    DataFrameInfo(binDir, DirectorySource(false), StructType.binaryStructType))
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
 
   //权限
   val permissions = Map(
-    "admin" -> Set(s"$csvDir\\data_1.csv", s"$csvDir\\invalid.csv", s"$binDir", s"/csv/data_1.csv", "/bin",
-      "/csv/data_2.csv","/bin/data_1.csv", "/csv/invalid.csv")
+    "admin" -> Set("/csv/data_1.csv", "/bin",
+      "/csv/data_2.csv", "/csv/invalid.csv")
   )
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
@@ -112,14 +117,14 @@ object TestBase {
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-      getOutputDir("test_output/bin").resolve(relativePath).toString
+      Paths.get(getOutputDir("test_output"), relativePath).toString
     }
   }
 
   private var fairdServer: Option[FairdServer] = None
   var dc: FairdClient = _
   val configCache = ConfigLoader.fairdConfig
-  var expectedHostInfo: String = _
+  var expectedHostInfo: Map[String, String] = _
 
   @BeforeAll
   def startServer(): Unit = {
@@ -144,13 +149,18 @@ object TestBase {
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)
       expectedHostInfo =
-        s"""
-           |faird.hostName: ${ConfigLoader.fairdConfig.hostName}
-           |faird.hostTitle: ${ConfigLoader.fairdConfig.hostTitle}
-           |faird.hostPosition: ${ConfigLoader.fairdConfig.hostPosition}
-           |faird.hostDomain: ${ConfigLoader.fairdConfig.hostDomain}
-           |faird.hostPort: ${ConfigLoader.fairdConfig.hostPort}
-           |""".stripMargin
+        Map(
+          faird_host_name -> ConfigLoader.fairdConfig.hostName,
+          faird_host_port -> ConfigLoader.fairdConfig.hostPort.toString,
+          faird_host_title -> ConfigLoader.fairdConfig.hostTitle,
+          faird_host_position -> ConfigLoader.fairdConfig.hostPosition,
+          faird_host_domain -> ConfigLoader.fairdConfig.hostDomain,
+          // New TLS configuration values
+          faird_tls_enabled -> ConfigLoader.fairdConfig.useTLS.toString,
+          faird_tls_cert_path -> ConfigLoader.fairdConfig.certPath,
+          faird_tls_key_path -> ConfigLoader.fairdConfig.keyPath
+        )
+
     }
     fairdServer.get
   }
@@ -169,16 +179,15 @@ object TestBase {
     ModelFactory.createDefaultModel()
   }
 
-  def getOutputDir(subdir: String): Path = {
-    val baseDir = Paths.get(System.getProperty("user.dir")) // 项目根路径
-    val outDir = baseDir.resolve("target").resolve(subdir)
+  def getOutputDir(subDirs: String*): String = {
+    val outDir = Paths.get(System.getProperty("user.dir"), subDirs: _*) // 项目根路径
     Files.createDirectories(outDir)
-    outDir
+    outDir.toString
   }
 
   def getResourcePath(resourceName: String): String = {
     val url = Option(getClass.getClassLoader.getResource(resourceName))
-      .orElse(Option(getClass.getResource(resourceName)))
+      .orElse(Option(getClass.getResource(resourceName))) // 先到test-classes中查找，然后到classes中查找
       .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
     val nativePath: Path = Paths.get(url.toURI())
     nativePath.toString
@@ -198,26 +207,6 @@ object TestBase {
     printDirectoryInfo()
   }
 
-  // 清理所有测试数据
-  def cleanupTestData(): Unit = {
-    println("Cleaning up test data...")
-    val startTime = System.currentTimeMillis()
-
-    if (Files.exists(getOutputDir("test_output"))) {
-      FileUtils.deleteDirectory(baseDir.toFile)
-      println(s"Deleted directory: ${baseDir.toAbsolutePath}")
-    }
-
-    val duration = (System.currentTimeMillis() - startTime) / 1000.0
-    println(s"Cleanup completed in ${duration}s")
-  }
-
-  private def createDirectories(): Unit = {
-    Files.createDirectories(binDir)
-    Files.createDirectories(csvDir)
-    println(s"Created directory structure at ${baseDir.toAbsolutePath}")
-  }
-
   def getExpectedDataFrameSize(dataFrameName: String): Long = {
     dataProvider.dataSetsScalaList.foreach(ds => {
       val dfInfo = ds.getDataFrameInfo(dataFrameName)
@@ -226,11 +215,32 @@ object TestBase {
     -1L
   }
 
+  // 清理所有测试数据
+  private def cleanupTestData(): Unit = {
+    println("Cleaning up test data...")
+    val startTime = System.currentTimeMillis()
+    val basePath = Paths.get(baseDir)
+
+    if (Files.exists(Paths.get(getOutputDir("test_output")))) {
+      FileUtils.deleteDirectory(basePath.toFile)
+      println(s"Deleted directory: ${basePath.toAbsolutePath}")
+    }
+
+    val duration = (System.currentTimeMillis() - startTime) / 1000.0
+    println(s"Cleanup completed in ${duration}s")
+  }
+
+  private def createDirectories(): Unit = {
+    Files.createDirectories(Paths.get(binDir))
+    Files.createDirectories(Paths.get(csvDir))
+    println(s"Created directory structure at ${Paths.get(baseDir).toAbsolutePath}")
+  }
+
   private def generateBinaryFiles(): Unit = {
     println(s"Generating $binFileCount binary files (~1GB each)...")
     (1 to binFileCount).foreach { i =>
       val fileName = s"binary_data_$i.bin"
-      val filePath = binDir.resolve(fileName)
+      val filePath = Paths.get(binDir).resolve(fileName)
       val startTime = System.currentTimeMillis()
       val size = 1024 * 1024 * 1024 // 1GB
       var fos: FileOutputStream = null
@@ -255,7 +265,7 @@ object TestBase {
     println(s"Generating $csvFileCount CSV files with 100 million rows each...")
     (1 to csvFileCount).foreach { i =>
       val fileName = s"data_$i.csv"
-      val filePath = csvDir.resolve(fileName).toFile
+      val filePath = Paths.get(csvDir).resolve(fileName).toFile
       val startTime = System.currentTimeMillis()
       val rows = 10000 // 1 亿行
       var writer: BufferedWriter = null // 声明为 var，方便 finally 块中访问
@@ -303,7 +313,8 @@ object TestBase {
     println("----------------------------------------\n")
   }
 
-  private def printDirectorySize(dir: Path, label: String): Unit = {
+  private def printDirectorySize(dirString: String, label: String): Unit = {
+    val dir = Paths.get(dirString)
     if (Files.exists(dir)) {
       val size = Files.walk(dir)
         .filter(p => Files.isRegularFile(p))
@@ -355,9 +366,8 @@ abstract class DataProviderImpl extends DataProvider {
     new DataFrameDocument {
       override def getSchemaURL(): Option[String] = {
         //客户端也需要初始化因为是不同进程
-        ConfigLoader.init(getResourcePath("/conf/faird.conf"))
-        Some(s"dacp://${ConfigLoader.fairdConfig.hostName}:${ConfigLoader.fairdConfig.hostPort}/schemaURL"+
-          dataFrameName)
+//        ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+        Some("[SchemaURL defined by provider]")
       }
 
       override def getColumnURL(colName: String): Option[String] = Some("[ColumnURL defined by provider]")

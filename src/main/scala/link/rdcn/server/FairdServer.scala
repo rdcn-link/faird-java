@@ -2,6 +2,7 @@ package link.rdcn.server
 
 import com.sun.management.OperatingSystemMXBean
 import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
+import link.rdcn.FairdConfigKeys._
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
@@ -12,8 +13,8 @@ import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.arrow.vector._
+import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
 import java.io.File
@@ -42,7 +43,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
   private def buildServer(): Unit = {
     // 初始化配置
-    ConfigLoader.init(s"$fairdHome"+File.separator+"conf"+File.separator+"faird.conf")
+    ConfigLoader.init(Paths.get(fairdHome,"conf","faird.conf").toString())
     val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort
@@ -122,38 +123,38 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
 class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataProvider: DataProvider, authProvider: AuthProvider) extends NoOpFlightProducer with Logging {
 
-  private val requestMap = new ConcurrentHashMap[FlightDescriptor, (String, Operation)]()
+  private val requestMap = new ConcurrentHashMap[String, (String, Operation)]()
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
   private val batchLen = 100
 
-  override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
+//  override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
 
-    new Runnable {
-      override def run(): Unit = {
-        val ticketKey: String = flightStream.getDescriptor.getPath.get(0)
-        ticketKey match {
-          case _ => {
-            while (flightStream.next()) {
-              val root = flightStream.getRoot
-              val dfName = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
-              val userToken = root.getFieldVectors.get(1).asInstanceOf[VarCharVector].getObject(0).toString
-              val authenticatedUser = Option(authenticatedUserMap.get(userToken))
-              if(authenticatedUser.isEmpty){
-                throw new AuthorizationException(USER_NOT_LOGGED_IN)
-              }
-              if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
-                throw new DataFrameAccessDeniedException(dfName)
-              val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
-              val operationNode: Operation = Operation.fromJsonString(operationNodeJsonString)
-              requestMap.put(flightStream.getDescriptor, (dfName, operationNode))
-              flightStream.getRoot.clear()
-            }
-          }
-        }
-        ackStream.onCompleted()
-      }
-    }
-  }
+//    new Runnable {
+//      override def run(): Unit = {
+//        val ticketKey: String = flightStream.getDescriptor.getPath.get(0)
+//        ticketKey match {
+//          case _ => {
+//            while (flightStream.next()) {
+//              val root = flightStream.getRoot
+//              val dfName = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
+//              val userToken = root.getFieldVectors.get(1).asInstanceOf[VarCharVector].getObject(0).toString
+//              val authenticatedUser = Option(authenticatedUserMap.get(userToken))
+//              if(authenticatedUser.isEmpty){
+//                throw new AuthorizationException(USER_NOT_LOGGED_IN)
+//              }
+//              if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
+//                throw new DataFrameAccessDeniedException(dfName)
+//              val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
+//              val operationNode: Operation = Operation.fromJsonString(operationNodeJsonString)
+//              requestMap.put(flightStream.getDescriptor, (dfName, operationNode))
+//              flightStream.getRoot.clear()
+//            }
+//          }
+//        }
+//        ackStream.onCompleted()
+//      }
+//    }
+//  }
 
   override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
     val body = action.getBody
@@ -179,11 +180,14 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getHostInfo") =>
         val hostInfo =
           s"""
-             {"faird.host.name": "${ConfigLoader.fairdConfig.hostName}",
-             "faird.host.title": "${ConfigLoader.fairdConfig.hostTitle}",
-             "faird.host.position": "${ConfigLoader.fairdConfig.hostPosition}",
-             "faird.host.domain": "${ConfigLoader.fairdConfig.hostDomain}",
-             "faird.host.port": "${ConfigLoader.fairdConfig.hostPort}"
+             {"$faird_host_name": "${ConfigLoader.fairdConfig.hostName}",
+             "$faird_host_title": "${ConfigLoader.fairdConfig.hostTitle}",
+             "$faird_host_position": "${ConfigLoader.fairdConfig.hostPosition}",
+             "$faird_host_domain": "${ConfigLoader.fairdConfig.hostDomain}",
+             "$faird_host_port": "${ConfigLoader.fairdConfig.hostPort}",
+             "$faird_tls_enabled": "${ConfigLoader.fairdConfig.useTLS}",
+             "$faird_tls_cert_path": "${ConfigLoader.fairdConfig.certPath}",
+             "$faird_tls_key_path": "${ConfigLoader.fairdConfig.keyPath}"
              }""".stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
         getSingleStringStream(hostInfo,listener)
 
@@ -216,16 +220,28 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
           val loginToken: String = actionType.split("\\.")(1)
           authenticatedUserMap.put(loginToken, authenticatedUser)
           listener.onCompleted()
+      case actionType if actionType.startsWith("putRequest") =>
+        val dfName =  actionType.split(":")(1)
+        val userToken =  actionType.split(":")(2)
+        val authenticatedUser = Option(authenticatedUserMap.get(userToken))
+        if(authenticatedUser.isEmpty){
+          throw new AuthorizationException(USER_NOT_LOGGED_IN)
+        }
+        if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
+          throw new DataFrameAccessDeniedException(dfName)
+        val operationNode: Operation = Operation.fromJsonString(new String(body, StandardCharsets.UTF_8))
+        requestMap.put(userToken, (dfName, operationNode))
+        listener.onCompleted()
       case _ =>
         throw new UnsupportedOperationException("Unsupported action type")
     }
   }
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-        new String(ticket.getBytes, StandardCharsets.UTF_8) match {
+          val userToken = new String(ticket.getBytes, StandardCharsets.UTF_8)
+          new String(ticket.getBytes, StandardCharsets.UTF_8) match {
           case _ => {
-            val flightDescriptor = FlightDescriptor.path(new String(ticket.getBytes, StandardCharsets.UTF_8))
-            val request = requestMap.get(flightDescriptor)
+            val request = requestMap.get(userToken)
 
             val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
             val inDataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
@@ -259,7 +275,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             } finally {
               if (root != null) root.close()
               if (childAllocator != null) childAllocator.close()
-              requestMap.remove(flightDescriptor)
+              requestMap.remove(userToken)
             }
           }
     }
@@ -267,8 +283,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   }
 
   override def getFlightInfo(context: FlightProducer.CallContext, descriptor: FlightDescriptor): FlightInfo = {
-      val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
-      val request = requestMap.getOrDefault(descriptor, null)
+    val flightEndpoint = new FlightEndpoint(new Ticket(descriptor.getPath.get(0).getBytes(StandardCharsets.UTF_8)), location)
+    val userToken = descriptor.getPath.get(0)
+    val request = requestMap.getOrDefault(userToken, null)
       val structType = dataProvider.getDataStreamSource(request._1).schema
       val schema =  if (request != null) {
         val dataFrameSchema = structType
@@ -284,7 +301,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
     requestMap.forEach {
-      (k, v) => listener.onNext(getFlightInfo(null, k))
+      (k, v) => listener.onNext(getFlightInfo(null, FlightDescriptor.path(k)))
     }
     listener.onCompleted()
   }

@@ -4,12 +4,10 @@ import link.rdcn.TestBase.{csvDfInfos, dc}
 import link.rdcn.client.Blob
 import link.rdcn.struct.StructType.binaryStructType
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
-import link.rdcn.TestEmptyProvider.getOutputDir
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
 import org.junit.jupiter.api.Test
 
 class DataParsingTest extends TestBase {
-  val outputDir = getOutputDir("test_output\\output").toString
 
   @Test
   def CSVParsingTest(): Unit = {

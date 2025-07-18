@@ -15,7 +15,6 @@ import org.apache.arrow.flight.auth.ServerAuthHandler
 import java.util
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Optional, UUID}
-import scala.util.Properties.userName
 
 object UserSessionStore {
   val users: Map[String, String] = Map("admin@instdb.cn" -> "admin001")
@@ -49,12 +48,12 @@ class FlightServerAuthHandler extends ServerAuthHandler{
         val usernamePassword = incomingCredentials.asInstanceOf[UsernamePassword]
         UserSessionStore.validateUser(usernamePassword) match {
           case Some(token) =>
-            println(s"Server: User $userName authenticated successfully. Issuing token.")
+//            println(s"Server: User $userName authenticated successfully. Issuing token.")
             // 认证成功，返回一个包含用户身份和令牌的字符串。这通常是一个 JWT 或类似的令牌，但在这里我们使用简单的 UUID 作为示例。
             // token 将发送回客户端
             Some(token)
           case None =>
-            println(s"Server: Authentication failed for user $userName.")
+//            println(s"Server: Authentication failed for user $userName.")
             throw new AuthorizationException(INVALID_CREDENTIALS)
         }
       } else if (incomingCredentials == Credentials.ANONYMOUS) {
@@ -64,7 +63,7 @@ class FlightServerAuthHandler extends ServerAuthHandler{
       }
   }
   override def isValid(bytes: Array[Byte]): Optional[String] = {
-    println(s"Server: Validating session for token $bytes")
+//    println(s"Server: Validating session for token $bytes")
     Optional.ofNullable(UserSessionStore.isValidSession(new String(bytes)).getOrElse(null))
   }
 

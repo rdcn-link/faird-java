@@ -1,5 +1,6 @@
 package link.rdcn
 
+import link.rdcn.FairdConfigKeys._
 import link.rdcn.TestBase._
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 
 /**
@@ -53,7 +55,22 @@ class ClientAPITest extends TestBase {
 
   @Test
   def testGetHostInfo(): Unit = {
-    assertEquals(expectedHostInfo, dc.getHostInfo, "GetHostInfo接口输出与预期不符！")
+    val allKeys: Set[String] = Set(
+      faird_host_name,
+      faird_host_port,
+      faird_host_title,
+      faird_host_position,
+      faird_host_domain,
+      faird_tls_enabled,
+      faird_tls_cert_path,
+      faird_tls_key_path
+    )
+    val hostInfo = dc.getHostInfo().asScala.toMap
+    allKeys.foreach(key =>{
+      assertTrue(hostInfo.contains(key), s"实际结果中缺少键：$key")
+      assertEquals(expectedHostInfo(key), hostInfo(key), s"键 '$key' 的值与预期不符！")
+    }
+    )
   }
 
   @ParameterizedTest
