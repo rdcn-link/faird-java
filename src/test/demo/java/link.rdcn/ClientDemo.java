@@ -278,10 +278,5 @@ public class ClientDemo {
     }
 
 
-    public void getExcelDataFrame(){
-        FairdClient dc = FairdClient.connect("dacp://10.0.82.71:8232", new UsernamePassword("admin@instdb.cn", "admin001"));
-
-    }
-
 }
 
