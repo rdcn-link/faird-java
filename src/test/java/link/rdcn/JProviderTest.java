@@ -5,22 +5,27 @@ import link.rdcn.provider.DataProvider;
 import link.rdcn.provider.DataStreamSource;
 import link.rdcn.provider.DataStreamSourceFactory;
 import link.rdcn.server.FairdServer;
-import link.rdcn.struct.*;
+import link.rdcn.server.exception.AuthorizationException;
+import link.rdcn.struct.StructType;
+import link.rdcn.struct.ValueTypeHelper;
 import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
-import link.rdcn.server.exception.AuthorizationException;
 import link.rdcn.user.DataOperationType;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.*;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import scala.Option;
 import scala.collection.JavaConverters;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * @Author renhao
@@ -33,7 +38,7 @@ public class JProviderTest {
     public static void main(String[] args) throws IOException, InterruptedException {
 
         InputSource inputSource = new CSVSource(",", false);
-        DataFrameInfo dfInfo = new DataFrameInfo("/home/dd/file_1.csv", inputSource, StructType.empty().add("id", ValueTypeHelper.getIntType(), true)
+        DataFrameInfo dfInfo = new DataFrameInfo("file_1.csv", Paths.get("/home/dd/file_1.csv").toUri(), inputSource, StructType.empty().add("id", ValueTypeHelper.getIntType(), true)
                 .add("name", ValueTypeHelper.getStringType(), true));
         List<DataFrameInfo> listD = new ArrayList<DataFrameInfo>();
         listD.add(dfInfo);
@@ -162,7 +167,7 @@ public class JProviderTest {
 //                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
                 DirectorySource directorySource = new DirectorySource(false);
                 DataFrameInfo dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(null);
-                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name()),false);
+                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()),false);
             }
 
             /**

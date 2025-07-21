@@ -1,7 +1,7 @@
 package link.rdcn
 
+import link.rdcn.ConfigKeys._
 import link.rdcn.ErrorCode._
-import link.rdcn.FairdConfigKeys._
 import link.rdcn.client.FairdClient
 import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.server.FairdServer
@@ -17,6 +17,7 @@ import org.apache.jena.vocabulary.RDF
 import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.io.{BufferedWriter, File, FileOutputStream, FileWriter}
+import java.net.URI
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -59,10 +60,11 @@ object TestBase {
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir).map(file => {
-    DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
+    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   lazy val binDfInfos = Seq(
-    DataFrameInfo(binDir, DirectorySource(false), StructType.binaryStructType))
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\","/"),Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
+
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
@@ -150,15 +152,15 @@ object TestBase {
       fairdServer = Some(s)
       expectedHostInfo =
         Map(
-          faird_host_name -> ConfigLoader.fairdConfig.hostName,
-          faird_host_port -> ConfigLoader.fairdConfig.hostPort.toString,
-          faird_host_title -> ConfigLoader.fairdConfig.hostTitle,
-          faird_host_position -> ConfigLoader.fairdConfig.hostPosition,
-          faird_host_domain -> ConfigLoader.fairdConfig.hostDomain,
+          FairdHostName -> ConfigLoader.fairdConfig.hostName,
+          FairdHostPort -> ConfigLoader.fairdConfig.hostPort.toString,
+          FairdHostTitle -> ConfigLoader.fairdConfig.hostTitle,
+          FairdHostPosition -> ConfigLoader.fairdConfig.hostPosition,
+          FairdHostDomain -> ConfigLoader.fairdConfig.hostDomain,
           // New TLS configuration values
-          faird_tls_enabled -> ConfigLoader.fairdConfig.useTLS.toString,
-          faird_tls_cert_path -> ConfigLoader.fairdConfig.certPath,
-          faird_tls_key_path -> ConfigLoader.fairdConfig.keyPath
+          FairdTlsEnabled -> ConfigLoader.fairdConfig.useTLS.toString,
+          FairdTlsCertPath -> ConfigLoader.fairdConfig.certPath,
+          FairdTlsKeyPath -> ConfigLoader.fairdConfig.keyPath
         )
 
     }
@@ -210,7 +212,7 @@ object TestBase {
   def getExpectedDataFrameSize(dataFrameName: String): Long = {
     dataProvider.dataSetsScalaList.foreach(ds => {
       val dfInfo = ds.getDataFrameInfo(dataFrameName)
-      if (dfInfo.nonEmpty) return DataUtils.countLinesFast(new File(dfInfo.get.name))
+      if (dfInfo.nonEmpty) return DataUtils.countLinesFast(new File(dfInfo.get.path))
     })
     -1L
   }
@@ -354,9 +356,9 @@ abstract class DataProviderImpl extends DataProvider {
       override def iterator: Iterator[Row] = Iterator.empty
     })
     dataFrameInfo.inputSource match {
-      case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.name))
-      case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.name))
-      case _: ExcelSource => DataStreamSourceFactory.createExcelDataStreamSource(dataFrameInfo.name)
+      case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.path))
+      case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path))
+      case _: ExcelSource => DataStreamSourceFactory.createExcelDataStreamSource(Paths.get(dataFrameInfo.path).toString)
       case _: InputSource => ???
     }
 
@@ -391,10 +393,10 @@ abstract class DataProviderImpl extends DataProvider {
 
 case class DataFrameInfo(
                           name: String,
+                          path: URI,
                           inputSource: InputSource,
                           schema: StructType
                         ) {
-  def getSchemaUrl(url: String): String = url + name
 }
 
 case class DataSet(
@@ -420,7 +422,7 @@ case class DataSet(
 
   def getDataFrameInfo(dataFrameName: String): Option[DataFrameInfo] = {
     dataFrames.find { dfInfo =>
-      val normalizedDfPath: String = dfInfo.name.replace('\\', '/')
+      val normalizedDfPath: String = dfInfo.path.toString
       normalizedDfPath.contains(dataFrameName)
     }
   }

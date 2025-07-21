@@ -8,6 +8,8 @@ import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Function1;
 import scala.Option;
 import scala.collection.Iterator;
@@ -18,7 +20,7 @@ import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static link.rdcn.TestFairdConfigKeys.*;
+import static link.rdcn.TestFairdKeys.*;
 
 /**
  * @Author Yomi
@@ -27,6 +29,8 @@ import static link.rdcn.TestFairdConfigKeys.*;
  * @Modified By:
  */
 public class ClientDemo {
+
+    private static final Logger log = LoggerFactory.getLogger(ClientDemo.class);
 
     public static void main(String[] args) {
         // 通过用户名密码非加密连接FairdClient
@@ -63,20 +67,28 @@ public class ClientDemo {
         System.out.println(hostInfo.get(faird_host_title));
         System.out.println(hostInfo.get(faird_host_port));
         System.out.println(hostInfo.get(faird_host_position));
-        System.out.println(hostInfo.get(faird_host_port));
         System.out.println(hostInfo.get(faird_host_name));
         System.out.println(hostInfo.get(faird_host_domain));
         System.out.println(hostInfo.get(faird_tls_enabled));
         System.out.println(hostInfo.get(faird_tls_cert_path));
         System.out.println(hostInfo.get(faird_tls_key_path));
+        System.out.println(hostInfo.get(logging_file_name));
+        System.out.println(hostInfo.get(logging_level_root));
+        System.out.println(hostInfo.get(logging_pattern_console));
+        System.out.println(hostInfo.get(logging_pattern_file));
 
         //获得服务器资源信息
         System.out.println("--------------打印服务器资源信息--------------");
         Map<String,String> serverResourceInfo = dc.getServerResourceInfo();
-        System.out.println(serverResourceInfo.get("cpu.cores"));
-        System.out.println(serverResourceInfo.get("cpu.usage.percent"));
-        System.out.println(serverResourceInfo.get("jvm.memory"));
-        System.out.println(serverResourceInfo.get("system.physical.memory"));
+        System.out.println(serverResourceInfo.get(faird_cpu_cores));
+        System.out.println(serverResourceInfo.get(faird_cpu_usage_percent));
+        System.out.println(serverResourceInfo.get(faird_jvm_max_memory));
+        System.out.println(serverResourceInfo.get(faird_jvm_free_memory));
+        System.out.println(serverResourceInfo.get(faird_jvm_total_memory));
+        System.out.println(serverResourceInfo.get(faird_jvm_used_memory));
+        System.out.println(serverResourceInfo.get(faird_system_memory_total));
+        System.out.println(serverResourceInfo.get(faird_system_memory_used));
+        System.out.println(serverResourceInfo.get(faird_system_memory_free));
 
         //获得数据帧大小
         System.out.println("--------------打印数据帧大小--------------");
@@ -137,6 +149,12 @@ public class ClientDemo {
         //对数据进行collect操作可以将数据帧的所有行收集到内存中，但是要注意内存溢出的问题
         //limit操作可以限制返回的数据行数，防止内存溢出
         RemoteDataFrame dfCsv = dc.open("/csv/data_1.csv");
+        dfBin.foreach(row -> {
+            return null;
+        });
+        dfCsv.foreach(row -> {
+            return null;
+        });
         List<Row> rowsCollect = convertToJavaList(dfCsv.limit(1).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 数据帧--------------");
         for(Row row: rowsCollect){

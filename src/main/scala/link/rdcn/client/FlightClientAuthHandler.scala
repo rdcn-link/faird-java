@@ -22,7 +22,6 @@ class FlightClientAuthHandler(credentials: Credentials) extends ClientAuthHandle
     val tokenBytes = iterator.next() // 假设服务器返回的第一个字节数组就是令牌
     val token = new String(tokenBytes, StandardCharsets.UTF_8)
     setSessionToken(token)
-    println("Client: Received server response during authentication.")
   }
 
   override def getCallToken: Array[Byte] = sessionToken.getOrElse("").getBytes(StandardCharsets.UTF_8)

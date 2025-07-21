@@ -1,6 +1,7 @@
 package link.rdcn
 
-import link.rdcn.FairdConfigKeys._
+import link.rdcn.ConfigKeys._
+import link.rdcn.ResourceKeys.{SystemMemoryTotal, _}
 import link.rdcn.TestBase._
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
@@ -56,14 +57,18 @@ class ClientAPITest extends TestBase {
   @Test
   def testGetHostInfo(): Unit = {
     val allKeys: Set[String] = Set(
-      faird_host_name,
-      faird_host_port,
-      faird_host_title,
-      faird_host_position,
-      faird_host_domain,
-      faird_tls_enabled,
-      faird_tls_cert_path,
-      faird_tls_key_path
+      FairdHostDomain,
+      FairdHostTitle,
+      FairdHostName,
+      FairdHostPort,
+      FairdHostPosition,
+      LoggingFileName,
+      LoggingLevelRoot,
+      LoggingPatternFile,
+      LoggingPatternConsole,
+      FairdTlsEnabled,
+      FairdTlsCertPath,
+      FairdTlsKeyPath
     )
     val hostInfo = dc.getHostInfo().asScala.toMap
     allKeys.foreach(key =>{
@@ -82,6 +87,24 @@ class ClientAPITest extends TestBase {
   @Test
   def testGetServerResourceInfo(): Unit = {
     val statusMap = dc.getServerResourceInfo()
+
+    val allKeys: Set[String] = Set(
+      CpuCores,
+      CpuUsagePercent,
+      JvmMaxMemory,
+      JvmFreeMemory,
+      JvmTotalMemory,
+      JvmUsedMemory,
+      SystemMemoryTotal,
+      SystemMemoryFree,
+      SystemMemoryUsed
+    )
+    val hostInfo = dc.getHostInfo().asScala.toMap
+    allKeys.foreach(key =>{
+      assertTrue(hostInfo.contains(key), s"实际结果中缺少键：$key")
+      assertEquals(expectedHostInfo(key), hostInfo(key), s"键 '$key' 的值与预期不符！")
+    }
+    )
 
     assertNotNull(statusMap)
     assertTrue(statusMap.containsKey("cpu.cores"))

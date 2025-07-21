@@ -2,7 +2,7 @@ package link.rdcn.server
 
 import com.sun.management.OperatingSystemMXBean
 import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
-import link.rdcn.FairdConfigKeys._
+import link.rdcn.ConfigKeys._
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
@@ -127,35 +127,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
   private val batchLen = 100
 
-//  override def acceptPut(context: FlightProducer.CallContext, flightStream: FlightStream, ackStream: FlightProducer.StreamListener[PutResult]): Runnable = {
-
-//    new Runnable {
-//      override def run(): Unit = {
-//        val ticketKey: String = flightStream.getDescriptor.getPath.get(0)
-//        ticketKey match {
-//          case _ => {
-//            while (flightStream.next()) {
-//              val root = flightStream.getRoot
-//              val dfName = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
-//              val userToken = root.getFieldVectors.get(1).asInstanceOf[VarCharVector].getObject(0).toString
-//              val authenticatedUser = Option(authenticatedUserMap.get(userToken))
-//              if(authenticatedUser.isEmpty){
-//                throw new AuthorizationException(USER_NOT_LOGGED_IN)
-//              }
-//              if(! authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
-//                throw new DataFrameAccessDeniedException(dfName)
-//              val operationNodeJsonString = root.getFieldVectors.get(2).asInstanceOf[VarCharVector].getObject(0).toString
-//              val operationNode: Operation = Operation.fromJsonString(operationNodeJsonString)
-//              requestMap.put(flightStream.getDescriptor, (dfName, operationNode))
-//              flightStream.getRoot.clear()
-//            }
-//          }
-//        }
-//        ackStream.onCompleted()
-//      }
-//    }
-//  }
-
   override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
     val body = action.getBody
     action.getType match {
@@ -180,14 +151,18 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getHostInfo") =>
         val hostInfo =
           s"""
-             {"$faird_host_name": "${ConfigLoader.fairdConfig.hostName}",
-             "$faird_host_title": "${ConfigLoader.fairdConfig.hostTitle}",
-             "$faird_host_position": "${ConfigLoader.fairdConfig.hostPosition}",
-             "$faird_host_domain": "${ConfigLoader.fairdConfig.hostDomain}",
-             "$faird_host_port": "${ConfigLoader.fairdConfig.hostPort}",
-             "$faird_tls_enabled": "${ConfigLoader.fairdConfig.useTLS}",
-             "$faird_tls_cert_path": "${ConfigLoader.fairdConfig.certPath}",
-             "$faird_tls_key_path": "${ConfigLoader.fairdConfig.keyPath}"
+             {"$FairdHostName": "${ConfigLoader.fairdConfig.hostName}",
+             "$FairdHostTitle": "${ConfigLoader.fairdConfig.hostTitle}",
+             "$FairdHostPosition": "${ConfigLoader.fairdConfig.hostPosition}",
+             "$FairdHostDomain": "${ConfigLoader.fairdConfig.hostDomain}",
+             "$FairdHostPort": "${ConfigLoader.fairdConfig.hostPort}",
+             "$FairdTlsEnabled": "${ConfigLoader.fairdConfig.useTLS}",
+             "$FairdTlsCertPath": "${ConfigLoader.fairdConfig.certPath}",
+             "$FairdTlsKeyPath": "${ConfigLoader.fairdConfig.keyPath}",
+             "$LoggingFileName": "${ConfigLoader.fairdConfig.logggingFileName}",
+             "$LoggingLevelRoot": "${ConfigLoader.fairdConfig.logggingLevelRoot}",
+             "$LoggingPatternConsole": "${ConfigLoader.fairdConfig.loggingPatternConsole}",
+             "$LoggingPatternFile": "${ConfigLoader.fairdConfig.loggingPatternFile}"
              }""".stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
         getSingleStringStream(hostInfo,listener)
 
@@ -317,6 +292,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     val totalMemory = runtime.totalMemory() / 1024 / 1024 // MB
     val freeMemory = runtime.freeMemory() / 1024 / 1024   // MB
     val maxMemory = runtime.maxMemory() / 1024 / 1024     // MB
+    println(s"JVM Memory: $totalMemory MB, Max: $maxMemory MB")
     val usedMemory = totalMemory - freeMemory
 
     val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
@@ -327,17 +303,16 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
        |   {
        |    "cpu.cores"        : "$availableProcessors",
        |    "cpu.usage.percent" : "$cpuLoadPercent%",
-       |    "jvm.memory":{
-       |    "max.available" : "$maxMemory MB",
-       |    "allocated" : "$totalMemory MB",
-       |    "used" : "$usedMemory MB",
-       |    "free" : "$freeMemory MB"
-       |},
-       |    "system.physical.memory" : {
-       |    "total" : "$systemMemoryTotal MB",
-       |    "used" : "$systemMemoryUsed MB",
-       |    "free" : "$systemMemoryFree MB"
-       |   }
+       |
+       |    "jvm.memory.max" : "$maxMemory MB",
+       |    "jvm.memory.total" : "$totalMemory MB",
+       |    "jvm.memory.used" : "$usedMemory MB",
+       |    "jvm.memory.free" : "$freeMemory MB",
+       |
+       |    "system.memory.total" : "$systemMemoryTotal MB",
+       |    "system.memory.used" : "$systemMemoryUsed MB",
+       |    "system.memory.free" : "$systemMemoryFree MB"
+       |
        |}
        |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
   }

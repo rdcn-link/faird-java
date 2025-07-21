@@ -27,13 +27,13 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
   val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
 
   //根据文件生成元信息
-  lazy val csvDfInfos = listFiles(csvDir.toString).map(file => {
-    DataFrameInfo(file.getAbsolutePath, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
+  lazy val csvDfInfos = listFiles(csvDir).map(file => {
+    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   lazy val binDfInfos = Seq(
-    DataFrameInfo(binDir.toString, DirectorySource(false), StructType.binaryStructType))
-  lazy val excelDfInfos = listFiles(excelDir.toString).map(file => {
-    DataFrameInfo(file.getAbsolutePath, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\","/"),Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
+  lazy val excelDfInfos = listFiles(excelDir).map(file => {
+    DataFrameInfo(Paths.get("/excel").resolve(file.getName).toString.replace("\\","/"), Paths.get(file.getAbsolutePath).toUri, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
   })
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)

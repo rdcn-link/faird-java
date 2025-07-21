@@ -24,13 +24,13 @@ sealed trait FunctionWrapper {
 
 object FunctionWrapper {
 
-  case class JsonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
+  case class PythonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.PYTHON_CODE.name)
       jo.put("code", code)
     }
-    override def toString(): String = "JsonCode Function"
+    override def toString(): String = "PythonCode Function"
 
     override def applyToInput(input: Any, interpOpt: Option[SharedInterpreter]): Any = {
       val interp = interpOpt.getOrElse(throw new IllegalArgumentException("Python interpreter is required"))
@@ -113,7 +113,7 @@ object FunctionWrapper {
   def apply(jsonObj: JSONObject): FunctionWrapper = {
     val funcType = jsonObj.getString("type")
     funcType match {
-      case LangType.PYTHON_CODE.name => JsonCode(jsonObj.getString("code"))
+      case LangType.PYTHON_CODE.name => PythonCode(jsonObj.getString("code"))
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
     }
   }

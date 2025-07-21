@@ -123,30 +123,6 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
 
   def getRows(dataFrameName: String, operationNode: String): Iterator[Row] = {
     //上传参数
-//    val paramFields: Seq[Field] = List(
-//      new Field("dfName", FieldType.nullable(new ArrowType.Utf8()), null),
-//      new Field("userToken", FieldType.nullable(new ArrowType.Utf8()), null),
-//      new Field("DFOperation", FieldType.nullable(new ArrowType.Utf8()), null)
-//    )
-//    val schema = new Schema(paramFields.asJava)
-//    val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-//    val dfNameCharVector = vectorSchemaRoot.getVector("dfName").asInstanceOf[VarCharVector]
-//    val tokenCharVector = vectorSchemaRoot.getVector("userToken").asInstanceOf[VarCharVector]
-//    val dfOperationVector = vectorSchemaRoot.getVector("DFOperation").asInstanceOf[VarCharVector]
-//    dfNameCharVector.allocateNew(1)
-//    dfNameCharVector.set(0, dataFrameName.getBytes("UTF-8"))
-//    tokenCharVector.allocateNew(1)
-//    tokenCharVector.set(0, userToken.orNull.getBytes("UTF-8"))
-//    dfOperationVector.allocateNew(1)
-//    dfOperationVector.set(0, operationNode.getBytes("UTF-8"))
-//    vectorSchemaRoot.setRowCount(1)
-//
-//    val requestSchemaId = UUID.randomUUID().toString
-//    val listener = flightClient.startPut(FlightDescriptor.path(requestSchemaId), vectorSchemaRoot, new AsyncPutListener())
-//    listener.putNext()
-//    listener.completed()
-//    listener.getResult()
-
     val result = flightClient.doAction(new Action(s"putRequest:$dataFrameName:${userToken.orNull}", operationNode.getBytes("UTF-8"))).asScala
     result.hasNext
     val flightInfo = flightClient.getInfo(FlightDescriptor.path(userToken.orNull))
@@ -184,19 +160,28 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     val flatIter: Iterator[Seq[Any]] = iter.flatMap(rows => rows)
 
     if (!isBinaryColumn) {
-      // 第三列不是binary类型，直接返回Row(Seq[Any])
+      // 最后一列不是binary类型，直接返回Row(Seq[Any])
       flatIter.map(seq => Row.fromSeq(seq))
     } else {
 
       var isFirstChunk: Boolean = true
+      var isCalled: Boolean = false
       var currentSeq: Seq[Any] = if (flatIter.hasNext) flatIter.next() else Seq.empty[Any]
       var cachedSeq: Seq[Any] = currentSeq
       var currentChunk: Array[Byte] = Array[Byte]()
       var cachedChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
+      val verifyChunk: Array[Byte] = currentSeq.last.asInstanceOf[Array[Byte]]
       var cachedName: String = currentSeq(0).asInstanceOf[String]
       var currentName: String = currentSeq(0).asInstanceOf[String]
       new Iterator[Row] {
-        override def hasNext: Boolean = flatIter.hasNext || cachedChunk.nonEmpty
+        override def hasNext: Boolean = {
+          if (isCalled) {
+            !(verifyChunk eq cachedChunk) && (flatIter.hasNext || cachedChunk.nonEmpty)
+          } else{
+            isCalled = true
+            (flatIter.hasNext || cachedChunk.nonEmpty)
+          }
+        }
 
         override def next(): Row = {
 
