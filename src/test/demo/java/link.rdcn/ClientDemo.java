@@ -1,6 +1,9 @@
 package link.rdcn;
 
-import link.rdcn.client.*;
+import link.rdcn.client.Blob;
+import link.rdcn.client.FairdClient;
+import link.rdcn.client.RemoteDataFrame;
+import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.DAGNode;
 import link.rdcn.client.dag.SourceNode;
 import link.rdcn.client.dag.TransformerDAG;
@@ -19,8 +22,6 @@ import scala.collection.Seq;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.*;
-
-import static link.rdcn.TestFairdKeys.*;
 
 /**
  * @Author Yomi
@@ -64,31 +65,31 @@ public class ClientDemo {
         //获得host基本信息
         System.out.println("--------------打印host基本信息--------------");
         Map<String,String> hostInfo =  dc.getHostInfo();
-        System.out.println(hostInfo.get(faird_host_title));
-        System.out.println(hostInfo.get(faird_host_port));
-        System.out.println(hostInfo.get(faird_host_position));
-        System.out.println(hostInfo.get(faird_host_name));
-        System.out.println(hostInfo.get(faird_host_domain));
-        System.out.println(hostInfo.get(faird_tls_enabled));
-        System.out.println(hostInfo.get(faird_tls_cert_path));
-        System.out.println(hostInfo.get(faird_tls_key_path));
-        System.out.println(hostInfo.get(logging_file_name));
-        System.out.println(hostInfo.get(logging_level_root));
-        System.out.println(hostInfo.get(logging_pattern_console));
-        System.out.println(hostInfo.get(logging_pattern_file));
+        System.out.println(hostInfo.get(ConfigKeys.FairdHostName()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdHostTitle()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdHostPort()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdHostPosition()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdHostDomain()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdTlsEnabled()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdTlsCertPath()));
+        System.out.println(hostInfo.get(ConfigKeys.FairdTlsKeyPath()));
+        System.out.println(hostInfo.get(ConfigKeys.LoggingFileName()));
+        System.out.println(hostInfo.get(ConfigKeys.LoggingLevelRoot()));
+        System.out.println(hostInfo.get(ConfigKeys.LoggingPatternConsole()));
+        System.out.println(hostInfo.get(ConfigKeys.LoggingPatternFile()));
 
         //获得服务器资源信息
         System.out.println("--------------打印服务器资源信息--------------");
         Map<String,String> serverResourceInfo = dc.getServerResourceInfo();
-        System.out.println(serverResourceInfo.get(faird_cpu_cores));
-        System.out.println(serverResourceInfo.get(faird_cpu_usage_percent));
-        System.out.println(serverResourceInfo.get(faird_jvm_max_memory));
-        System.out.println(serverResourceInfo.get(faird_jvm_free_memory));
-        System.out.println(serverResourceInfo.get(faird_jvm_total_memory));
-        System.out.println(serverResourceInfo.get(faird_jvm_used_memory));
-        System.out.println(serverResourceInfo.get(faird_system_memory_total));
-        System.out.println(serverResourceInfo.get(faird_system_memory_used));
-        System.out.println(serverResourceInfo.get(faird_system_memory_free));
+        System.out.println(serverResourceInfo.get(ResourceKeys.CpuCores()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.CpuUsagePercent()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JvmMaxMemory()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JvmTotalMemory()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JvmUsedMemory()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JvmFreeMemory()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryTotal()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryUsed()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryFree()));
 
         //获得数据帧大小
         System.out.println("--------------打印数据帧大小--------------");
@@ -138,7 +139,7 @@ public class ClientDemo {
 
         //还打开Excel文件数据帧
         System.out.println("--------------打印Excel文件数据帧--------------");
-        RemoteDataFrameImpl dfExcel = dc.open("/excel/data.xlsx");
+        RemoteDataFrame dfExcel = dc.open("/excel/data.xlsx");
         //获取数据
         java.util.List<Row> rows = convertToJavaList(dfExcel.limit(1).collect());
         for(Row row: rows){
