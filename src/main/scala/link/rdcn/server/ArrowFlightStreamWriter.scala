@@ -1,6 +1,6 @@
 package link.rdcn.server
 
-import link.rdcn.struct.{DataFrame, Row}
+import link.rdcn.struct.{DataFrameStream, Row}
 import link.rdcn.struct.ValueType.BinaryType
 import link.rdcn.util.DataUtils
 import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
@@ -15,7 +15,7 @@ import scala.collection.JavaConverters.asScalaBufferConverter
  * @Data 2025/7/8 14:22
  * @Modified By:
  */
-case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
+case class ArrowFlightStreamWriter(dataFrame: DataFrameStream) {
 
   val schema = dataFrame.schema
   val stream = dataFrame.stream

@@ -6,7 +6,7 @@ import link.rdcn.ConfigKeys._
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
-import link.rdcn.struct.{DataFrame, StructType, ValueType}
+import link.rdcn.struct.{DataFrameStream, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
@@ -168,13 +168,26 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
       case actionType if actionType.startsWith("getServerResourceInfo") =>
         getSingleStringStream(getResourceStatusString,listener)
-      case actionType if actionType.startsWith("getDataFrameDocument") => {
-        val dfName = actionType.replace("getDataFrameDocument.","")
-        val dataFrameDocumentBytes = SimpleSerializer.serialize(dataProvider.getDataFrameDocument(dfName))
+      case actionType if actionType.startsWith("getDocument") => {
+        val dfName = actionType.replace("getDocument.","")
+        val dataFrameDocumentBytes = SimpleSerializer.serialize(dataProvider.getDocument(dfName))
         getArrayBytesStream(dataFrameDocumentBytes,listener)
       }
       case actionType if actionType.startsWith("getSchema") => {
         val dfName =  actionType.replace("getSchema.","")
+        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+        var structType = dataStreamSource.schema
+        if(structType.isEmpty()){
+          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
+          val iter = dataStreamSource.iterator
+          if(iter.hasNext){
+            structType = DataUtils.inferSchemaFromRow(iter.next())
+          }
+        }
+        getSingleStringStream(structType.toString,listener)
+      }
+      case actionType if actionType.startsWith("getDataStat") => {
+        val dfName =  actionType.replace("getDataStat.","")
         val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
         var structType = dataStreamSource.schema
         if(structType.isEmpty()){
@@ -219,8 +232,8 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
             val request = requestMap.get(userToken)
 
             val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
-            val inDataFrame = DataFrame(dataStreamSource.schema, dataStreamSource.iterator)
-            val outDataFrame: DataFrame  = request._2.execute(inDataFrame)
+            val inDataFrame = DataFrameStream(dataStreamSource.schema, dataStreamSource.iterator)
+            val outDataFrame: DataFrameStream  = request._2.execute(inDataFrame)
             val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
 
             //能否支持并发
@@ -292,7 +305,6 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
     val totalMemory = runtime.totalMemory() / 1024 / 1024 // MB
     val freeMemory = runtime.freeMemory() / 1024 / 1024   // MB
     val maxMemory = runtime.maxMemory() / 1024 / 1024     // MB
-    println(s"JVM Memory: $totalMemory MB, Max: $maxMemory MB")
     val usedMemory = totalMemory - freeMemory
 
     val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
@@ -325,9 +337,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   }
 
   private def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("size", ValueType.LongType))
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("rowCount", ValueType.LongType))
     try {
-      val nameVector = rootAndAllocator._1.getVector("size").asInstanceOf[BigIntVector]
+      val nameVector = rootAndAllocator._1.getVector("rowCount").asInstanceOf[BigIntVector]
       rootAndAllocator._1.allocateNew()
       nameVector.setSafe(0, long)
       rootAndAllocator._1.setRowCount(1)

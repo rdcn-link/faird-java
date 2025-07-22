@@ -1,7 +1,5 @@
 package link.rdcn.client.dag
 
-import link.rdcn.dftree.{Operation, SourceOp}
-
 /**
  * @Author renhao
  * @Description:
@@ -24,7 +22,6 @@ case class TransformerDAG(
                            nodes: Map[String, DAGNode],
                            edges: Map[String, Seq[String]]
                          ){
-
 
   def getExecutionPaths(): Seq[Seq[DAGNode]] = {
     val keyPaths = extractAllPaths(edges)
@@ -71,6 +68,17 @@ case class TransformerDAG(
     }
 
     rootNodes.toSeq.flatMap(root => dfs(Seq(root), root, Set.empty))
+  }
+}
+object TransformerDAG{
+  def fromSeq(nodes: Map[String, DAGNode], edgesSeq: Seq[String]): TransformerDAG = {
+    if (nodes.isEmpty) {
+      throw new IllegalArgumentException("one node at least")
+    }
+    val pairs = edgesSeq.zip(edgesSeq.tail).toMap
+    val edges = pairs.map { case (currentElement, nextElement) =>
+      currentElement -> Seq(nextElement)}
+    TransformerDAG(nodes, edges)
   }
 }
 

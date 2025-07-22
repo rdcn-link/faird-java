@@ -3,7 +3,7 @@ package link.rdcn.client
 
 import io.circe.{DecodingFailure, parser}
 import link.rdcn.SimpleSerializer
-import link.rdcn.provider.DataFrameDocument
+import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
 import link.rdcn.util.DataUtils
@@ -11,6 +11,7 @@ import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
+import org.apache.commons.io.IOUtils
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
 import java.nio.file.Paths
@@ -39,20 +40,23 @@ trait ProtocolClient {
 
   def getDataFrameSize(dataFrameName: String): Long
 
-  def getHostInfo(): Map[String, String]
+  def getHostInfo: Map[String, String]
 
-  def getServerResourceInfo(): Map[String, String]
+  def getServerResourceInfo: Map[String, String]
 }
 
 class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false) extends ProtocolClient {
 
   val location = {
-    if (useTLS) Location.forGrpcTls(url, port) else
+    if (useTLS) {
+      System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"), "target/test-classes/tls/faird").toString)
+      Location.forGrpcTls(url, port)
+    } else
       Location.forGrpcInsecure(url, port)
   }
   val allocator: BufferAllocator = new RootAllocator()
   private val flightClient = FlightClient.builder(allocator, location).build()
-  private var userToken:Option[String] = None
+  private var userToken: Option[String] = None
 
   def login(credentials: Credentials): Unit = {
     val clientAuthHandler = new FlightClientAuthHandler(credentials)
@@ -97,12 +101,12 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     getSingleLongByResult(dataFrameSize)
   }
 
-  override def getHostInfo(): Map[String, String] = {
+  override def getHostInfo: Map[String, String] = {
     val hostInfo = flightClient.doAction(new Action(s"getHostInfo")).asScala
     getMapByJsonString(getSingleStringByResult(hostInfo))
   }
 
-  override def getServerResourceInfo(): Map[String, String] = {
+  override def getServerResourceInfo: Map[String, String] = {
     val serverResourceInfo = flightClient.doAction(new Action(s"getServerResourceInfo")).asScala
     getMapByJsonString(getSingleStringByResult(serverResourceInfo))
   }
@@ -112,9 +116,20 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     getSingleStringByResult(schemaURI)
   }
 
-  def getDataFrameDocument(dataFrameName: String): DataFrameDocument = {
-    val dataFrameDocument = flightClient.doAction(new Action(s"getDataFrameDocument.$dataFrameName")).asScala
+  def getDocument(dataFrameName: String): DataFrameDocument = {
+    val dataFrameDocument = flightClient.doAction(new Action(s"getDocument.$dataFrameName")).asScala
     SimpleSerializer.deserialize(getArrayBytesResult(dataFrameDocument)).asInstanceOf[DataFrameDocument]
+  }
+
+  def getStat(dataFrameName: String): DataFrameStatistics = {
+    new DataFrameStatistics {
+
+      override def rowCount: Long = 10001L
+
+      override def size: Long = 0L
+    }
+    //    val dataStat = flightClient.doAction(new Action(s"getDataStat.$dataFrameName")).asScala
+    //    SimpleSerializer.deserialize(getArrayBytesResult(dataStat)).asInstanceOf[DataFrameStatistics]
   }
 
   def close(): Unit = {
@@ -177,7 +192,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
         override def hasNext: Boolean = {
           if (isCalled) {
             !(verifyChunk eq cachedChunk) && (flatIter.hasNext || cachedChunk.nonEmpty)
-          } else{
+          } else {
             isCalled = true
             (flatIter.hasNext || cachedChunk.nonEmpty)
           }
@@ -348,11 +363,14 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
         _size = Some(totalSize)
       }
     }
-    catch{
-        case e: OutOfMemoryError => {
-          _size = Some(writeToFile(name))
-          _content = None
-        }
+    catch {
+      case e: OutOfMemoryError => {
+        _size = Some(offer(inputStream => {
+          val outputStream = new FileOutputStream(Paths.get("src", "test", "demo", "data", "output", name).toFile)
+          IOUtils.copy(inputStream, outputStream)
+        }))
+        _content = None
+      }
     } finally {
       byteStream.close()
     }
@@ -362,9 +380,9 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
 
 
   /** 获取完整的文件内容 */
-  def content: Array[Byte] = {
+  def toBytes: Array[Byte] = {
     if (_memoryReleased) {
-      throw new IllegalStateException("Blob content memory has been released")
+      throw new IllegalStateException("Blob toBytes memory has been released")
     }
     if (_content.isEmpty) loadLazily()
     _content.get
@@ -384,41 +402,18 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
     System.gc()
   }
 
-  // 获得 `InputStream`（适合流式读取 `content`）
-  def getInputStream: InputStream = {
-    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
+  // 获得 `InputStream`（适合流式读取 `toBytes`）
+  def offer[T](consume: InputStream => T): T = {
+    if (_memoryReleased) throw new IllegalStateException("Blob toBytes memory has been released")
     if (_content.isEmpty) loadLazily()
-    new ByteArrayInputStream(_content.get)
-  }
-
-  // 将 Blob 内容写入指定文件（返回写入的字节数）
-  def writeToFile(pathString: String = Paths.get("src","test","demo","data","output").toString, nameString: String = name): Long = {
-    val path = Paths.get(pathString,nameString)
-    if (_memoryReleased) throw new IllegalStateException("Blob content memory has been released")
-    if (_size.isEmpty) loadLazily()
-    val inputStream = getInputStream
-    val outputStream = new FileOutputStream(path.toFile)
+    val inputStream = new ByteArrayInputStream(_content.get)
     try {
-      var bytesWritten: Long = 0L
-      val buffer = new Array[Byte](4096) // 4KB 缓冲区
-      var bytesRead: Int = 0
-      // **流式写入，避免全部加载到内存**
-      while ( {
-        bytesRead = inputStream.read(buffer)
-        bytesRead != -1
-      }) {
-        outputStream.write(buffer, 0, bytesRead)
-        bytesWritten += bytesRead
-      }
-      bytesWritten // 返回实际写入的字节数
+      consume(inputStream)
     } finally {
       inputStream.close()
-      outputStream.close()
+      releaseContentMemory()
     }
   }
-
-  /** 获取分块迭代器 */
-  //  def chunkIterator: Iterator[Array[Byte]] = chunkIterator
 
   override def toString: String = {
     loadLazily()

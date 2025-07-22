@@ -8,7 +8,7 @@ package link.rdcn;
 
 import link.rdcn.server.FairdServer;
 
-public class ServerDemo {
+public class JServerDemo {
     public static void main(String[] args) {
         TestProvider provider = new TestProvider();
         //根据fairdHome自动读取配置文件

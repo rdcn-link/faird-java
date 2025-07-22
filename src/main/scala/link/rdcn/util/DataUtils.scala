@@ -4,7 +4,7 @@ import link.rdcn.Logging
 
 import scala.collection.mutable
 import link.rdcn.struct.ValueType._
-import link.rdcn.struct.{Column, DataFrame, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, DataFrameStream, Row, StructType, ValueType}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
@@ -138,11 +138,11 @@ object DataUtils extends Logging{
     StructType.fromSeq(columns)
   }
 
-  def getDataFrameByStream(stream: Iterator[Row]): DataFrame = {
-    if(stream.isEmpty) return DataFrame(StructType.empty, Iterator.empty)
+  def getDataFrameByStream(stream: Iterator[Row]): DataFrameStream = {
+    if(stream.isEmpty) return DataFrameStream(StructType.empty, Iterator.empty)
     val row = stream.next()
     val structType = inferSchemaFromRow(row)
-    DataFrame(structType, Seq(row).iterator ++ stream)
+    DataFrameStream(structType, Seq(row).iterator ++ stream)
   }
 
 //  /** 推断一个值的类型 */

@@ -44,5 +44,5 @@ trait DataProvider {
    * @param dataFrameName 数据帧名
    * @return 数据帧的DataFrameDocument
    */
-  def getDataFrameDocument(dataFrameName: String): DataFrameDocument
+  def getDocument(dataFrameName: String): DataFrameDocument
 }

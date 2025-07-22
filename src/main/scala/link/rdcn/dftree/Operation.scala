@@ -2,7 +2,7 @@ package link.rdcn.dftree
 
 import jep.SharedInterpreter
 import link.rdcn.dftree.FunctionWrapper.{JavaBin, PythonCode}
-import link.rdcn.struct.{DataFrame, Row}
+import link.rdcn.struct.{DataFrameStream, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
@@ -22,7 +22,7 @@ sealed trait Operation {
 
   def toJsonString: String = toJson.toString
 
-  def execute(dataFrame: DataFrame): DataFrame
+  def execute(dataFrame: DataFrameStream): DataFrameStream
 }
 
 object Operation {
@@ -49,7 +49,7 @@ case class SourceOp() extends Operation {
 
   override def toJson: JSONObject = new JSONObject().put("type", operationType)
 
-  override def execute(dataFrame: DataFrame): DataFrame = dataFrame
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = dataFrame
 }
 
 case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Operation {
@@ -60,7 +60,7 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrame): DataFrame = {
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
     functionWrapper match {
       case JavaBin(serializedBase64) =>
         val in = input.execute(dataFrame)
@@ -87,18 +87,18 @@ case class FilterOp(functionWrapper: FunctionWrapper, input: Operation) extends 
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrame): DataFrame = {
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
     functionWrapper match {
       case JavaBin(serializedBase64) =>
         val in = input.execute(dataFrame)
         val stream = in.stream.filter(functionWrapper.applyToInput(_, None).asInstanceOf[Boolean])
-        DataFrame(in.schema, stream)
+        DataFrameStream(in.schema, stream)
       case PythonCode(pythonCode, batchSize) =>
         val interp = new SharedInterpreter()
         try {
           val in = input.execute(dataFrame)
           val stream = in.stream.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
-          DataFrame(in.schema, stream)
+          DataFrameStream(in.schema, stream)
         } finally {
           interp.close()
         }
@@ -114,9 +114,9 @@ case class LimitOp(limit: Int, input: Operation) extends Operation {
     .put("args", new JSONArray(Seq(limit).asJava))
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrame): DataFrame = {
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
     val in = input.execute(dataFrame)
-    DataFrame(in.schema, in.stream.take(limit))
+    DataFrameStream(in.schema, in.stream.take(limit))
   }
 }
 
@@ -128,7 +128,7 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
     .put("args", new JSONArray(columns.asJava))
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrame): DataFrame = {
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
     val in = input.execute(dataFrame)
     val selectedSchema = in.schema.select(columns: _*)
     val selectedStream = in.stream.map { row =>
@@ -140,7 +140,7 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
       }
       Row.fromSeq(selectedValues)
     }
-    DataFrame(selectedSchema, selectedStream)
+    DataFrameStream(selectedSchema, selectedStream)
   }
 }
 
@@ -152,7 +152,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrame): DataFrame = {
+  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
     functionWrapper match {
       case JavaBin(serializedBase64) =>
         val in = input.execute(dataFrame)

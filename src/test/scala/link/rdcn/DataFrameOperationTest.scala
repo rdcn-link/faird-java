@@ -3,7 +3,7 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
-import link.rdcn.client.RemoteDataFrame
+import link.rdcn.client.DataFrame
 import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
@@ -258,7 +258,7 @@ class DataFrameOperationTest extends TestBase {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -294,7 +294,7 @@ class DataFrameOperationTest extends TestBase {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -324,7 +324,7 @@ class DataFrameOperationTest extends TestBase {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -357,7 +357,7 @@ class DataFrameOperationTest extends TestBase {
         "B" -> Seq("C")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -391,7 +391,7 @@ class DataFrameOperationTest extends TestBase {
         "A" -> Seq("B","C"),
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -429,7 +429,7 @@ class DataFrameOperationTest extends TestBase {
         "B" -> Seq("C")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
@@ -473,7 +473,7 @@ class DataFrameOperationTest extends TestBase {
         "D" -> Seq("E")
       )
     )
-    val dfs: Seq[RemoteDataFrame] = dc.execute(transformerDAG)
+    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
     val actualOutputs = dfs.map { df =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)

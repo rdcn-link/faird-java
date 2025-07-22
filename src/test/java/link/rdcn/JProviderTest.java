@@ -178,7 +178,7 @@ public class JProviderTest {
              * @return DataFrameSchema的URL
              */
             @Override
-            public DataFrameDocument getDataFrameDocument(String dataFrameName) {
+            public DataFrameDocument getDocument(String dataFrameName) {
                 return null;
             }
 

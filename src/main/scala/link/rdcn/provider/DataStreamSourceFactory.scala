@@ -1,8 +1,6 @@
 package link.rdcn.provider
 
-import link.rdcn.struct
-import link.rdcn.struct.ValueType.IntType
-import link.rdcn.struct.{Column, Row, StructType}
+import link.rdcn.struct.{Row, StructType}
 import link.rdcn.util.{DataUtils, JdbcUtils}
 
 import java.io.File

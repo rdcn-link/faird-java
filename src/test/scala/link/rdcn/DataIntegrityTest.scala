@@ -6,11 +6,12 @@ import link.rdcn.TestEmptyProvider.outputDir
 import link.rdcn.client.Blob
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
+import org.apache.commons.io.IOUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
-import java.io.InputStream
+import java.io.{FileOutputStream, InputStream}
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
@@ -54,7 +55,7 @@ class DataIntegrityTest extends TestBase {
     val expectedRow: Row = {
       val temp = (
         file.getName, // name: String
-        attrs.size(), // size: Long
+        attrs.size(), // rowCount: Long
         DataUtils.getFileTypeByExtension(file), // 文件类型: String
         attrs.creationTime().toMillis, // 创建时间: Long (Millis)
         attrs.lastModifiedTime().toMillis, // 最后修改时间: Long (Millis)
@@ -80,9 +81,10 @@ class DataIntegrityTest extends TestBase {
         val modifiedTime = row.getAs[Long](4).getOrElse(null)
         val lastAccessTime = row.getAs[Long](5).getOrElse(null)
         val blob = row.getAs[Blob](6).getOrElse(null)
-        blob.writeToFile(outputDir)
-        blob.releaseContentMemory()
-
+        val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
+        blob.offer(inputStream => {
+          val outputStream = new FileOutputStream(path.toFile)
+          IOUtils.copy(inputStream, outputStream)})
         assertEquals(expectedName, name)
         assertEquals(expectedSize, size)
         assertEquals(expectedFileType, fileType)

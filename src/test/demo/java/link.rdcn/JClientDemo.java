@@ -1,7 +1,7 @@
 package link.rdcn;
 
 import link.rdcn.client.Blob;
-import link.rdcn.client.FairdClient;
+import link.rdcn.client.DataFrame;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.DAGNode;
@@ -11,6 +11,7 @@ import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Function1;
@@ -19,7 +20,8 @@ import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
-import java.io.InputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -29,30 +31,29 @@ import java.util.*;
  * @Data 2025/7/14 19:38
  * @Modified By:
  */
-public class ClientDemo {
+public class JClientDemo {
 
-    private static final Logger log = LoggerFactory.getLogger(ClientDemo.class);
+    private static final Logger log = LoggerFactory.getLogger(JClientDemo.class);
 
     public static void main(String[] args) {
         // 通过用户名密码非加密连接FairdClient
 //        FairdClient dc = FairdClient.connect("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
         // 客户端证书路径配置
-        System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"),"target/test-classes/tls/faird").toString());
-       FairdClient dc = FairdClient.connectTLS("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+        JFairdClient dc = JFairdClient.connectTLS("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
         // 匿名连接FairdClient
 //        FairdClient dcAnonymous = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 
         //获得所有的数据集名称
         System.out.println("--------------打印数据集列表--------------");
-        List<String> dataSetNames = convertToJavaList(dc.listDataSetNames());
+        List<String> dataSetNames = dc.listDataSetNames();
         for (String name : dataSetNames) {
             System.out.println(name);
         }
 
         //获得指定数据集的所有的数据帧名称
         System.out.println("--------------打印数据集 csv 所有数据帧名称--------------");
-        List<String> frameNames = convertToJavaList(dc.listDataFrameNames("csv"));
+        List<String> frameNames = dc.listDataFrameNames("csv");
         for (String frameName : frameNames) {
             System.out.println(frameName);
         }
@@ -64,7 +65,7 @@ public class ClientDemo {
 
         //获得host基本信息
         System.out.println("--------------打印host基本信息--------------");
-        Map<String,String> hostInfo =  dc.getHostInfo();
+        Map<String, String> hostInfo = dc.getHostInfo();
         System.out.println(hostInfo.get(ConfigKeys.FairdHostName()));
         System.out.println(hostInfo.get(ConfigKeys.FairdHostTitle()));
         System.out.println(hostInfo.get(ConfigKeys.FairdHostPort()));
@@ -80,7 +81,7 @@ public class ClientDemo {
 
         //获得服务器资源信息
         System.out.println("--------------打印服务器资源信息--------------");
-        Map<String,String> serverResourceInfo = dc.getServerResourceInfo();
+        Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
         System.out.println(serverResourceInfo.get(ResourceKeys.CpuCores()));
         System.out.println(serverResourceInfo.get(ResourceKeys.CpuUsagePercent()));
         System.out.println(serverResourceInfo.get(ResourceKeys.JvmMaxMemory()));
@@ -91,18 +92,13 @@ public class ClientDemo {
         System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryUsed()));
         System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryFree()));
 
-        //获得数据帧大小
-        System.out.println("--------------打印数据帧大小--------------");
-        Long dataFrameSize =  dc.getDataFrameSize("/csv/data_1.csv");
-        System.out.println(dataFrameSize);
-
         //打开非结构化数据的文件列表数据帧
         RemoteDataFrame dfBin = dc.open("/bin");
 
         //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
         //用户可以控制没有信息时输出的字段
         System.out.println("--------------打印数据帧Document--------------");
-        DataFrameDocument dataFrameDocument =  dfBin.getDataFrameDocument();
+        DataFrameDocument dataFrameDocument = dfBin.getDocument();
         String schemaURL = convertToJavaOptional(dataFrameDocument.getSchemaURL()).orElse("schemaURL not found");
         String columnURL = convertToJavaOptional(dataFrameDocument.getColumnURL("file_name")).orElse("columnURL not found");
         String columnAlias = convertToJavaOptional(dataFrameDocument.getColumnAlias("file_name")).orElse("columnAlias not found");
@@ -113,6 +109,13 @@ public class ClientDemo {
         System.out.println(columnTitle);
         System.out.println(dfBin.schema());
 
+        //获得数据帧大小
+        System.out.println("--------------打印数据帧大小--------------");
+        Long dataFrameSize = dfBin.getStatistics().size();
+        Long dataFrameRowCount = dfBin.getStatistics().rowCount();
+        System.out.println(dataFrameSize);
+        System.out.println(dataFrameRowCount);
+
         //可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
         System.out.println("--------------打印非结构化数据文件列表数据帧--------------");
         dfBin.foreach(row -> {
@@ -121,13 +124,19 @@ public class ClientDemo {
             //通过下标访问
             Blob blob = (Blob) row.get(6);
             //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
-            //得到blob的InputStream用于读取blob内容
-            InputStream inputStream = blob.getInputStream();
-            //或者直接将blob写入指定路径和文件名
-            String path = Paths.get("src","test","demo","data","output").toString();
-            blob.writeToFile(path, name);
+            //offer用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
+            blob.offer(inputStream -> {
+                try {
+                    FileOutputStream outputStream = new FileOutputStream(Paths.get("src", "test", "demo", "data", "output", name).toFile());
+                    IOUtils.copy(inputStream, outputStream);
+                    outputStream.close();
+                    return null;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
             //或者直接获取blob的内容，得到byte数组
-            byte[] bytes = blob.content();
+            byte[] bytes = blob.toBytes();
             System.out.println(row);
             System.out.println(name);
             System.out.println(blob.size());
@@ -135,34 +144,16 @@ public class ClientDemo {
             return null;
         });
 
-
-
-        //还打开Excel文件数据帧
-        System.out.println("--------------打印Excel文件数据帧--------------");
-        RemoteDataFrame dfExcel = dc.open("/excel/data.xlsx");
         //获取数据
-        java.util.List<Row> rows = convertToJavaList(dfExcel.limit(1).collect());
-        for(Row row: rows){
-            System.out.println(row);
-        }
-
-        //还可以打开CSV文件数据帧
         //对数据进行collect操作可以将数据帧的所有行收集到内存中，但是要注意内存溢出的问题
         //limit操作可以限制返回的数据行数，防止内存溢出
-        RemoteDataFrame dfCsv = dc.open("/csv/data_1.csv");
-        dfBin.foreach(row -> {
-            return null;
-        });
-        dfCsv.foreach(row -> {
-            return null;
-        });
+        //还可以打开CSV文件数据帧
+        DataFrame dfCsv = dc.open("/csv/data_1.csv");
         List<Row> rowsCollect = convertToJavaList(dfCsv.limit(1).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 数据帧--------------");
-        for(Row row: rowsCollect){
+        for (Row row : rowsCollect) {
             System.out.println(row);
         }
-
-
 
         //编写map算子的匿名函数对数据帧进行操作
         //Function1是scala函数类接口，需要实现apply方法并在其中编写函数体
@@ -188,7 +179,7 @@ public class ClientDemo {
         };
         List<Row> rowsMap = convertToJavaList(dfCsv.limit(3).map(mapFunction).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------");
-        for(Row row: rowsMap){
+        for (Row row : rowsMap) {
             System.out.println(row);
         }
 
@@ -213,7 +204,7 @@ public class ClientDemo {
         };
         List<Row> rowsFilter = convertToJavaList(dfCsv.filter(filterFunction).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过filter操作后的数据帧--------------");
-        for(Row row: rowsFilter){
+        for (Row row : rowsFilter) {
             System.out.println(row);
         }
 
@@ -221,17 +212,48 @@ public class ClientDemo {
         //自定义算子和DAG执行图对数据帧进行操作
         //构建数据源节点
         DAGNode sourceNodeA = new SourceNode("/csv/data_1.csv");
+        DAGNode sourceNodeB = new SourceNode("/csv/data_2.csv");
         //构建自定义算子节点对象
-        //自定义一个过滤算子 比如只保留小于等于10的行
+        //自定义一个map算子 比如对第一列加1
+        DAGNode mapFilter = new UDFFunction() {
+            @Override
+            public Iterator<Row> transform(Iterator<Row> iter) {
+                return iter.map(row -> {
+                    long value = (long) row._1();
+                    return Row.fromJavaList(Arrays.asList(value + 1, row._2()));
+                });
+            }
+        };
+        //自定义一个过滤算子 比如只保留小于等于3的行
         DAGNode udfFilter = new UDFFunction() {
             @Override
             public Iterator<Row> transform(Iterator<Row> iter) {
                 return iter.filter(row -> {
                     long value = (long) row._1();
-                    return value <= 10;
+                    return value <= 3;
                 });
             }
         };
+
+        //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
+        //至少一个节点
+        Map<String, DAGNode> javaNodesMapMin = new HashMap<>();
+        javaNodesMapMin.put("A", sourceNodeA);
+        //构建边Map，可以没有边，对应不进行操作
+        Map<String, List<String>> javaEdgesMapMin = new HashMap<>();
+        //通过边和节点Map构建DAG执行图
+        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
+        //执行DAG图，返回一个数据帧列表
+        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
+        System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
+        for (DataFrame df : minDAGDfs) {
+            df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
         Map<String, DAGNode> javaNodesMap = new HashMap<>();
         javaNodesMap.put("A", sourceNodeA);
@@ -241,29 +263,54 @@ public class ClientDemo {
         javaEdgesMap.put("A", Arrays.asList("B"));
         //通过边和节点Map构建DAG执行图
         TransformerDAG transformerDAG = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMap), convertToScalaEdgesMap(javaEdgesMap));
-        //执行DAG图，返回一个数据帧列表
-        List<RemoteDataFrame> dfs= convertToJavaList(dc.execute(transformerDAG));
+        List<DataFrame> simpleDfs = dc.execute(transformerDAG);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
-        for(RemoteDataFrame df: dfs){
-            df.foreach( row ->
+        for (DataFrame df : simpleDfs) {
+            df.foreach(row ->
             {
                 System.out.println(row);
                 return null;
             });
         }
+
+        //对于线性依赖也可以通过fromSeq构造DAG
+        TransformerDAG transformerDAGSeq = TransformerDAG.fromSeq(convertToScalaNodesMap(javaNodesMap), convertToScalaSeq(Arrays.asList("A", "B")));
+        List<DataFrame> seqDAGDfs = dc.execute(transformerDAGSeq);
+        System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
+        for (DataFrame df : seqDAGDfs) {
+            df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+
+        //可以构建更复杂的多数据源节点和操作的DAG
+        TransformerDAG transformerComplexDAG = TransformerDAG.apply(convertToScalaNodesMap(
+                new HashMap<String, DAGNode>() {{
+            put("A", sourceNodeA);
+            put("B", sourceNodeB);
+            put("C", mapFilter);
+            put("D", udfFilter);
+        }}), convertToScalaEdgesMap(
+                new HashMap<String, List<String>>() {{
+            put("A", Arrays.asList("C"));
+            put("B", Arrays.asList("C"));
+            put("C", Arrays.asList("D"));
+        }}));
+        List<DataFrame> complexDfs = dc.execute(transformerComplexDAG);
+        System.out.println("--------------打印执行自定义复杂DAG后的数据帧--------------");
+        for (DataFrame df : complexDfs) {
+            df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+
     }
 
-    public static <T> java.util.List<T> convertToJavaList(Seq<T> scalaSeq) {
-        return JavaConverters.seqAsJavaListConverter(scalaSeq).asJava();
-    }
 
-    public static <T> Seq<T> convertToScalaSeq(java.util.List<T> javaList) {
-        return JavaConverters.asScalaBufferConverter(javaList).asScala().toSeq();
-    }
-
-    public static <T> java.util.Optional<T> convertToJavaOptional(Option<T> scalaOption) {
-        return Optional.ofNullable(scalaOption.getOrElse(null));
-    }
 
     public static scala.collection.immutable.Map<String, DAGNode> convertToScalaNodesMap(Map<String, DAGNode> javaMap) {
         return JavaConverters.mapAsScalaMapConverter(javaMap).asScala().toMap(
@@ -277,6 +324,17 @@ public class ClientDemo {
         );
     }
 
+    public static <T> java.util.List<T> convertToJavaList(Seq<T> scalaSeq) {
+        return JavaConverters.seqAsJavaListConverter(scalaSeq).asJava();
+    }
+
+    public static <T> Seq<T> convertToScalaSeq(java.util.List<T> javaList) {
+        return JavaConverters.asScalaBufferConverter(javaList).asScala().toSeq();
+    }
+
+    public static <T> java.util.Optional<T> convertToJavaOptional(Option<T> scalaOption) {
+        return Optional.ofNullable(scalaOption.getOrElse(null));
+    }
 
 }
 

@@ -91,7 +91,7 @@
 //      val name = row.get(0).asInstanceOf[String]
 //      val blob = row.get(6).asInstanceOf[Blob]
 //      //      val bytesLen = blob.length
-//      val bytesLen = blob.size
+//      val bytesLen = blob.rowCount
 //      println(f"Received: ${blob.chunkCount} chunks, name:$name")
 //      totalBytes += bytesLen
 //      realBytes += bytesLen
@@ -138,7 +138,7 @@
 //      val name = row.get(0).asInstanceOf[String]
 //      val blob = row.get(1).asInstanceOf[Blob]
 //      //      val bytesLen = blob.length
-//      val bytesLen = blob.size
+//      val bytesLen = blob.rowCount
 //      println(f"Received: ${blob.chunkCount} chunks, name:$name")
 //      totalBytes += bytesLen
 //      realBytes += bytesLen

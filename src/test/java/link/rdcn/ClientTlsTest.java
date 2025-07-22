@@ -6,8 +6,6 @@ import link.rdcn.user.Credentials;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
-import java.util.Map;
-
 /**
  * ServerTest Description
  *
@@ -27,8 +25,7 @@ public class ClientTlsTest {
         while (iterator.hasNext()){
             System.out.println(iterator.next());
         }
-
-        Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
+        scala.collection.immutable.Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
         System.out.println(serverResourceInfo);
     }
 }

@@ -45,8 +45,8 @@ class FairdClient private(
   private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
   protocolClient.login(credentials)
 
-  def open(dataFrameName: String): RemoteDataFrameImpl =
-    RemoteDataFrameImpl(dataFrameName, protocolClient)
+  def open(dataFrameName: String): RemoteDataFrame =
+    RemoteDataFrame(dataFrameName, protocolClient)
 
   def listDataSetNames(): Seq[String] =
     protocolClient.listDataSetNames()
@@ -60,21 +60,21 @@ class FairdClient private(
   def getDataFrameSize(dataFrameName: String): Long =
     protocolClient.getDataFrameSize(dataFrameName)
 
-  def getHostInfo(): java.util.Map[String, String] =
-    protocolClient.getHostInfo().asJava
+  def getHostInfo: Map[String, String] =
+    protocolClient.getHostInfo
 
-  def getServerResourceInfo(): java.util.Map[String, String] =
-    protocolClient.getServerResourceInfo().asJava
+  def getServerResourceInfo: Map[String, String] =
+    protocolClient.getServerResourceInfo
 
   def close(): Unit = protocolClient.close()
 
-  def execute(transformerDAG: TransformerDAG): Seq[RemoteDataFrame] = {
+  def execute(transformerDAG: TransformerDAG): Seq[DataFrame] = {
     val executePaths = transformerDAG.getExecutionPaths()
     executePaths.map(path => getRemoteDataFrameByDAGPath(path))
   }
 
 
-  private def getRemoteDataFrameByDAGPath(path: Seq[DAGNode]): RemoteDataFrame = {
+  private def getRemoteDataFrameByDAGPath(path: Seq[DAGNode]): DataFrame = {
     val dataFrameName = path.head.asInstanceOf[SourceNode].dataFrameName
     var operation: Operation = SourceOp()
     path.foreach(node => node match {
@@ -87,7 +87,7 @@ class FairdClient private(
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This DAGNode ${node} is not supported please extend UDFFunction trait")
     })
-    RemoteDataFrameImpl(dataFrameName, protocolClient, operation)
+    RemoteDataFrame(dataFrameName, protocolClient, operation)
   }
 
 }

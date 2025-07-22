@@ -363,12 +363,11 @@ abstract class DataProviderImpl extends DataProvider {
     }
 
   }
-
-  override def getDataFrameDocument(dataFrameName: String): DataFrameDocument = {
+  //若使用config，客户端也需要初始化因为是不同进程
+  override def getDocument(dataFrameName: String): DataFrameDocument = {
     new DataFrameDocument {
       override def getSchemaURL(): Option[String] = {
-        //客户端也需要初始化因为是不同进程
-//        ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+
         Some("[SchemaURL defined by provider]")
       }
 
