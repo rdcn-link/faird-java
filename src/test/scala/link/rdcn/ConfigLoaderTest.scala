@@ -31,7 +31,7 @@ class ConfigLoaderTest {
   //是否加载配置文件
   @Test
   def initTest(): Unit = {
-    val configPath = getResourcePath("/faird.conf")
+    val configPath = getResourcePath("")
     ConfigLoader.fairdConfig = configCache
     ConfigLoader.init(configPath)
     val config = ConfigBridge.getConfig

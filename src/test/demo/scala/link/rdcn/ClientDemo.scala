@@ -100,7 +100,6 @@ object ClientDemo {
     println(dataFrameRowCount)
     println(dataFrameSize)
 
-
     //可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
     println("--------------打印非结构化数据文件列表数据帧--------------")
     dfBin.foreach((row: Row) => {
@@ -108,6 +107,8 @@ object ClientDemo {
       val name: String = row._1.asInstanceOf[String]
       //通过下标访问
       val blob: Blob = row.get(6).asInstanceOf[Blob]
+      //通过getAs方法获取列值，该方法返回Option类型，如果找不到对应的列则返回None
+      val byteSize: Option[Long] = row.getAs[Long](3)
       //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
       //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
       val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
@@ -121,6 +122,7 @@ object ClientDemo {
       println(row)
       println(name)
       println(blob.size)
+      println(byteSize)
       println(bytes.hashCode())
     })
 
@@ -134,17 +136,22 @@ object ClientDemo {
     csvRows.foreach(println)
 
     //编写map算子的匿名函数对数据帧进行操作
-    val rowsMap: Seq[Row] = dfCsv.map(x => Row(x._1)).collect()
+    val mappedRows: Seq[Row] = dfCsv.map(x => Row(x._1)).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------")
-    rowsMap.take(3).foreach(println)
+    mappedRows.take(3).foreach(println)
 
     //编写filter算子的匿名函数对数据帧进行操作
-    val rowsFilter: Seq[Row] = dfCsv.filter({ row =>
+    val filteredRows: Seq[Row] = dfCsv.filter({ row =>
       val id: Long = row._1.asInstanceOf[Long]
       id <= 1L
     }).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 经过filter操作后的数据帧--------------")
-    rowsFilter.foreach(println)
+    filteredRows.foreach(println)
+
+    //select可以通过列名得到指定列的数据
+    val selectedRows: Seq[Row] = dfCsv.select("id").collect()
+    println("--------------打印结构化数据 /csv/data_1.csv 经过select操作后的数据帧--------------")
+    selectedRows.take(3).foreach(println)
 
     //自定义算子和DAG执行图对数据帧进行操作
     //构建数据源节点
@@ -169,10 +176,18 @@ object ClientDemo {
     }
 
     //对于线性依赖可以通过pipe直接构造DAG
-    val transformerDAGSeq: TransformerDAG = TransformerDAG.pipe(sourceNodeA)
-    val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGSeq)
+    //至少一个节点
+    val transformerDAGMin: TransformerDAG = TransformerDAG.pipe(sourceNodeA)
+    val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGMin)
     println("--------------打印最小DAG直接获取的数据帧--------------")
     minDAGDfs.foreach(df => df.foreach(row => println(row))
+    )
+
+    //可以多个节点
+    val transformerDAGPipe: TransformerDAG = TransformerDAG.pipe(sourceNodeA,udfFilter,udfMap)
+    val pipeDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPipe)
+    println("--------------打印执行链式DAG的数据帧--------------")
+    pipeDAGDfs.foreach(df => df.foreach(row => println(row))
     )
 
     //也可以通过构建边Map和节点Map构建DAG执行图
@@ -193,8 +208,6 @@ object ClientDemo {
     simpleDfs.foreach(df => df.foreach(row => println(row))
     )
 
-
-
     //可以构建更复杂的多数据源节点和操作的DAG
     //多对一
     //  A   B
@@ -211,7 +224,7 @@ object ClientDemo {
     println("--------------打印执行自定义DAG后的数据帧--------------")
     mergeDfs.foreach(df => df.foreach(row => println(row)))
 
-    //多对一
+    //一对多
     //   A
     //  / \
     // B   C

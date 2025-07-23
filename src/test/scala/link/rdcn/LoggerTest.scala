@@ -47,7 +47,7 @@ class LoggerTest extends Logging {
   //测试能否正确生成一条log（格式）
   @Test
   def testLoggerMessageCorrect(): Unit = {
-    ConfigLoader.init(getResourcePath("/faird.conf"))
+    ConfigLoader.init(getResourcePath(""))
     val logger: Logger = LogManager.getLogger(getClass)
     logger.info(expectedMessage)
     val logLine = extractTargetLog(filePath)

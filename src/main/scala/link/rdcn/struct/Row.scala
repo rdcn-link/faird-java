@@ -1,7 +1,6 @@
 package link.rdcn.struct
 
 import scala.collection.JavaConverters.asScalaBufferConverter
-
 /**
  * @Author renhao
  * @Description:

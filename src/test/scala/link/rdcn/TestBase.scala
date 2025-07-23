@@ -51,9 +51,6 @@ object TestBase {
   val binDir = Paths.get(baseDir, "bin").toString
   val csvDir = Paths.get(baseDir, "csv").toString
 
-  //初始化配置信息
-  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
-
   //必须在DfInfos前执行一次！！！
   generateTestData()
 
@@ -145,7 +142,7 @@ object TestBase {
 
   def getServer: FairdServer = synchronized {
     if (fairdServer.isEmpty) {
-      val s = new FairdServer(dataProvider, authprovider, Paths.get(getResourcePath(""),"conf","faird.conf").toString())
+      val s = new FairdServer(dataProvider, authprovider, Paths.get(getResourcePath("")).toString())
 
       s.start()
       //      println(s"Server (Location): Listening on port ${s.getPort}")
@@ -157,10 +154,14 @@ object TestBase {
           FAIRD_HOST_TITLE -> ConfigLoader.fairdConfig.hostTitle,
           FAIRD_HOST_POSITION -> ConfigLoader.fairdConfig.hostPosition,
           FAIRD_HOST_DOMAIN -> ConfigLoader.fairdConfig.hostDomain,
-          // New TLS configuration values
           FAIRD_TLS_ENABLED -> ConfigLoader.fairdConfig.useTLS.toString,
           FAIRD_TLS_CERT_PATH -> ConfigLoader.fairdConfig.certPath,
-          FAIRD_TLS_KEY_PATH -> ConfigLoader.fairdConfig.keyPath
+          FAIRD_TLS_KEY_PATH -> ConfigLoader.fairdConfig.keyPath,
+          LOGGING_FILE_NAME -> ConfigLoader.fairdConfig.loggingFileName,
+          LOGGING_LEVEL_ROOT -> ConfigLoader.fairdConfig.loggingLevelRoot,
+          LOGGING_PATTERN_FILE -> ConfigLoader.fairdConfig.loggingPatternFile,
+          LOGGING_PATTERN_CONSOLE -> ConfigLoader.fairdConfig.loggingPatternConsole
+
         )
 
     }

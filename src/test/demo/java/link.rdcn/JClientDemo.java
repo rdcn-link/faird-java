@@ -210,6 +210,12 @@ public class JClientDemo {
             System.out.println(row);
         }
 
+        //select可以通过列名得到指定列的数据
+        List<Row> selectedRows = convertToJavaList(dfCsv.select("id").collect());
+        System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过select操作后的数据帧--------------");
+        for (Row row : selectedRows.stream().limit(10).collect(Collectors.toList())) {
+            System.out.println(row);
+        }
 
         //自定义算子和DAG执行图对数据帧进行操作
         //构建数据源节点

@@ -12,7 +12,7 @@ import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 
 trait TestEmptyProvider{
@@ -23,7 +23,7 @@ trait TestEmptyProvider{
  * 用于不需要生成数据的测试的Provider
  */
 object TestEmptyProvider {
-  ConfigLoader.init(getResourcePath("/conf/faird.conf"))
+  ConfigLoader.init(getResourcePath(""))
 
   val outputDir = getOutputDir("test_output","output")
 
@@ -70,7 +70,8 @@ object TestEmptyProvider {
     val url = Option(getClass.getClassLoader.getResource(resourceName))
       .orElse(Option(getClass.getResource(resourceName)))
       .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
-    url.getPath
+    val nativePath: Path = Paths.get(url.toURI())
+    nativePath.toString
   }
 
   //生成Token

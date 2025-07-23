@@ -16,8 +16,8 @@ case class FairdConfig(
                         useTLS: Boolean,
                         certPath: String,
                         keyPath: String,
-                        logggingFileName: String,
-                        logggingLevelRoot: String,
+                        loggingFileName: String,
+                        loggingLevelRoot: String,
                         loggingPatternConsole: String,
                         loggingPatternFile: String
                       )
@@ -32,18 +32,18 @@ object FairdConfig {
 
     FairdConfig(
       fairdHome = getOrDefault(ConfigKeys.FAIRD_HOME, ""),
-      hostName = getOrDefault("faird.host.name", ""),
-      hostTitle = getOrDefault("faird.host.title", ""),
-      hostPosition = getOrDefault("faird.host.position","0.0.0.0"),
-      hostDomain = getOrDefault("faird.host.domain",""),
-      hostPort = getOrDefault("faird.host.port","3101").toInt,
-      useTLS = getOrDefault("faird.tls.enabled", "false").toBoolean,
-      certPath = getOrDefault("faird.tls.cert.path","server.crt"),
-      keyPath = getOrDefault("faird.tls.key.path,", "server.pem"),
-      logggingFileName = getOrDefault("logging.file.name","./access.log"),
-      logggingLevelRoot = getOrDefault("logging.level.root","INFO"),
-      loggingPatternConsole = getOrDefault("logging.pattern.console","%d{HH:mm:ss} %-5level %logger{36} - %msg%n"),
-      loggingPatternFile = getOrDefault("logging.pattern.file","%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n")
+      hostName = getOrDefault(ConfigKeys.FAIRD_HOST_NAME, ""),
+      hostTitle = getOrDefault(ConfigKeys.FAIRD_HOST_TITLE, ""),
+      hostPosition = getOrDefault(ConfigKeys.FAIRD_HOST_POSITION,"0.0.0.0"),
+      hostDomain = getOrDefault(ConfigKeys.FAIRD_HOST_DOMAIN,""),
+      hostPort = getOrDefault(ConfigKeys.FAIRD_HOST_PORT,"3101").toInt,
+      useTLS = getOrDefault(ConfigKeys.FAIRD_TLS_ENABLED, "false").toBoolean,
+      certPath = getOrDefault(ConfigKeys.FAIRD_TLS_CERT_PATH,"server.crt"),
+      keyPath = getOrDefault(ConfigKeys.FAIRD_TLS_KEY_PATH, "server.pem"),
+      loggingFileName = getOrDefault(ConfigKeys.LOGGING_FILE_NAME,"./access.log"),
+      loggingLevelRoot = getOrDefault(ConfigKeys.LOGGING_LEVEL_ROOT,"INFO"),
+      loggingPatternConsole = getOrDefault(ConfigKeys.LOGGING_PATTERN_CONSOLE,"%d{HH:mm:ss} %-5level %logger{36} - %msg%n"),
+      loggingPatternFile = getOrDefault(ConfigKeys.LOGGING_PATTERN_FILE,"%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n")
     )
   }
 }

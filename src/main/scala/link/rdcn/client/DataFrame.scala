@@ -5,6 +5,8 @@ import link.rdcn.dftree._
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{Row, StructType}
 
+import scala.annotation.varargs
+
 /**
  * @Author renhao
  * @Description:
@@ -18,6 +20,7 @@ trait DataFrame {
 
   def filter(f: Row => Boolean): DataFrame
 
+  @varargs
   def select(columns: String*): DataFrame
 
   def limit(n: Int): DataFrame

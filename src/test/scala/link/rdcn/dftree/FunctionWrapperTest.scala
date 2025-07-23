@@ -1,6 +1,7 @@
 package link.rdcn.dftree
 
 import link.rdcn.ConfigLoader
+import link.rdcn.TestEmptyProvider.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{JavaCode, PythonBin}
 import link.rdcn.struct.Row
 import org.json.JSONObject
@@ -56,7 +57,7 @@ class FunctionWrapperTest {
 
   @Test
   def pythonBinTest(): Unit = {
-    ConfigLoader.init(getClass.getClassLoader.getResource("").getPath)
+    ConfigLoader.init(getResourcePath(""))
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
     val jo = new JSONObject()
     jo.put("type", LangType.PYTHON_BIN.name)
