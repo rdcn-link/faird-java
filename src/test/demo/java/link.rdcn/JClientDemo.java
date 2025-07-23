@@ -2,7 +2,7 @@ package link.rdcn;
 
 import link.rdcn.client.Blob;
 import link.rdcn.client.DataFrame;
-import link.rdcn.client.RemoteDataFrameImpl;
+import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.DAGNode;
 import link.rdcn.client.dag.SourceNode;
@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @Author Yomi
@@ -85,13 +86,13 @@ public class JClientDemo {
         Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
         System.out.println(serverResourceInfo.get(ResourceKeys.CPU_CORES()));
         System.out.println(serverResourceInfo.get(ResourceKeys.CPU_USAGE_PERCENT()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_MEMORY_MAX()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_TOTAL_MEMORY()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_USED_MEMORY()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_FREE_MEMORY()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_TOTAL_MEMORY()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_USE_MEMORY()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_FREE_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_FREE_MEMORY_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_USED_MEMORY_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_TOTAL_MEMORY_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_MAX_MEMORY_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_MEMORY_FREE_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_MEMORY_USED_MB()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB()));
 
         //打开非结构化数据的文件列表数据帧
         RemoteDataFrame dfBin = dc.open("/bin");
@@ -125,7 +126,7 @@ public class JClientDemo {
             //通过下标访问
             Blob blob = (Blob) row.get(6);
             //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
-            //offer用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
+            //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
             blob.offerStream(inputStream -> {
                 try {
                     FileOutputStream outputStream = new FileOutputStream(Paths.get("src", "test", "demo", "data", "output", name).toFile());
@@ -178,9 +179,9 @@ public class JClientDemo {
                 return SerializableFunction.super.andThen(g);
             }
         };
-        List<Row> rowsMap = convertToJavaList(dfCsv.limit(3).map(mapFunction).collect());
+        List<Row> rowsMap = convertToJavaList(dfCsv.map(mapFunction).collect());
         System.out.println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------");
-        for (Row row : rowsMap) {
+        for (Row row : rowsMap.stream().limit(10).collect(Collectors.toList())) {
             System.out.println(row);
         }
 

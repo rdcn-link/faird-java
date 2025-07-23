@@ -90,13 +90,13 @@ class ClientAPITest extends TestBase {
     val allKeys: Set[String] = Set(
       CPU_CORES,
       CPU_USAGE_PERCENT,
-      JVM_MEMORY_MAX,
-      JVM_FREE_MEMORY,
-      JVM_TOTAL_MEMORY,
-      JVM_USED_MEMORY,
-      SYSTEM_TOTAL_MEMORY,
-      SYSTEM_FREE_MEMORY,
-      SYSTEM_USE_MEMORY
+      JVM_TOTAL_MEMORY_MB,
+      JVM_FREE_MEMORY_MB,
+      JVM_USED_MEMORY_MB,
+      JVM_MAX_MEMORY_MB,
+      SYSTEM_MEMORY_USED_MB,
+      SYSTEM_MEMORY_FREE_MB,
+      SYSTEM_MEMORY_TOTAL_MB
     )
     val hostInfo = dc.getHostInfo
     allKeys.foreach(key =>{

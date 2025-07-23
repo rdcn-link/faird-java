@@ -160,7 +160,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
              "$FAIRD_HOST_PORT": "${ConfigLoader.fairdConfig.hostPort}",
              "$FAIRD_TLS_ENABLED": "${ConfigLoader.fairdConfig.useTLS}",
              "$FAIRD_TLS_CERT_PATH": "${ConfigLoader.fairdConfig.certPath}",
-             "$FAIRD_TLS_KEY_PATH: "${ConfigLoader.fairdConfig.keyPath}",
+             "$FAIRD_TLS_KEY_PATH": "${ConfigLoader.fairdConfig.keyPath}",
              "$LOGGING_FILE_NAME": "${ConfigLoader.fairdConfig.logggingFileName}",
              "$LOGGING_LEVEL_ROOT": "${ConfigLoader.fairdConfig.logggingLevelRoot}",
              "$LOGGING_PATTERN_CONSOLE": "${ConfigLoader.fairdConfig.loggingPatternConsole}",
@@ -310,14 +310,14 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
        |    "cpu.cores"        : "$availableProcessors",
        |    "cpu.usage.percent" : "$cpuLoadPercent%",
        |
-       |    "jvm.memory.max" : "$maxMemory MB",
-       |    "jvm.memory.total" : "$totalMemory MB",
-       |    "jvm.memory.used" : "$usedMemory MB",
-       |    "jvm.memory.free" : "$freeMemory MB",
+       |    "jvm.memory.max.mb" : "$maxMemory MB",
+       |    "jvm.memory.total.mb" : "$totalMemory MB",
+       |    "jvm.memory.used.mb" : "$usedMemory MB",
+       |    "jvm.memory.free.mb" : "$freeMemory MB",
        |
-       |    "system.memory.total" : "$systemMemoryTotal MB",
-       |    "system.memory.used" : "$systemMemoryUsed MB",
-       |    "system.memory.free" : "$systemMemoryFree MB"
+       |    "system.memory.total.mb" : "$systemMemoryTotal MB",
+       |    "system.memory.used.mb" : "$systemMemoryUsed MB",
+       |    "system.memory.free.mb" : "$systemMemoryFree MB"
        |
        |}
        |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")

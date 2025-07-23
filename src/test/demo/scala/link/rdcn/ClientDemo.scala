@@ -24,7 +24,7 @@ object ClientDemo {
 
   def main(args: Array[String]): Unit = {
     // 通过用户名密码非加密连接FairdClient
-    // FairdClient dc = FairdClient.connect("dacp://localhost:3101", new UsernamePassword("admin@instdb.cn", "admin001"));
+    // FairdClient dc = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
     // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
     val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
     // 匿名连接FairdClient
@@ -66,22 +66,22 @@ object ClientDemo {
     val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
     println(serverResourceInfo(ResourceKeys.CPU_CORES))
     println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
-    println(serverResourceInfo(ResourceKeys.JVM_MEMORY_MAX))
-    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY))
-    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY))
-    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY))
-    println(serverResourceInfo(ResourceKeys.SYSTEM_TOTAL_MEMORY))
-    println(serverResourceInfo(ResourceKeys.SYSTEM_USE_MEMORY))
-    println(serverResourceInfo(ResourceKeys.SYSTEM_FREE_MEMORY))
+    println(serverResourceInfo(ResourceKeys.JVM_MAX_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_FREE_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_USED_MB))
 
 
     //打开非结构化数据的文件列表数据帧
-    val dfBin: RemoteDataFrame = dc.open("/bin")
+    val dfBin: DataFrame = dc.open("/bin")
 
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
     println("--------------打印数据帧Document--------------")
-    val dataFrameDocument: DataFrameDocument = dfBin.getDocument
+    val dataFrameDocument: DataFrameDocument = dfBin.asInstanceOf[RemoteDataFrame].getDocument
     val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
     val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
     val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
@@ -93,9 +93,10 @@ object ClientDemo {
     println(dfBin.schema)
 
     //获得数据帧大小
-    println("--------------打印数据帧大小--------------")
-    val dataFrameRowCount: Long = dfBin.getStatistics.rowCount
-    val dataFrameSize: Long = dfBin.getStatistics.byteSize
+    println("--------------打印数据帧行数和大小--------------")
+    val df = dfBin.asInstanceOf[RemoteDataFrame]
+    val dataFrameRowCount: Long = df.getStatistics.rowCount
+    val dataFrameSize: Long = df.getStatistics.byteSize
     println(dataFrameRowCount)
     println(dataFrameSize)
 
@@ -108,7 +109,7 @@ object ClientDemo {
       //通过下标访问
       val blob: Blob = row.get(6).asInstanceOf[Blob]
       //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
-      //offer用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
+      //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
       val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
       blob.offerStream(inputStream => {
         val outputStream = new FileOutputStream(path.toFile)
@@ -133,9 +134,9 @@ object ClientDemo {
     csvRows.foreach(println)
 
     //编写map算子的匿名函数对数据帧进行操作
-    val rowsMap: Seq[Row] = dfCsv.limit(3).map(x => Row(x._1)).collect()
+    val rowsMap: Seq[Row] = dfCsv.map(x => Row(x._1)).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------")
-    rowsMap.foreach(println)
+    rowsMap.take(3).foreach(println)
 
     //编写filter算子的匿名函数对数据帧进行操作
     val rowsFilter: Seq[Row] = dfCsv.filter({ row =>
@@ -144,10 +145,11 @@ object ClientDemo {
     }).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 经过filter操作后的数据帧--------------")
     rowsFilter.foreach(println)
+
     //自定义算子和DAG执行图对数据帧进行操作
     //构建数据源节点
-    val sourceNodeA: DAGNode = new SourceNode("/csv/data_1.csv")
-    val sourceNodeB: DAGNode = new SourceNode("/csv/data_2.csv")
+    val sourceNodeA: DAGNode = SourceNode("/csv/data_1.csv")
+    val sourceNodeB: DAGNode = SourceNode("/csv/data_2.csv")
 
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1
@@ -166,23 +168,14 @@ object ClientDemo {
       })
     }
 
-
-    //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
-    //至少一个节点
-    val nodesMapSingle: Map[String, DAGNode] = Map(
-      "A" -> sourceNodeA
-    )
-    //构建边Map，可以没有边，对应不进行操作
-    val edgesMapMin: Map[String, Seq[String]] = Map.empty
-    //通过边和节点Map构建DAG执行图
-    val transformerDAGMin: TransformerDAG = TransformerDAG(nodesMapSingle, edgesMapMin)
-    //执行DAG图，返回一个数据帧列表
-    val minDfs: Seq[DataFrame] = dc.execute(transformerDAGMin)
+    //对于线性依赖可以通过pipe直接构造DAG
+    val transformerDAGSeq: TransformerDAG = TransformerDAG.pipe(sourceNodeA)
+    val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGSeq)
     println("--------------打印最小DAG直接获取的数据帧--------------")
-    minDfs.foreach(df => df.foreach(row => println(row))
+    minDAGDfs.foreach(df => df.foreach(row => println(row))
     )
 
-
+    //也可以通过构建边Map和节点Map构建DAG执行图
     //构建DAG执行图A -> B ，A是数据源节点B是自定义filter算子
     val nodesMap: Map[String, DAGNode] = Map(
       "A" -> sourceNodeA,
@@ -200,12 +193,7 @@ object ClientDemo {
     simpleDfs.foreach(df => df.foreach(row => println(row))
     )
 
-    //对于线性依赖也可以通过fromSeq构造DAG
-    val transformerDAGSeq: TransformerDAG = TransformerDAG.pipe(SourceNode("/csv/data_1.csv"))
-    val seqDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGSeq)
-    println("--------------打印执行直接构造线性依赖DAG后的数据帧--------------")
-    seqDAGDfs.foreach(df => df.foreach(row => println(row))
-    )
+
 
     //可以构建更复杂的多数据源节点和操作的DAG
     //多对一
