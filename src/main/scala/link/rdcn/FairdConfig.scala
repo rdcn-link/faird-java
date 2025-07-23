@@ -7,6 +7,7 @@ package link.rdcn
  * @Modified By:
  */
 case class FairdConfig(
+                        fairdHome: String,
                         hostName: String,
                         hostTitle: String,
                         hostPosition: String,
@@ -30,6 +31,7 @@ object FairdConfig {
         .getOrElse(default)
 
     FairdConfig(
+      fairdHome = getOrDefault(ConfigKeys.FAIRD_HOME, ""),
       hostName = getOrDefault("faird.host.name", ""),
       hostTitle = getOrDefault("faird.host.title", ""),
       hostPosition = getOrDefault("faird.host.position","0.0.0.0"),

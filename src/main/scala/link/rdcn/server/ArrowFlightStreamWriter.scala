@@ -25,7 +25,7 @@ case class ArrowFlightStreamWriter(dataFrame: DataFrameStream) {
       stream.flatMap(row => {
         val file = row.getAs[File](6).get
         DataUtils.readFileInChunks(file).map(bytes => {
-          (row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5), bytes)
+          (row._1, row._2, row._3, row._4, row._5, row._6, bytes)
         })
       }).map(Row.fromTuple(_))
     }else stream

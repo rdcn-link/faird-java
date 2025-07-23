@@ -160,7 +160,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
              "$FAIRD_HOST_PORT": "${ConfigLoader.fairdConfig.hostPort}",
              "$FAIRD_TLS_ENABLED": "${ConfigLoader.fairdConfig.useTLS}",
              "$FAIRD_TLS_CERT_PATH": "${ConfigLoader.fairdConfig.certPath}",
-             "$FAIRD_TLS_KEY_PATH": "${ConfigLoader.fairdConfig.keyPath}",
+             "$FAIRD_TLS_KEY_PATH: "${ConfigLoader.fairdConfig.keyPath}",
              "$LOGGING_FILE_NAME": "${ConfigLoader.fairdConfig.logggingFileName}",
              "$LOGGING_LEVEL_ROOT": "${ConfigLoader.fairdConfig.logggingLevelRoot}",
              "$LOGGING_PATTERN_CONSOLE": "${ConfigLoader.fairdConfig.loggingPatternConsole}",

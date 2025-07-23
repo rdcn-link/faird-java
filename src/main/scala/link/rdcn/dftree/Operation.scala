@@ -1,12 +1,15 @@
 package link.rdcn.dftree
 
-import jep.SharedInterpreter
-import link.rdcn.dftree.FunctionWrapper.{JavaBin, PythonCode}
+import link.rdcn.dftree.FunctionWrapper.{JavaBin, JavaCode, PythonBin, PythonCode}
 import link.rdcn.struct.{DataFrameStream, Row}
+import link.rdcn.util.AutoClosingIterator
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
+import java.util.concurrent.Executors
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
  * @Author renhao
@@ -67,14 +70,10 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
         val stream = in.stream.map(functionWrapper.applyToInput(_, None)).map(_.asInstanceOf[Row])
         getDataFrameByStream(stream)
       case PythonCode(pythonCode, batchSize) =>
-        val interp = new SharedInterpreter()
-        try {
-          val in = input.execute(dataFrame)
-          val stream = in.stream.map(functionWrapper.applyToInput(_, Some(interp))).map(_.asInstanceOf[Row])
-          getDataFrameByStream(stream)
-        } finally {
-          interp.close()
-        }
+        val interp = JepInterpreterManager.getInterpreter
+        val in = input.execute(dataFrame)
+        val stream = in.stream.map(functionWrapper.applyToInput(_, Some(interp))).map(_.asInstanceOf[Row])
+        getDataFrameByStream(stream)
     }
   }
 }
@@ -94,14 +93,10 @@ case class FilterOp(functionWrapper: FunctionWrapper, input: Operation) extends 
         val stream = in.stream.filter(functionWrapper.applyToInput(_, None).asInstanceOf[Boolean])
         DataFrameStream(in.schema, stream)
       case PythonCode(pythonCode, batchSize) =>
-        val interp = new SharedInterpreter()
-        try {
-          val in = input.execute(dataFrame)
-          val stream = in.stream.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
-          DataFrameStream(in.schema, stream)
-        } finally {
-          interp.close()
-        }
+        val interp = JepInterpreterManager.getInterpreter
+        val in = input.execute(dataFrame)
+        val stream = in.stream.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
+        DataFrameStream(in.schema, stream)
     }
   }
 }
@@ -146,6 +141,8 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
 
 case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) extends Operation {
 
+  private val singleThreadEc = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
+
   override def operationType: String = "TransformerNode"
 
   override def toJson: JSONObject = new JSONObject().put("type", operationType)
@@ -158,15 +155,24 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         val in = input.execute(dataFrame)
         val stream = functionWrapper.applyToInput(in.stream, None).asInstanceOf[Iterator[Row]]
         getDataFrameByStream(stream)
+      case JavaCode(javaCode, className) =>
+        val in = input.execute(dataFrame)
+        val stream = functionWrapper.applyToInput(in.stream, None).asInstanceOf[Iterator[Row]]
+        getDataFrameByStream(stream)
       case PythonCode(pythonCode, batchSize) =>
-        val interp = new SharedInterpreter()
-        try {
+        val jep = JepInterpreterManager.getInterpreter
+        val in = input.execute(dataFrame)
+        val stream: Iterator[Row] = functionWrapper.applyToInput(in.stream, Some(jep)).asInstanceOf[Iterator[Row]]
+        getDataFrameByStream(stream)
+      case PythonBin(functionID, functionName, whlPath, batchSize) =>
+        Await.result(Future {
+          val jep = JepInterpreterManager.getJepInterpreter(functionID, whlPath)
           val in = input.execute(dataFrame)
-          val stream = functionWrapper.applyToInput(in.stream, Some(interp)).asInstanceOf[Iterator[Row]]
+          val stream: AutoClosingIterator[Row] = AutoClosingIterator(
+            functionWrapper.applyToInput(in.stream, Some(jep)).asInstanceOf[Iterator[Row]]
+          )(jep.close())
           getDataFrameByStream(stream)
-        } finally {
-          interp.close()
-        }
+        }(singleThreadEc), Duration.Inf)
     }
   }
 }

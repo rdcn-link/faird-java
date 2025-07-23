@@ -1,15 +1,12 @@
 package link.rdcn
 
-import java.io.FileInputStream
+import java.io.{File, FileInputStream, InputStreamReader}
 import java.util.Properties
-
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
 import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilder
-
-import java.io.InputStreamReader
 /**
  * @Author renhao
  * @Description:
@@ -22,8 +19,9 @@ object ConfigLoader {
   private var props: Properties = _
   var fairdConfig: FairdConfig = _
 
-  def init(configFilePath: String): Unit = synchronized {
-    props = loadProperties(configFilePath)
+  def init(fairdHome: String): Unit = synchronized {
+    props = loadProperties(s"$fairdHome"+File.separator+"conf"+File.separator+"faird.conf")
+    props.setProperty(ConfigKeys.FAIRD_HOME, fairdHome)
     fairdConfig = FairdConfig.load(props)
     initLog4j(props)
   }

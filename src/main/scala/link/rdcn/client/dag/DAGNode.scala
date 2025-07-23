@@ -13,6 +13,21 @@ trait DAGNode
 trait UDFFunction extends DAGNode with Serializable {
   def transform(iter: Iterator[Row]): Iterator[Row]
 }
+case class PythonWhlFunctionNode(
+                            functionId: String,
+                            functionName: String,
+                            whlPath: String
+                            ) extends DAGNode
+case class JavaCodeNode(
+                   javaCode: String,
+                   className: String
+                   ) extends DAGNode
+
+case class PythonCodeNode(
+                     code: String
+                     ) extends DAGNode
+
+
 
 //只为DAG执行提供dataFrameName
 case class SourceNode (dataFrameName: String) extends DAGNode

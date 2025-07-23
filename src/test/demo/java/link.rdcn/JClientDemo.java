@@ -2,7 +2,7 @@ package link.rdcn;
 
 import link.rdcn.client.Blob;
 import link.rdcn.client.DataFrame;
-import link.rdcn.client.RemoteDataFrame;
+import link.rdcn.client.RemoteDataFrameImpl;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.DAGNode;
 import link.rdcn.client.dag.SourceNode;

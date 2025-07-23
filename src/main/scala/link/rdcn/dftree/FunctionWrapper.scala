@@ -1,13 +1,14 @@
 package link.rdcn.dftree
 
-import jep.SharedInterpreter
+import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.struct.Row
 import org.json.JSONObject
+import org.codehaus.janino.SimpleCompiler
 
 import java.util
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 
 
 /**
@@ -19,7 +20,7 @@ import scala.collection.JavaConverters.asScalaBufferConverter
 
 sealed trait FunctionWrapper {
   def toJson: JSONObject
-  def applyToInput(input: Any, interpOpt: Option[SharedInterpreter] = None): Any
+  def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any
 }
 
 object FunctionWrapper {
@@ -30,9 +31,9 @@ object FunctionWrapper {
       jo.put("type", LangType.PYTHON_CODE.name)
       jo.put("code", code)
     }
-    override def toString(): String = "PythonCode Function"
+    override def toString(): String = "PythonCodeNode Function"
 
-    override def applyToInput(input: Any, interpOpt: Option[SharedInterpreter]): Any = {
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
       val interp = interpOpt.getOrElse(throw new IllegalArgumentException("Python interpreter is required"))
       input match {
         case row: Row =>
@@ -100,7 +101,7 @@ object FunctionWrapper {
       jo.put("serializedBase64", serializedBase64)
     }
     override def toString(): String = "Java_bin Function"
-    override def applyToInput(input: Any, interpOpt: Option[SharedInterpreter] = None): Any = {
+    override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       input match {
         case row: Row               => genericFunctionCall.transform(row)
         case (r1: Row, r2: Row)     => genericFunctionCall.transform((r1, r2))
@@ -110,11 +111,65 @@ object FunctionWrapper {
     }
   }
 
+  case class JavaCode(javaCode: String, className: String) extends FunctionWrapper {
+
+    override def toJson: JSONObject = {
+      val jo = new JSONObject()
+      jo.put("type", LangType.JAVA_CODE.name)
+      jo.put("javaCode", javaCode)
+      jo.put("className", className)
+    }
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+      input match {
+        case iter: Iterator[Row] => val
+          compiler = new SimpleCompiler()
+          compiler.cook(javaCode)
+          val clazz = compiler.getClassLoader.loadClass(className)
+          val instance = clazz.getDeclaredConstructor().newInstance()
+          val method = clazz.getMethod("transform", classOf[Iterator[Row]])
+          method.invoke(instance, input.asInstanceOf[AnyRef])
+        case other =>  throw new IllegalArgumentException(s"Unsupported input: $other")
+      }
+
+    }
+  }
+
+  case class PythonBin(functionID: String, functionName: String, whlPath: String, batchSize: Int = 100) extends FunctionWrapper {
+
+    override def toJson: JSONObject = {
+      val jo = new JSONObject()
+      jo.put("type", LangType.PYTHON_BIN.name)
+      jo.put("functionId", functionID)
+      jo.put("functionName", functionName)
+      jo.put("whlPath", whlPath)
+    }
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+      val jep = interpOpt.getOrElse(throw new IllegalArgumentException("Python interpreter is required"))
+      jep.eval("import link.rdcn.operators.registry as registry")
+      jep.set("operator_name", functionName)
+      jep.eval("func = registry.get_operator(operator_name)")
+      input match {
+        case rows: Iterator[Row] =>
+          rows.grouped(batchSize).flatMap(rowSeq => {
+            jep.set("input_rows", rowSeq.map(_.toSeq.asJava).asJava)
+            jep.eval("output_rows = func(input_rows)")
+            val result = jep.getValue("output_rows").asInstanceOf[java.util.List[java.util.List[Object]]]
+            result.asScala.map(Row.fromJavaList(_))
+          })
+        case other => throw new IllegalArgumentException(s"Unsupported input: $other")
+      }
+    }
+  }
+
   def apply(jsonObj: JSONObject): FunctionWrapper = {
     val funcType = jsonObj.getString("type")
     funcType match {
       case LangType.PYTHON_CODE.name => PythonCode(jsonObj.getString("code"))
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
+      case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionId"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
+      case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
     }
   }
 

@@ -142,7 +142,10 @@ object DataUtils extends Logging{
     if(stream.isEmpty) return DataFrameStream(StructType.empty, Iterator.empty)
     val row = stream.next()
     val structType = inferSchemaFromRow(row)
-    DataFrameStream(structType, Seq(row).iterator ++ stream)
+    stream match {
+      case iter: AutoClosingIterator[Row] => DataFrameStream(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(iter.close))
+      case _ => DataFrameStream(structType, Seq(row).iterator ++ stream)
+    }
   }
 
 //  /** 推断一个值的类型 */

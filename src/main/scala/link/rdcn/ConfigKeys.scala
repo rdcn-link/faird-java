@@ -8,6 +8,8 @@ package link.rdcn
  */
 object ConfigKeys {
 
+  val FAIRD_HOME = "faird.home"
+
   // === 自定义配置项 ===
   val FAIRD_HOST_NAME       = "faird.host.name"
   val FAIRD_HOST_TITLE      = "faird.host.title"
