@@ -1,12 +1,13 @@
+package link.rdcn;
+
 /**
  * @Author Yomi
  * @Description:
  * @Data 2025/7/22 16:02
  * @Modified By:
  */
-package link.rdcn;
 
-import link.rdcn.client.DataFrame;
+
 import link.rdcn.client.FairdClient;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.dag.TransformerDAG;
@@ -53,7 +54,7 @@ public class JFairdClient {
         fairdClient.close();
     }
 
-    public List<DataFrame> execute(TransformerDAG transformerDAG) {
+    public List<link.rdcn.struct.DataFrame> execute(TransformerDAG transformerDAG) {
         return convertToJavaList(fairdClient.execute(transformerDAG));
     }
 

@@ -3,7 +3,6 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
-import link.rdcn.client.DataFrame
 import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler

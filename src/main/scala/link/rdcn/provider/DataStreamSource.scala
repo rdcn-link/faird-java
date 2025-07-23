@@ -1,6 +1,7 @@
 package link.rdcn.provider
 
 import link.rdcn.struct.{Row, StructType}
+import link.rdcn.util.AutoClosingIterator
 /**
  * @Author renhao
  * @Description:
@@ -11,7 +12,7 @@ import link.rdcn.struct.{Row, StructType}
 trait DataStreamSource {
   def rowCount: Long
   def schema: StructType
-  def iterator: Iterator[Row]
+  def iterator: AutoClosingIterator[Row]
 }
 
 

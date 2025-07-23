@@ -4,7 +4,7 @@ import link.rdcn.Logging
 
 import scala.collection.mutable
 import link.rdcn.struct.ValueType._
-import link.rdcn.struct.{Column, DataFrameStream, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, LocalDataFrame, Row, StructType, ValueType}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
@@ -138,13 +138,13 @@ object DataUtils extends Logging{
     StructType.fromSeq(columns)
   }
 
-  def getDataFrameByStream(stream: Iterator[Row]): DataFrameStream = {
-    if(stream.isEmpty) return DataFrameStream(StructType.empty, Iterator.empty)
+  def getDataFrameByStream(stream: Iterator[Row]): LocalDataFrame = {
+    if(stream.isEmpty) return LocalDataFrame(StructType.empty, AutoClosingIterator(Iterator.empty)(()=>()))
     val row = stream.next()
     val structType = inferSchemaFromRow(row)
     stream match {
-      case iter: AutoClosingIterator[Row] => DataFrameStream(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(iter.close))
-      case _ => DataFrameStream(structType, Seq(row).iterator ++ stream)
+      case iter: AutoClosingIterator[Row] => LocalDataFrame(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(iter.close))
+      case _ => LocalDataFrame(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(()=>()))
     }
   }
 
@@ -314,10 +314,9 @@ object DataUtils extends Logging{
     source.getLines()
   }
 
-  //TODO source 资源及时释放
-  def getFileLines(file: File): Iterator[String] = {
+  def getFileLines(file: File): AutoClosingIterator[String] = {
     val source = Source.fromFile(file)
-    source.getLines()
+    AutoClosingIterator(source.getLines())(source.close())
   }
 
   def closeFileSource(filePath: String): Unit = {

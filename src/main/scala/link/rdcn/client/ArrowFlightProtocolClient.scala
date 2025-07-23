@@ -6,7 +6,7 @@ import link.rdcn.SimpleSerializer
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
-import link.rdcn.util.DataUtils
+import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
@@ -136,7 +136,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     flightClient.close()
   }
 
-  def getRows(dataFrameName: String, operationNode: String): Iterator[Row] = {
+  def getRows(dataFrameName: String, operationNode: String): AutoClosingIterator[Row] = {
     //上传参数
     val result = flightClient.doAction(new Action(s"putRequest:$dataFrameName:${userToken.orNull}", operationNode.getBytes("UTF-8"))).asScala
     result.hasNext
@@ -174,7 +174,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     }
     val flatIter: Iterator[Seq[Any]] = iter.flatMap(rows => rows)
 
-    if (!isBinaryColumn) {
+    val stream = if (!isBinaryColumn) {
       // 最后一列不是binary类型，直接返回Row(Seq[Any])
       flatIter.map(seq => Row.fromSeq(seq))
     } else {
@@ -272,6 +272,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
         }
       }
     }
+    AutoClosingIterator(stream)()
   }
 
   private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {

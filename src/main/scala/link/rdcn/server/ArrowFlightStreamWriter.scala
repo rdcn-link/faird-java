@@ -1,6 +1,6 @@
 package link.rdcn.server
 
-import link.rdcn.struct.{DataFrameStream, Row}
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
 import link.rdcn.struct.ValueType.BinaryType
 import link.rdcn.util.DataUtils
 import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
@@ -15,20 +15,21 @@ import scala.collection.JavaConverters.asScalaBufferConverter
  * @Data 2025/7/8 14:22
  * @Modified By:
  */
-case class ArrowFlightStreamWriter(dataFrame: DataFrameStream) {
+case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
 
   val schema = dataFrame.schema
-  val stream = dataFrame.stream
 
   def process(root: VectorSchemaRoot, batchSize: Int): Iterator[ArrowRecordBatch] = {
     val streamSplitChunk: Iterator[Row] = if(schema.contains(BinaryType)){
-      stream.flatMap(row => {
-        val file = row.getAs[File](6).get
-        DataUtils.readFileInChunks(file).map(bytes => {
-          (row._1, row._2, row._3, row._4, row._5, row._6, bytes)
-        })
-      }).map(Row.fromTuple(_))
-    }else stream
+      dataFrame.mapIterator[Iterator[Row]](stream => {
+        stream.flatMap(row => {
+          val file = row.getAs[File](6).get
+          DataUtils.readFileInChunks(file).map(bytes => {
+            (row._1, row._2, row._3, row._4, row._5, row._6, bytes)
+          })
+        }).map(Row.fromTuple(_))
+      })
+    }else dataFrame.mapIterator[Iterator[Row]](iter => iter)
     streamSplitChunk.grouped(batchSize).map(rows => createDummyBatch(root, rows))
   }
 
