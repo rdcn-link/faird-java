@@ -1,6 +1,6 @@
 package link.rdcn.client.dag
 
-import link.rdcn.struct.Row
+import link.rdcn.struct.{DataFrame, Row}
 
 /**
  * @Author renhao
@@ -11,7 +11,7 @@ import link.rdcn.struct.Row
 trait DAGNode
 
 trait UDFFunction extends DAGNode with Serializable {
-  def transform(iter: Iterator[Row]): Iterator[Row]
+  def transform(dataFrame: DataFrame): DataFrame
 }
 case class PythonWhlFunctionNode(
                             functionId: String,

@@ -80,8 +80,8 @@ class FairdClient private(
     var operation: Operation = SourceOp()
     path.foreach(node => node match {
       case f: UDFFunction =>
-        val genericFunctionCall = IteratorRowCall(new SerializableFunction[Iterator[Row], Iterator[Row]] {
-          override def apply(v1: Iterator[Row]): Iterator[Row] = f.transform(v1)
+        val genericFunctionCall = DataFrameCall(new SerializableFunction[DataFrame, DataFrame] {
+          override def apply(v1: DataFrame): DataFrame = f.transform(v1)
         })
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
         operation = transformerNode
