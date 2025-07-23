@@ -12,6 +12,7 @@ import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
 import org.apache.commons.io.IOUtils;
+import org.apache.jena.rdf.model.Model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Function1;
@@ -60,8 +61,8 @@ public class JClientDemo {
 
         //获得指定数据集的元数据信息
         System.out.println("--------------打印数据集 csv 的元数据信息--------------");
-        String metaData = dc.getDataSetMetaData("csv");
-        System.out.println(metaData);
+        Model metaData = dc.getDataSetMetaData("csv");
+        metaData.write(System.out, "TURTLE");
 
         //获得host基本信息
         System.out.println("--------------打印host基本信息--------------");
@@ -136,11 +137,11 @@ public class JClientDemo {
                 }
             });
             //或者直接获取blob的内容，得到byte数组
-            byte[] bytes = blob.toBytes();
+            //由于offer后blob被消费，此时调用会抛出异常
+//            byte[] bytes = blob.toBytes();
             System.out.println(row);
             System.out.println(name);
             System.out.println(blob.size());
-            System.out.println(bytes.hashCode());
             return null;
         });
 
@@ -215,7 +216,7 @@ public class JClientDemo {
         DAGNode sourceNodeB = new SourceNode("/csv/data_2.csv");
         //构建自定义算子节点对象
         //自定义一个map算子 比如对第一列加1
-        DAGNode mapFilter = new UDFFunction() {
+        DAGNode udfMap = new UDFFunction() {
             @Override
             public Iterator<Row> transform(Iterator<Row> iter) {
                 return iter.map(row -> {
@@ -241,18 +242,18 @@ public class JClientDemo {
         javaNodesMapMin.put("A", sourceNodeA);
         //构建边Map，可以没有边，对应不进行操作
         Map<String, List<String>> javaEdgesMapMin = new HashMap<>();
-        //通过边和节点Map构建DAG执行图
-        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
-        //执行DAG图，返回一个数据帧列表
-        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
-        System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
-        for (DataFrame df : minDAGDfs) {
-            df.foreach(row ->
-            {
-                System.out.println(row);
-                return null;
-            });
-        }
+//        //通过边和节点Map构建DAG执行图
+//        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
+//        //执行DAG图，返回一个数据帧列表
+//        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
+//        System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
+//        for (DataFrame df : minDAGDfs) {
+//            df.foreach(row ->
+//            {
+//                System.out.println(row);
+//                return null;
+//            });
+//        }
 
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
         Map<String, DAGNode> javaNodesMap = new HashMap<>();
@@ -286,22 +287,72 @@ public class JClientDemo {
         }
 
         //可以构建更复杂的多数据源节点和操作的DAG
-        TransformerDAG transformerComplexDAG = TransformerDAG.apply(convertToScalaNodesMap(
+        //多对一
+        //  A   B
+        //   \ /
+        //    C
+        TransformerDAG transformerMergeDAG = TransformerDAG.apply(convertToScalaNodesMap(
                 new HashMap<String, DAGNode>() {{
             put("A", sourceNodeA);
             put("B", sourceNodeB);
-            put("C", mapFilter);
-            put("D", udfFilter);
+            put("C", udfFilter);
         }}), convertToScalaEdgesMap(
                 new HashMap<String, List<String>>() {{
             put("A", Arrays.asList("C"));
             put("B", Arrays.asList("C"));
-            put("C", Arrays.asList("D"));
         }}));
-        List<DataFrame> complexDfs = dc.execute(transformerComplexDAG);
-        System.out.println("--------------打印执行自定义复杂DAG后的数据帧--------------");
-        for (DataFrame df : complexDfs) {
+        List<DataFrame> mergeDfs = dc.execute(transformerMergeDAG);
+        System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
+        for (DataFrame df : mergeDfs) {
             df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+
+        //多对一
+        //   A
+        //  / \
+        // B   C
+        TransformerDAG transformerForkDAG = TransformerDAG.apply(convertToScalaNodesMap(
+                new HashMap<String, DAGNode>() {{
+                    put("A", sourceNodeA);
+                    put("B", udfMap);
+                    put("C", udfFilter);
+                }}), convertToScalaEdgesMap(
+                new HashMap<String, List<String>>() {{
+                    put("A", Arrays.asList("B","C"));
+                }}));
+        List<DataFrame> forkDfs = dc.execute(transformerForkDAG);
+        System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
+        for (DataFrame df : forkDfs) {
+            df.limit(3).foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+
+        //多对多
+        //   A  B
+        //   |/\|
+        //   C  D
+        TransformerDAG transformerComplexDAG = TransformerDAG.apply(convertToScalaNodesMap(
+                new HashMap<String, DAGNode>() {{
+                    put("A", sourceNodeA);
+                    put("B", sourceNodeB);
+                    put("C", udfFilter);
+                    put("D", udfMap);
+                }}), convertToScalaEdgesMap(
+                new HashMap<String, List<String>>() {{
+                    put("A", Arrays.asList("C","D"));
+                    put("B", Arrays.asList("C","D"));
+                }}));
+        List<DataFrame> complexDfs = dc.execute(transformerComplexDAG);
+        System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
+        for (DataFrame df : complexDfs) {
+            df.limit(3).foreach(row ->
             {
                 System.out.println(row);
                 return null;

@@ -17,7 +17,7 @@ import org.apache.arrow.vector._
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
-import java.io.File
+import java.io.{File, StringWriter}
 import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
@@ -138,9 +138,11 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       }
       case actionType if actionType.startsWith("getDataSetMetaData") => {
         val dsName = actionType.replace("getDataSetMetaData.","")
-        val model: Model = ModelFactory.createDefaultModel()
+        val model: Model = ModelFactory.createDefaultModel
         dataProvider.getDataSetMetaData(dsName, model)
-        getSingleStringStream(model.toString,listener)
+        val out: StringWriter  = new StringWriter()
+        model.write(out, "TTL")
+        getSingleStringStream(out.toString,listener)
       }
       case actionType if actionType.startsWith("getDataFrameSize") => {
         val dfName =  actionType.replace("getDataFrameSize.","")
@@ -186,18 +188,10 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         }
         getSingleStringStream(structType.toString,listener)
       }
-      case actionType if actionType.startsWith("getDataStat") => {
-        val dfName =  actionType.replace("getDataStat.","")
-        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-        var structType = dataStreamSource.schema
-        if(structType.isEmpty()){
-          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(dfName)
-          val iter = dataStreamSource.iterator
-          if(iter.hasNext){
-            structType = DataUtils.inferSchemaFromRow(iter.next())
-          }
-        }
-        getSingleStringStream(structType.toString,listener)
+      case actionType if actionType.startsWith("getStatistics") => {
+        val dfName =  actionType.replace("getStatistics.","")
+        val dataFrameStatisticsBytes = SimpleSerializer.serialize(dataProvider.getStatistics(dfName))
+        getArrayBytesStream(dataFrameStatisticsBytes,listener)
       }
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)

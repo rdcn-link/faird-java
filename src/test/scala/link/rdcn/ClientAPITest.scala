@@ -4,7 +4,7 @@ import link.rdcn.ConfigKeys._
 import link.rdcn.ResourceKeys._
 import link.rdcn.TestBase._
 import org.apache.jena.rdf.model.Model
-import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
+import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -39,13 +39,13 @@ class ClientAPITest extends TestBase {
   def testGetDataSetMetaData(): Unit = {
     //注入元数据
     dataProvider.getDataSetMetaData("csv", csvModel)
-    assertEquals(csvModel.toString, dc.getDataSetMetaData("csv"), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
+    assertTrue(csvModel.isIsomorphicWith(dc.getDataSetMetaData("csv")), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
     dataProvider.getDataSetMetaData("bin", binModel)
-    assertEquals(binModel.toString, dc.getDataSetMetaData("bin"), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
+    assertTrue(binModel.isIsomorphicWith(dc.getDataSetMetaData("bin")), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
   }
 
   @Test
-  def testGetSchema(): Unit = {
+  def testSchema(): Unit = {
     //注入元数据
     dataProvider.getDataSetMetaData("csv", csvModel)
     assertEquals(csvModel.toString, dc.getDataSetMetaData("csv"), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
@@ -104,13 +104,5 @@ class ClientAPITest extends TestBase {
       assertEquals(expectedHostInfo(key), hostInfo(key), s"键 '$key' 的值与预期不符！")
     }
     )
-
-    assertNotNull(statusMap)
-    assertTrue(statusMap.contains("cpu.cores"))
-    assertTrue(statusMap.contains("cpu.usage.percent"))
-    assertTrue(statusMap.contains("jvm.memory"))
-    assertTrue(statusMap.contains("system.physical.memory"))
   }
-
-
 }

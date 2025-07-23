@@ -4,6 +4,7 @@ import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
 import link.rdcn.struct.Row
 import link.rdcn.user.Credentials
+import org.apache.jena.rdf.model.Model
 
 import scala.collection.JavaConverters._
 
@@ -54,7 +55,7 @@ class FairdClient private(
   def listDataFrameNames(dsName: String): Seq[String] =
     protocolClient.listDataFrameNames(dsName)
 
-  def getDataSetMetaData(dsName: String): String =
+  def getDataSetMetaData(dsName: String): Model =
     protocolClient.getDataSetMetaData(dsName)
 
   def getDataFrameSize(dataFrameName: String): Long =

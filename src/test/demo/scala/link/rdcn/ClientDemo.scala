@@ -6,6 +6,7 @@ import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.Row
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
+import org.apache.jena.rdf.model.Model
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.FileOutputStream
@@ -41,8 +42,8 @@ object ClientDemo {
 
     //获得指定数据集的元数据信息
     println("--------------打印数据集 csv 的元数据信息--------------")
-    val metaData: String = dc.getDataSetMetaData("csv")
-    println(metaData)
+    val metaData: Model = dc.getDataSetMetaData("csv")
+    metaData.write(System.out, "TURTLE")
     //返回Model
 
     //获得host基本信息
@@ -73,7 +74,6 @@ object ClientDemo {
     println(serverResourceInfo(ResourceKeys.SystemMemoryTotal))
     println(serverResourceInfo(ResourceKeys.SystemMemoryUsed))
     println(serverResourceInfo(ResourceKeys.SystemMemoryFree))
-
 
 
     //打开非结构化数据的文件列表数据帧
@@ -134,7 +134,7 @@ object ClientDemo {
     csvRows.foreach(println)
 
     //编写map算子的匿名函数对数据帧进行操作
-    val rowsMap: Seq[Row] = dfCsv.limit(3).map(x=>Row(x._1)).collect()
+    val rowsMap: Seq[Row] = dfCsv.limit(3).map(x => Row(x._1)).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 经过map操作后的数据帧--------------")
     rowsMap.foreach(println)
 
@@ -203,24 +203,56 @@ object ClientDemo {
 
     //对于线性依赖也可以通过fromSeq构造DAG
     val transformerDAGSeq: TransformerDAG = TransformerDAG.fromSeq(nodesMap, Seq("A", "B"))
-    val seqDAGDfs: Seq[DataFrame] = dc.execute(transformerDAG)
+    val seqDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGSeq)
     println("--------------打印执行直接构造线性依赖DAG后的数据帧--------------")
     seqDAGDfs.foreach(df => df.foreach(row => println(row))
     )
 
     //可以构建更复杂的多数据源节点和操作的DAG
+    //多对一
+    //  A   B
+    //   \ /
+    //    C
+    val transformerMergeDAG: TransformerDAG = TransformerDAG(
+      Map("A" -> sourceNodeA,
+        "B" -> sourceNodeB,
+        "C" -> udfFilter),
+      Map("A" -> Seq("C"),
+        "B" -> Seq("C"))
+    )
+    val mergeDfs: Seq[DataFrame] = dc.execute(transformerMergeDAG)
+    println("--------------打印执行自定义DAG后的数据帧--------------")
+    mergeDfs.foreach(df => df.foreach(row => println(row)))
+
+    //多对一
+    //   A
+    //  / \
+    // B   C
+    val transformerForkDAG: TransformerDAG = TransformerDAG(
+      Map("A" -> sourceNodeA,
+        "B" -> udfMap,
+        "C" -> udfFilter),
+      Map("A" -> Seq("B"),
+        "A" -> Seq("C"))
+    )
+    val forkDfs: Seq[DataFrame] = dc.execute(transformerForkDAG)
+    println("--------------打印执行自定义DAG后的数据帧--------------")
+    forkDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+
+    //多对多
+    //   A  B
+    //   |/\|
+    //   C  D
     val transformerComplexDAG: TransformerDAG = TransformerDAG(
       Map("A" -> sourceNodeA,
         "B" -> sourceNodeB,
-        "C" -> udfMap,
+        "C" -> udfFilter,
         "D" -> udfFilter),
-      Map("A" -> Seq("C"),
-        "B" -> Seq("C"),
-        "C" -> Seq("D"))
+      Map("A" -> Seq("C,D"),
+        "B" -> Seq("C,D"))
     )
     val complexDfs: Seq[DataFrame] = dc.execute(transformerComplexDAG)
-    println("--------------打印执行自定义复杂DAG后的数据帧--------------")
-    complexDfs.foreach(df => df.foreach(row => println(row)))
+    println("--------------打印执行自定义DAG后的数据帧--------------")
+    complexDfs.foreach(df => df.limit(3).foreach(row => println(row)))
   }
-
 }

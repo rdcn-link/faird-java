@@ -1,9 +1,6 @@
 package link.rdcn;
 
-import link.rdcn.provider.DataFrameDocument;
-import link.rdcn.provider.DataProvider;
-import link.rdcn.provider.DataStreamSource;
-import link.rdcn.provider.DataStreamSourceFactory;
+import link.rdcn.provider.*;
 import link.rdcn.server.FairdServer;
 import link.rdcn.server.exception.AuthorizationException;
 import link.rdcn.struct.StructType;
@@ -163,8 +160,6 @@ public class JProviderTest {
              */
             @Override
             public DataStreamSource getDataStreamSource(String dataFrameName) {
-//                DataUtils.inferExcelSchema("");
-//                DataUtils.readExcelRows("", DataUtils.inferExcelSchema(""));
                 DirectorySource directorySource = new DirectorySource(false);
                 DataFrameInfo dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(null);
                 return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()),false);
@@ -175,15 +170,24 @@ public class JProviderTest {
              * DataFrameDocument用于封装DataFrameSchemaURL等元数据
              *
              * @param dataFrameName DataFrame的名称
-             * @return DataFrameSchema的URL
+             * @return DataFrameDocument
              */
             @Override
             public DataFrameDocument getDocument(String dataFrameName) {
                 return null;
             }
 
-
-
+            /**
+             * 根据DataFrame名称获取DataFrameStatistics
+             * DataFrameStatistics用于封装rowCount等DataFrame统计信息
+             * 此处示例为返回null，实际根据Provider需要实现
+             * @param dataFrameName
+             * @return DataFrameStatistics
+             */
+            @Override
+            public DataFrameStatistics getStatistics(String dataFrameName) {
+                return null;
+            }
 
 
             /**

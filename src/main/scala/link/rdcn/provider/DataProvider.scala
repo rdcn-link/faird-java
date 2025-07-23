@@ -45,4 +45,11 @@ trait DataProvider {
    * @return 数据帧的DataFrameDocument
    */
   def getDocument(dataFrameName: String): DataFrameDocument
+
+  /***
+   * 获取数据帧统计信息
+   * @param dataFrameName 数据帧名
+   * @return 数据帧的DataFrameStatistics
+   */
+  def getStatistics(dataFrameName: String): DataFrameStatistics
 }

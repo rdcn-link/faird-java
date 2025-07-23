@@ -11,6 +11,7 @@ import link.rdcn.client.FairdClient;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.dag.TransformerDAG;
 import link.rdcn.user.Credentials;
+import org.apache.jena.rdf.model.Model;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
@@ -36,7 +37,7 @@ public class JFairdClient {
         return convertToJavaList(fairdClient.listDataFrameNames(dsName));
     }
 
-    public String getDataSetMetaData(String dsName) {
+    public Model getDataSetMetaData(String dsName) {
         return fairdClient.getDataSetMetaData(dsName);
     }
 

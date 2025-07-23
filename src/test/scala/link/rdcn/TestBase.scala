@@ -3,7 +3,7 @@ package link.rdcn
 import link.rdcn.ConfigKeys._
 import link.rdcn.ErrorCode._
 import link.rdcn.client.FairdClient
-import link.rdcn.provider.{DataFrameDocument, DataProvider, DataStreamSource, DataStreamSourceFactory}
+import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics, DataProvider, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.server.FairdServer
 import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
@@ -366,16 +366,23 @@ abstract class DataProviderImpl extends DataProvider {
   //若使用config，客户端也需要初始化因为是不同进程
   override def getDocument(dataFrameName: String): DataFrameDocument = {
     new DataFrameDocument {
-      override def getSchemaURL(): Option[String] = {
-
-        Some("[SchemaURL defined by provider]")
-      }
+      override def getSchemaURL(): Option[String] = Some("[SchemaURL defined by provider]")
 
       override def getColumnURL(colName: String): Option[String] = Some("[ColumnURL defined by provider]")
 
       override def getColumnAlias(colName: String): Option[String] = Some("[ColumnAlias defined by provider]")
 
       override def getColumnTitle(colName: String): Option[String] = Some("[ColumnTitle defined by provider]")
+    }
+  }
+
+  override def getStatistics(dataFrameName: String): DataFrameStatistics = {
+    val rowCountResult = getDataStreamSource(dataFrameName).rowCount
+
+    new DataFrameStatistics {
+      override def rowCount: Long = rowCountResult
+
+      override def size: Long = 0L
     }
   }
 

@@ -69,7 +69,7 @@ case class RemoteDataFrame(dataFrameName: String, client: ArrowFlightProtocolCli
 
   def getDocument: DataFrameDocument = client.getDocument(dataFrameName)
 
-  def getStatistics: DataFrameStatistics = client.getStat(dataFrameName)
+  def getStatistics: DataFrameStatistics = client.getStatistics(dataFrameName)
 
   private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)
 

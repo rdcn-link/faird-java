@@ -12,8 +12,10 @@ import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
 import org.apache.commons.io.IOUtils
+import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.apache.jena.riot.Lang
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream, StringReader}
 import java.nio.file.Paths
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -32,7 +34,7 @@ trait ProtocolClient {
 
   def listDataFrameNames(dsName: String): Seq[String]
 
-  def getDataSetMetaData(dsName: String): String
+  def getDataSetMetaData(dsName: String): Model
 
   def close(): Unit
 
@@ -91,9 +93,13 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     getSingleStringByResult(schema)
   }
 
-  override def getDataSetMetaData(dataSetName: String): String = {
+  override def getDataSetMetaData(dataSetName: String): Model = {
     val dataSetMetaData = flightClient.doAction(new Action(s"getDataSetMetaData.$dataSetName")).asScala
-    getSingleStringByResult(dataSetMetaData)
+    val modelString = getSingleStringByResult(dataSetMetaData)
+    val model = ModelFactory.createDefaultModel
+    val reader = new StringReader(modelString)
+    model.read(reader, null, Lang.TTL.getName)
+    model
   }
 
   override def getDataFrameSize(dataFrameName: String): Long = {
@@ -121,15 +127,9 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     SimpleSerializer.deserialize(getArrayBytesResult(dataFrameDocument)).asInstanceOf[DataFrameDocument]
   }
 
-  def getStat(dataFrameName: String): DataFrameStatistics = {
-    new DataFrameStatistics {
-
-      override def rowCount: Long = 10001L
-
-      override def size: Long = 0L
-    }
-    //    val dataStat = flightClient.doAction(new Action(s"getDataStat.$dataFrameName")).asScala
-    //    SimpleSerializer.deserialize(getArrayBytesResult(dataStat)).asInstanceOf[DataFrameStatistics]
+  def getStatistics(dataFrameName: String): DataFrameStatistics = {
+        val dataFrameStatistics = flightClient.doAction(new Action(s"getStatistics.$dataFrameName")).asScala
+        SimpleSerializer.deserialize(getArrayBytesResult(dataFrameStatistics)).asInstanceOf[DataFrameStatistics]
   }
 
   def close(): Unit = {
