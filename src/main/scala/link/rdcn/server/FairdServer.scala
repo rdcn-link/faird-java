@@ -43,7 +43,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
 
   private def buildServer(): Unit = {
     // 初始化配置
-    ConfigLoader.init(Paths.get(fairdHome,"conf","faird.conf").toString())
+    ConfigLoader.init(fairdHome)
     val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort

@@ -145,7 +145,7 @@ object TestBase {
 
   def getServer: FairdServer = synchronized {
     if (fairdServer.isEmpty) {
-      val s = new FairdServer(dataProvider, authprovider, getResourcePath(""))
+      val s = new FairdServer(dataProvider, authprovider, Paths.get(getResourcePath(""),"conf","faird.conf").toString())
 
       s.start()
       //      println(s"Server (Location): Listening on port ${s.getPort}")
