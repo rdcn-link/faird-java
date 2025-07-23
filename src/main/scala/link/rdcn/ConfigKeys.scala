@@ -8,21 +8,23 @@ package link.rdcn
  */
 object ConfigKeys {
 
+  val FAIRD_HOME = "faird.home"
+
   // === 自定义配置项 ===
-  val FairdHostName       = "faird.host.name"
-  val FairdHostTitle      = "faird.host.title"
-  val FairdHostPosition   = "faird.host.position"
-  val FairdHostDomain     = "faird.host.domain"
-  val FairdHostPort       = "faird.host.port"
+  val FAIRD_HOST_NAME       = "faird.host.name"
+  val FAIRD_HOST_TITLE      = "faird.host.title"
+  val FAIRD_HOST_POSITION   = "faird.host.position"
+  val FAIRD_HOST_DOMAIN     = "faird.host.domain"
+  val FAIRD_HOST_PORT       = "faird.host.port"
 
   // === 日志配置 ===
-  val LoggingFileName     = "logging.file.name"
-  val LoggingLevelRoot    = "logging.level.root"
-  val LoggingPatternConsole = "logging.pattern.console"
-  val LoggingPatternFile  = "logging.pattern.file"
+  val LOGGING_FILE_NAME     = "logging.file.name"
+  val LOGGING_LEVEL_ROOT    = "logging.level.root"
+  val LOGGING_PATTERN_CONSOLE = "logging.pattern.console"
+  val LOGGING_PATTERN_FILE  = "logging.pattern.file"
 
   // === 网络安全配置 ===
-  val FairdTlsEnabled     = "faird.tls.enabled"
-  val FairdTlsCertPath    = "faird.tls.cert.path"
-  val FairdTlsKeyPath     = "faird.tls.key.path"
+  val FAIRD_TLS_ENABLED     = "faird.tls.enabled"
+  val FAIRD_TLS_CERT_PATH    = "faird.tls.cert.path"
+  val FAIRD_TLS_KEY_PATH     = "faird.tls.key.path"
 }
