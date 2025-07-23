@@ -9,7 +9,7 @@ import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.user._
-import link.rdcn.util.DataUtils
+import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
 import org.apache.commons.io.FileUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -353,7 +353,7 @@ abstract class DataProviderImpl extends DataProvider {
 
       override def schema: StructType = StructType.empty
 
-      override def iterator: Iterator[Row] = Iterator.empty
+      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(Iterator.empty)()
     })
     dataFrameInfo.inputSource match {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.path))

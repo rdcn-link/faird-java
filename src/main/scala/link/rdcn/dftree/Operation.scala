@@ -1,7 +1,7 @@
 package link.rdcn.dftree
 
 import link.rdcn.dftree.FunctionWrapper.{JavaBin, JavaCode, PythonBin, PythonCode}
-import link.rdcn.struct.{DataFrameStream, Row}
+import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.AutoClosingIterator
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
@@ -25,7 +25,7 @@ sealed trait Operation {
 
   def toJsonString: String = toJson.toString
 
-  def execute(dataFrame: DataFrameStream): DataFrameStream
+  def execute(dataFrame: DataFrame): DataFrame
 }
 
 object Operation {
@@ -52,7 +52,7 @@ case class SourceOp() extends Operation {
 
   override def toJson: JSONObject = new JSONObject().put("type", operationType)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = dataFrame
+  override def execute(dataFrame: DataFrame): DataFrame = dataFrame
 }
 
 case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Operation {
@@ -63,18 +63,10 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
-    functionWrapper match {
-      case JavaBin(serializedBase64) =>
-        val in = input.execute(dataFrame)
-        val stream = in.stream.map(functionWrapper.applyToInput(_, None)).map(_.asInstanceOf[Row])
-        getDataFrameByStream(stream)
-      case PythonCode(pythonCode, batchSize) =>
-        val interp = JepInterpreterManager.getInterpreter
-        val in = input.execute(dataFrame)
-        val stream = in.stream.map(functionWrapper.applyToInput(_, Some(interp))).map(_.asInstanceOf[Row])
-        getDataFrameByStream(stream)
-    }
+  override def execute(dataFrame: DataFrame): DataFrame = {
+    val jep = JepInterpreterManager.getInterpreter
+    val in = input.execute(dataFrame)
+    in.map(functionWrapper.applyToInput(_, Some(jep)).asInstanceOf[Row])
   }
 }
 
@@ -86,32 +78,24 @@ case class FilterOp(functionWrapper: FunctionWrapper, input: Operation) extends 
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
-    functionWrapper match {
-      case JavaBin(serializedBase64) =>
-        val in = input.execute(dataFrame)
-        val stream = in.stream.filter(functionWrapper.applyToInput(_, None).asInstanceOf[Boolean])
-        DataFrameStream(in.schema, stream)
-      case PythonCode(pythonCode, batchSize) =>
-        val interp = JepInterpreterManager.getInterpreter
-        val in = input.execute(dataFrame)
-        val stream = in.stream.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
-        DataFrameStream(in.schema, stream)
-    }
+  override def execute(dataFrame: DataFrame): DataFrame = {
+    val interp = JepInterpreterManager.getInterpreter
+    val in = input.execute(dataFrame)
+    in.filter(functionWrapper.applyToInput(_, Some(interp)).asInstanceOf[Boolean])
   }
 }
 
-case class LimitOp(limit: Int, input: Operation) extends Operation {
+case class LimitOp(n: Int, input: Operation) extends Operation {
 
   override def operationType: String = "Limit"
 
   override def toJson: JSONObject = new JSONObject().put("type", operationType)
-    .put("args", new JSONArray(Seq(limit).asJava))
+    .put("args", new JSONArray(Seq(n).asJava))
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
+  override def execute(dataFrame: DataFrame): DataFrame = {
     val in = input.execute(dataFrame)
-    DataFrameStream(in.schema, in.stream.take(limit))
+    in.limit(n)
   }
 }
 
@@ -123,19 +107,9 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
     .put("args", new JSONArray(columns.asJava))
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
+  override def execute(dataFrame: DataFrame): DataFrame = {
     val in = input.execute(dataFrame)
-    val selectedSchema = in.schema.select(columns: _*)
-    val selectedStream = in.stream.map { row =>
-      val selectedValues = columns.map { colName =>
-        val idx = in.schema.indexOf(colName).getOrElse {
-          throw new IllegalArgumentException(s"列名 '$colName' 不存在")
-        }
-        row.get(idx)
-      }
-      Row.fromSeq(selectedValues)
-    }
-    DataFrameStream(selectedSchema, selectedStream)
+    in.select(columns: _*)
   }
 }
 
@@ -149,30 +123,25 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
     .put("function", functionWrapper.toJson)
     .put("input", input.toJson)
 
-  override def execute(dataFrame: DataFrameStream): DataFrameStream = {
+  override def execute(dataFrame: DataFrame): DataFrame = {
     functionWrapper match {
-      case JavaBin(serializedBase64) =>
-        val in = input.execute(dataFrame)
-        val stream = functionWrapper.applyToInput(in.stream, None).asInstanceOf[Iterator[Row]]
-        getDataFrameByStream(stream)
-      case JavaCode(javaCode, className) =>
-        val in = input.execute(dataFrame)
-        val stream = functionWrapper.applyToInput(in.stream, None).asInstanceOf[Iterator[Row]]
-        getDataFrameByStream(stream)
-      case PythonCode(pythonCode, batchSize) =>
-        val jep = JepInterpreterManager.getInterpreter
-        val in = input.execute(dataFrame)
-        val stream: Iterator[Row] = functionWrapper.applyToInput(in.stream, Some(jep)).asInstanceOf[Iterator[Row]]
-        getDataFrameByStream(stream)
       case PythonBin(functionID, functionName, whlPath, batchSize) =>
         Await.result(Future {
           val jep = JepInterpreterManager.getJepInterpreter(functionID, whlPath)
           val in = input.execute(dataFrame)
-          val stream: AutoClosingIterator[Row] = AutoClosingIterator(
-            functionWrapper.applyToInput(in.stream, Some(jep)).asInstanceOf[Iterator[Row]]
-          )(jep.close())
-          getDataFrameByStream(stream)
+          in.mapIterator[DataFrame](iter => {
+            val newStream =  functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[Iterator[Row]]
+            getDataFrameByStream(AutoClosingIterator(newStream)(iter.onClose))
+          })
         }(singleThreadEc), Duration.Inf)
+      case _ =>
+        val jep = JepInterpreterManager.getInterpreter
+        val in = input.execute(dataFrame)
+        in.mapIterator[DataFrame](iter => {
+          val newStream = in.mapIterator[Iterator[Row]](functionWrapper.applyToInput(_, Some(jep)).asInstanceOf[Iterator[Row]])
+          getDataFrameByStream(AutoClosingIterator(newStream)(iter.onClose))
+        })
+
     }
   }
 }

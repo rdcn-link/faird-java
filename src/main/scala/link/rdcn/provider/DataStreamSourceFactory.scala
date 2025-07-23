@@ -1,7 +1,7 @@
 package link.rdcn.provider
 
 import link.rdcn.struct.{Row, StructType}
-import link.rdcn.util.{DataUtils, JdbcUtils}
+import link.rdcn.util.{AutoClosingIterator, DataUtils, JdbcUtils}
 
 import java.io.File
 import java.nio.file.attribute.BasicFileAttributes
@@ -22,7 +22,7 @@ object DataStreamSourceFactory{
 
   def createCsvDataStreamSource(csvFile: File, delimiter: String = ",", header: Boolean = true): DataStreamSource = {
     val fileRowCount = DataUtils.countLinesFast(csvFile)
-    val iterLines = DataUtils.getFileLines(csvFile)
+    val iterLines: AutoClosingIterator[String] = DataUtils.getFileLines(csvFile)
     val headerArray = new ArrayBuffer[String]()
     if(header) iterLines.next().split(delimiter, -1).map(headerArray.append(_))
 
@@ -38,7 +38,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: Iterator[Row] = iterRows
+      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows)(iterLines.onClose)
     }
   }
 
@@ -50,7 +50,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: Iterator[Row] = iterRows.map(Row.fromSeq(_))
+      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows.map(Row.fromSeq(_)))()
     }
   }
 
@@ -70,7 +70,7 @@ object DataStreamSourceFactory{
       override def schema: StructType = StructType.binaryStructType
 
 
-      override def iterator: Iterator[Row] = stream
+      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(stream)()
     }
   }
 
@@ -92,17 +92,18 @@ object DataStreamSourceFactory{
     val rs = stmt.executeQuery(s"SELECT * FROM $tableName")
     val rsMeta = rs.getMetaData
     val structType = JdbcUtils.inferSchema(rsMeta)
-    val iterRows = JdbcUtils.resultSetToIterator(rs, stmt, conn, structType)
+    val iterRows: Iterator[Row] = JdbcUtils.resultSetToIterator(rs, stmt, conn, structType)
 
     new DataStreamSource {
       override def rowCount: Long = -1 // 行数未知，除非 COUNT 查询
 
       override def schema: StructType = structType
 
-      override def iterator: Iterator[Row] = new Iterator[Row] {
-        override def hasNext: Boolean = iterRows.hasNext
-        override def next(): Row = iterRows.next()
-      }
+      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows)(()=>{
+        rs.close()
+        stmt.close()
+        conn.close()
+      })
     }
   }
 

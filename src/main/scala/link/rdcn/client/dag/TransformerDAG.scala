@@ -26,11 +26,15 @@ case class TransformerDAG(
                          ){
 
   def getExecutionPaths(): Seq[Seq[DAGNode]] = {
-    val keyPaths = extractAllPaths(edges)
-    val nodePaths:Seq[Seq[DAGNode]] = keyPaths.map(_.map(key => nodes.get(key).getOrElse(throw new IllegalArgumentException(
-      s"Invalid DAG: root node '$key' is not defined in the node map."
-    ))))
-    nodePaths
+    if(edges.isEmpty){
+      nodes.map(node => Seq(node._2)).toSeq
+    }else{
+      val keyPaths = extractAllPaths(edges)
+      val nodePaths:Seq[Seq[DAGNode]] = keyPaths.map(_.map(key => nodes.get(key).getOrElse(throw new IllegalArgumentException(
+        s"Invalid DAG: root node '$key' is not defined in the node map."
+      ))))
+      nodePaths
+    }
   }
   /**
    * Edges(

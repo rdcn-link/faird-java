@@ -6,7 +6,7 @@ import link.rdcn.ConfigKeys._
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
-import link.rdcn.struct.{DataFrameStream, StructType, ValueType}
+import link.rdcn.struct.{DataFrame, LocalDataFrame, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
 import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
@@ -220,46 +220,46 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   }
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-          val userToken = new String(ticket.getBytes, StandardCharsets.UTF_8)
-          new String(ticket.getBytes, StandardCharsets.UTF_8) match {
-          case _ => {
-            val request = requestMap.get(userToken)
+      val userToken = new String(ticket.getBytes, StandardCharsets.UTF_8)
+      new String(ticket.getBytes, StandardCharsets.UTF_8) match {
+      case _ => {
+        val request = requestMap.get(userToken)
 
-            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
-            val inDataFrame = DataFrameStream(dataStreamSource.schema, dataStreamSource.iterator)
-            val outDataFrame: DataFrameStream  = request._2.execute(inDataFrame)
-            val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
+        val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
+        val inDataFrame = LocalDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+        val outDataFrame: DataFrame  = request._2.execute(inDataFrame)
+        val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
 
-            //能否支持并发
-            val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
-            val root = VectorSchemaRoot.create(schema, childAllocator)
-            val loader = new VectorLoader(root)
-            listener.start(root)
+        //能否支持并发
+        val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
+        val root = VectorSchemaRoot.create(schema, childAllocator)
+        val loader = new VectorLoader(root)
+        listener.start(root)
 
-            val arrowFlightStreamWriter = ArrowFlightStreamWriter(outDataFrame)
+        val arrowFlightStreamWriter = ArrowFlightStreamWriter(outDataFrame)
+        try {
+          arrowFlightStreamWriter.process(root, batchLen).foreach(batch => {
             try {
-              arrowFlightStreamWriter.process(root, batchLen).foreach(batch => {
-                try {
-                  loader.load(batch)
-                  while (!listener.isReady()) {
-                    LockSupport.parkNanos(1)
-                  }
-                  listener.putNext()
-                } finally {
-                  batch.close()
-                }
-              })
-              listener.completed()
-            } catch {
-              case e: Throwable => listener.error(e)
-                e.printStackTrace()
-                throw e
+              loader.load(batch)
+              while (!listener.isReady()) {
+                LockSupport.parkNanos(1)
+              }
+              listener.putNext()
             } finally {
-              if (root != null) root.close()
-              if (childAllocator != null) childAllocator.close()
-              requestMap.remove(userToken)
+              batch.close()
             }
-          }
+          })
+          listener.completed()
+        } catch {
+          case e: Throwable => listener.error(e)
+            e.printStackTrace()
+            throw e
+        } finally {
+          if (root != null) root.close()
+          if (childAllocator != null) childAllocator.close()
+          requestMap.remove(userToken)
+        }
+      }
     }
 
   }
