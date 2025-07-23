@@ -68,7 +68,7 @@ class DataParsingTest extends TestBase {
         val lastAccessTime = row.getAs[Long](5).getOrElse(-1L)
 
         assertTrue(name.nonEmpty, "name should not be empty")
-        assertTrue(size >= 0, "size should not be negative")
+        assertTrue(size >= 0, "byteSize should not be negative")
         assertTrue(fileType.nonEmpty, "fileType should not be empty")
         assertTrue(createdTime > 0, "time should be positive")
         assertTrue(modifiedTime > 0, "time should be positive")

@@ -44,36 +44,35 @@ object ClientDemo {
     println("--------------打印数据集 csv 的元数据信息--------------")
     val metaData: Model = dc.getDataSetMetaData("csv")
     metaData.write(System.out, "TURTLE")
-    //返回Model
 
     //获得host基本信息
     println("--------------打印host基本信息--------------")
     val hostInfo: Map[String, String] = dc.getHostInfo
-    println(hostInfo(ConfigKeys.FairdHostName))
-    println(hostInfo(ConfigKeys.FairdHostTitle))
-    println(hostInfo(ConfigKeys.FairdHostPort))
-    println(hostInfo(ConfigKeys.FairdHostPosition))
-    println(hostInfo(ConfigKeys.FairdHostDomain))
-    println(hostInfo(ConfigKeys.FairdTlsEnabled))
-    println(hostInfo(ConfigKeys.FairdTlsCertPath))
-    println(hostInfo(ConfigKeys.FairdTlsKeyPath))
-    println(hostInfo(ConfigKeys.LoggingFileName))
-    println(hostInfo(ConfigKeys.LoggingLevelRoot))
-    println(hostInfo(ConfigKeys.LoggingPatternConsole))
-    println(hostInfo(ConfigKeys.LoggingPatternFile))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_NAME))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_TITLE))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_PORT))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_POSITION))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_DOMAIN))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
+    println(hostInfo(ConfigKeys.LOGGING_FILE_NAME))
+    println(hostInfo(ConfigKeys.LOGGING_LEVEL_ROOT))
+    println(hostInfo(ConfigKeys.LOGGING_PATTERN_CONSOLE))
+    println(hostInfo(ConfigKeys.LOGGING_PATTERN_FILE))
 
     //获得服务器资源信息
     println("--------------打印服务器资源信息--------------")
     val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
-    println(serverResourceInfo(ResourceKeys.CpuCores))
-    println(serverResourceInfo(ResourceKeys.CpuUsagePercent))
-    println(serverResourceInfo(ResourceKeys.JvmMaxMemory))
-    println(serverResourceInfo(ResourceKeys.JvmTotalMemory))
-    println(serverResourceInfo(ResourceKeys.JvmUsedMemory))
-    println(serverResourceInfo(ResourceKeys.JvmFreeMemory))
-    println(serverResourceInfo(ResourceKeys.SystemMemoryTotal))
-    println(serverResourceInfo(ResourceKeys.SystemMemoryUsed))
-    println(serverResourceInfo(ResourceKeys.SystemMemoryFree))
+    println(serverResourceInfo(ResourceKeys.CPU_CORES))
+    println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
+    println(serverResourceInfo(ResourceKeys.JVM_MEMORY_MAX))
+    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY))
+    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY))
+    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_TOTAL_MEMORY))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_USE_MEMORY))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_FREE_MEMORY))
 
 
     //打开非结构化数据的文件列表数据帧
@@ -96,7 +95,7 @@ object ClientDemo {
     //获得数据帧大小
     println("--------------打印数据帧大小--------------")
     val dataFrameRowCount: Long = dfBin.getStatistics.rowCount
-    val dataFrameSize: Long = dfBin.getStatistics.size
+    val dataFrameSize: Long = dfBin.getStatistics.byteSize
     println(dataFrameRowCount)
     println(dataFrameSize)
 
@@ -111,17 +110,17 @@ object ClientDemo {
       //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
       //offer用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
       val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
-      blob.offer(inputStream => {
+      blob.offerStream(inputStream => {
         val outputStream = new FileOutputStream(path.toFile)
         IOUtils.copy(inputStream, outputStream)
         outputStream.close()
       })
       //或者直接获取blob的内容，得到byte数组
-      //由于offer后blob被消费，此时调用会抛出异常
-      //val bytes: Array[Byte] = blob.toBytes
+      val bytes: Array[Byte] = blob.toBytes
       println(row)
       println(name)
       println(blob.size)
+      println(bytes.hashCode())
     })
 
     //获取数据
@@ -202,7 +201,7 @@ object ClientDemo {
     )
 
     //对于线性依赖也可以通过fromSeq构造DAG
-    val transformerDAGSeq: TransformerDAG = TransformerDAG.fromSeq(nodesMap, Seq("A", "B"))
+    val transformerDAGSeq: TransformerDAG = TransformerDAG.pipe(SourceNode("/csv/data_1.csv"))
     val seqDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGSeq)
     println("--------------打印执行直接构造线性依赖DAG后的数据帧--------------")
     seqDAGDfs.foreach(df => df.foreach(row => println(row))

@@ -365,7 +365,7 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
     }
     catch {
       case e: OutOfMemoryError => {
-        _size = Some(offer(inputStream => {
+        _size = Some(offerStream(inputStream => {
           val outputStream = new FileOutputStream(Paths.get("src", "test", "demo", "data", "output", name).toFile)
           IOUtils.copy(inputStream, outputStream)
         }))
@@ -396,14 +396,14 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
   }
 
   /** 释放content占用的内存 */
-  def releaseContentMemory(): Unit = {
+  def releaseMemory(): Unit = {
     _content = None
     _memoryReleased = true
     System.gc()
   }
 
   // 获得 `InputStream`（适合流式读取 `toBytes`）
-  def offer[T](consume: InputStream => T): T = {
+  def offerStream[T](consume: InputStream => T): T = {
     if (_memoryReleased) throw new IllegalStateException("Blob toBytes memory has been released")
     if (_content.isEmpty) loadLazily()
     val inputStream = new ByteArrayInputStream(_content.get)
@@ -411,7 +411,6 @@ class Blob(val chunkIterator: Iterator[Array[Byte]], val name: String) extends S
       consume(inputStream)
     } finally {
       inputStream.close()
-      releaseContentMemory()
     }
   }
 

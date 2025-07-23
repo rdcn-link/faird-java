@@ -59,14 +59,14 @@ object DataStreamSourceFactory{
     iterFiles = if(recursive) DataUtils.listAllFilesWithAttrs(dir)
     else DataUtils.listFilesWithAttributes(dir).toIterator
     val stream = iterFiles.zipWithIndex
-      // schema [name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
+      // schema [name, byteSize, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
       //TODO 不能以文件名称判断是否为同一文件
       .map{case (file, index) => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,file._1)}
       .map(Row.fromTuple(_))
     new DataStreamSource {
       override def rowCount: Long = -1
 
-//      override def schema: StructType = StructType.fromSeq(Column("index", IntType)+:StructType.binaryStructType.columns)
+//      override def schema: StructType = StructType.pipe(Column("index", IntType)+:StructType.binaryStructType.columns)
       override def schema: StructType = StructType.binaryStructType
 
 

@@ -153,18 +153,18 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("getHostInfo") =>
         val hostInfo =
           s"""
-             {"$FairdHostName": "${ConfigLoader.fairdConfig.hostName}",
-             "$FairdHostTitle": "${ConfigLoader.fairdConfig.hostTitle}",
-             "$FairdHostPosition": "${ConfigLoader.fairdConfig.hostPosition}",
-             "$FairdHostDomain": "${ConfigLoader.fairdConfig.hostDomain}",
-             "$FairdHostPort": "${ConfigLoader.fairdConfig.hostPort}",
-             "$FairdTlsEnabled": "${ConfigLoader.fairdConfig.useTLS}",
-             "$FairdTlsCertPath": "${ConfigLoader.fairdConfig.certPath}",
-             "$FairdTlsKeyPath": "${ConfigLoader.fairdConfig.keyPath}",
-             "$LoggingFileName": "${ConfigLoader.fairdConfig.logggingFileName}",
-             "$LoggingLevelRoot": "${ConfigLoader.fairdConfig.logggingLevelRoot}",
-             "$LoggingPatternConsole": "${ConfigLoader.fairdConfig.loggingPatternConsole}",
-             "$LoggingPatternFile": "${ConfigLoader.fairdConfig.loggingPatternFile}"
+             {"$FAIRD_HOST_NAME": "${ConfigLoader.fairdConfig.hostName}",
+             "$FAIRD_HOST_TITLE": "${ConfigLoader.fairdConfig.hostTitle}",
+             "$FAIRD_HOST_POSITION": "${ConfigLoader.fairdConfig.hostPosition}",
+             "$FAIRD_HOST_DOMAIN": "${ConfigLoader.fairdConfig.hostDomain}",
+             "$FAIRD_HOST_PORT": "${ConfigLoader.fairdConfig.hostPort}",
+             "$FAIRD_TLS_ENABLED": "${ConfigLoader.fairdConfig.useTLS}",
+             "$FAIRD_TLS_CERT_PATH": "${ConfigLoader.fairdConfig.certPath}",
+             "$FAIRD_TLS_KEY_PATH": "${ConfigLoader.fairdConfig.keyPath}",
+             "$LOGGING_FILE_NAME": "${ConfigLoader.fairdConfig.logggingFileName}",
+             "$LOGGING_LEVEL_ROOT": "${ConfigLoader.fairdConfig.logggingLevelRoot}",
+             "$LOGGING_PATTERN_CONSOLE": "${ConfigLoader.fairdConfig.loggingPatternConsole}",
+             "$LOGGING_PATTERN_FILE": "${ConfigLoader.fairdConfig.loggingPatternFile}"
              }""".stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
         getSingleStringStream(hostInfo,listener)
 

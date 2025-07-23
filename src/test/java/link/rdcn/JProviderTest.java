@@ -147,7 +147,7 @@ public class JProviderTest {
              * 这里使用辅助函数getDataFrameInfo获得名称到文件位置的映射，Provider应根据实际情况实现该映射
              * Provider应当实现DataStreamSourceFactory静态类，根据不同的文件类型获得DataStreamSource
              * 注意：Factory应该设计针对读取一个文件夹下二进制文件的情况，此时DataFrame名称应为文件夹名称而非文件名
-             * 并且Schema应该定义为：[name, size, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
+             * 并且Schema应该定义为：[name, byteSize, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
              * 对于其他文件类型，Row的每列应与Schema一一对应
              * DataStreamSource类提供将数据处理为Iterator[Row]的方式，Provider也需要实现此类
              * 此处示例为通过Name、Schema、文件类型（csv，json，bin...）获得DataStreamSource

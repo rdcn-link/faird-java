@@ -152,15 +152,15 @@ object TestBase {
       fairdServer = Some(s)
       expectedHostInfo =
         Map(
-          FairdHostName -> ConfigLoader.fairdConfig.hostName,
-          FairdHostPort -> ConfigLoader.fairdConfig.hostPort.toString,
-          FairdHostTitle -> ConfigLoader.fairdConfig.hostTitle,
-          FairdHostPosition -> ConfigLoader.fairdConfig.hostPosition,
-          FairdHostDomain -> ConfigLoader.fairdConfig.hostDomain,
+          FAIRD_HOST_NAME -> ConfigLoader.fairdConfig.hostName,
+          FAIRD_HOST_PORT -> ConfigLoader.fairdConfig.hostPort.toString,
+          FAIRD_HOST_TITLE -> ConfigLoader.fairdConfig.hostTitle,
+          FAIRD_HOST_POSITION -> ConfigLoader.fairdConfig.hostPosition,
+          FAIRD_HOST_DOMAIN -> ConfigLoader.fairdConfig.hostDomain,
           // New TLS configuration values
-          FairdTlsEnabled -> ConfigLoader.fairdConfig.useTLS.toString,
-          FairdTlsCertPath -> ConfigLoader.fairdConfig.certPath,
-          FairdTlsKeyPath -> ConfigLoader.fairdConfig.keyPath
+          FAIRD_TLS_ENABLED -> ConfigLoader.fairdConfig.useTLS.toString,
+          FAIRD_TLS_CERT_PATH -> ConfigLoader.fairdConfig.certPath,
+          FAIRD_TLS_KEY_PATH -> ConfigLoader.fairdConfig.keyPath
         )
 
     }
@@ -382,7 +382,7 @@ abstract class DataProviderImpl extends DataProvider {
     new DataFrameStatistics {
       override def rowCount: Long = rowCountResult
 
-      override def size: Long = 0L
+      override def byteSize: Long = 0L
     }
   }
 
@@ -418,7 +418,7 @@ case class DataSet(
     val hasFile = model.createProperty(datasetURI + "/hasFile")
     val hasName = model.createProperty(datasetURI + "/name")
 
-    datasetRes.addProperty(RDF.`type`, model.createResource("DataSet"))
+    datasetRes.addProperty(RDF.`type`, model.createResource(datasetURI+"/DataSet"))
     datasetRes.addProperty(hasName, dataSetName)
 
     dataFrames.foreach { df =>

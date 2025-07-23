@@ -82,7 +82,7 @@ class DataIntegrityTest extends TestBase {
         val lastAccessTime = row.getAs[Long](5).getOrElse(null)
         val blob = row.getAs[Blob](6).getOrElse(null)
         val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
-        blob.offer(inputStream => {
+        blob.offerStream(inputStream => {
           val outputStream = new FileOutputStream(path.toFile)
           IOUtils.copy(inputStream, outputStream)})
         assertEquals(expectedName, name)

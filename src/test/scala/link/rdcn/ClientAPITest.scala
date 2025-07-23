@@ -56,18 +56,18 @@ class ClientAPITest extends TestBase {
   @Test
   def testGetHostInfo(): Unit = {
     val allKeys: Set[String] = Set(
-      FairdHostDomain,
-      FairdHostTitle,
-      FairdHostName,
-      FairdHostPort,
-      FairdHostPosition,
-      LoggingFileName,
-      LoggingLevelRoot,
-      LoggingPatternFile,
-      LoggingPatternConsole,
-      FairdTlsEnabled,
-      FairdTlsCertPath,
-      FairdTlsKeyPath
+      FAIRD_HOST_DOMAIN,
+      FAIRD_HOST_TITLE,
+      FAIRD_HOST_NAME,
+      FAIRD_HOST_PORT,
+      FAIRD_HOST_POSITION,
+      LOGGING_FILE_NAME,
+      LOGGING_LEVEL_ROOT,
+      LOGGING_PATTERN_FILE,
+      LOGGING_PATTERN_CONSOLE,
+      FAIRD_TLS_ENABLED,
+      FAIRD_TLS_CERT_PATH,
+      FAIRD_TLS_KEY_PATH
     )
     val hostInfo = dc.getHostInfo
     allKeys.foreach(key =>{
@@ -88,15 +88,15 @@ class ClientAPITest extends TestBase {
     val statusMap = dc.getServerResourceInfo
 
     val allKeys: Set[String] = Set(
-      CpuCores,
-      CpuUsagePercent,
-      JvmMaxMemory,
-      JvmFreeMemory,
-      JvmTotalMemory,
-      JvmUsedMemory,
-      SystemMemoryTotal,
-      SystemMemoryFree,
-      SystemMemoryUsed
+      CPU_CORES,
+      CPU_USAGE_PERCENT,
+      JVM_MEMORY_MAX,
+      JVM_FREE_MEMORY,
+      JVM_TOTAL_MEMORY,
+      JVM_USED_MEMORY,
+      SYSTEM_TOTAL_MEMORY,
+      SYSTEM_FREE_MEMORY,
+      SYSTEM_USE_MEMORY
     )
     val hostInfo = dc.getHostInfo
     allKeys.foreach(key =>{

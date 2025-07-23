@@ -67,31 +67,31 @@ public class JClientDemo {
         //获得host基本信息
         System.out.println("--------------打印host基本信息--------------");
         Map<String, String> hostInfo = dc.getHostInfo();
-        System.out.println(hostInfo.get(ConfigKeys.FairdHostName()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdHostTitle()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdHostPort()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdHostPosition()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdHostDomain()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdTlsEnabled()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdTlsCertPath()));
-        System.out.println(hostInfo.get(ConfigKeys.FairdTlsKeyPath()));
-        System.out.println(hostInfo.get(ConfigKeys.LoggingFileName()));
-        System.out.println(hostInfo.get(ConfigKeys.LoggingLevelRoot()));
-        System.out.println(hostInfo.get(ConfigKeys.LoggingPatternConsole()));
-        System.out.println(hostInfo.get(ConfigKeys.LoggingPatternFile()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_HOST_NAME()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_HOST_TITLE()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_HOST_PORT()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_HOST_POSITION()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_HOST_DOMAIN()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_TLS_ENABLED()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_TLS_CERT_PATH()));
+        System.out.println(hostInfo.get(ConfigKeys.FAIRD_TLS_KEY_PATH()));
+        System.out.println(hostInfo.get(ConfigKeys.LOGGING_FILE_NAME()));
+        System.out.println(hostInfo.get(ConfigKeys.LOGGING_LEVEL_ROOT()));
+        System.out.println(hostInfo.get(ConfigKeys.LOGGING_PATTERN_CONSOLE()));
+        System.out.println(hostInfo.get(ConfigKeys.LOGGING_PATTERN_FILE()));
 
         //获得服务器资源信息
         System.out.println("--------------打印服务器资源信息--------------");
         Map<String, String> serverResourceInfo = dc.getServerResourceInfo();
-        System.out.println(serverResourceInfo.get(ResourceKeys.CpuCores()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.CpuUsagePercent()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JvmMaxMemory()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JvmTotalMemory()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JvmUsedMemory()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.JvmFreeMemory()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryTotal()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryUsed()));
-        System.out.println(serverResourceInfo.get(ResourceKeys.SystemMemoryFree()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.CPU_CORES()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.CPU_USAGE_PERCENT()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_MEMORY_MAX()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_TOTAL_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_USED_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.JVM_FREE_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_TOTAL_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_USE_MEMORY()));
+        System.out.println(serverResourceInfo.get(ResourceKeys.SYSTEM_FREE_MEMORY()));
 
         //打开非结构化数据的文件列表数据帧
         RemoteDataFrame dfBin = dc.open("/bin");
@@ -112,7 +112,7 @@ public class JClientDemo {
 
         //获得数据帧大小
         System.out.println("--------------打印数据帧大小--------------");
-        Long dataFrameSize = dfBin.getStatistics().size();
+        Long dataFrameSize = dfBin.getStatistics().byteSize();
         Long dataFrameRowCount = dfBin.getStatistics().rowCount();
         System.out.println(dataFrameSize);
         System.out.println(dataFrameRowCount);
@@ -126,7 +126,7 @@ public class JClientDemo {
             Blob blob = (Blob) row.get(6);
             //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
             //offer用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
-            blob.offer(inputStream -> {
+            blob.offerStream(inputStream -> {
                 try {
                     FileOutputStream outputStream = new FileOutputStream(Paths.get("src", "test", "demo", "data", "output", name).toFile());
                     IOUtils.copy(inputStream, outputStream);
@@ -137,11 +137,11 @@ public class JClientDemo {
                 }
             });
             //或者直接获取blob的内容，得到byte数组
-            //由于offer后blob被消费，此时调用会抛出异常
-//            byte[] bytes = blob.toBytes();
+            byte[] bytes = blob.toBytes();
             System.out.println(row);
             System.out.println(name);
             System.out.println(blob.size());
+            System.out.println(bytes.hashCode());
             return null;
         });
 
@@ -242,18 +242,29 @@ public class JClientDemo {
         javaNodesMapMin.put("A", sourceNodeA);
         //构建边Map，可以没有边，对应不进行操作
         Map<String, List<String>> javaEdgesMapMin = new HashMap<>();
-//        //通过边和节点Map构建DAG执行图
-//        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
-//        //执行DAG图，返回一个数据帧列表
-//        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
-//        System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
-//        for (DataFrame df : minDAGDfs) {
-//            df.foreach(row ->
-//            {
-//                System.out.println(row);
-//                return null;
-//            });
-//        }
+        //通过边和节点Map构建DAG执行图
+        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
+        //执行DAG图，返回一个数据帧列表
+        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
+        System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
+        for (DataFrame df : minDAGDfs) {
+            df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
+        //对于线性依赖也可以简化为通过节点链pipe构造DAG
+        TransformerDAG transformerDAGSeq = TransformerDAG.pipe(new SourceNode("/csv/data_1.csv"));
+        List<DataFrame> seqDAGDfs = dc.execute(transformerDAGSeq);
+        System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
+        for (DataFrame df : seqDAGDfs) {
+            df.foreach(row ->
+            {
+                System.out.println(row);
+                return null;
+            });
+        }
 
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
         Map<String, DAGNode> javaNodesMap = new HashMap<>();
@@ -267,18 +278,6 @@ public class JClientDemo {
         List<DataFrame> simpleDfs = dc.execute(transformerDAG);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : simpleDfs) {
-            df.foreach(row ->
-            {
-                System.out.println(row);
-                return null;
-            });
-        }
-
-        //对于线性依赖也可以通过fromSeq构造DAG
-        TransformerDAG transformerDAGSeq = TransformerDAG.fromSeq(convertToScalaNodesMap(javaNodesMap), convertToScalaSeq(Arrays.asList("A", "B")));
-        List<DataFrame> seqDAGDfs = dc.execute(transformerDAGSeq);
-        System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
-        for (DataFrame df : seqDAGDfs) {
             df.foreach(row ->
             {
                 System.out.println(row);

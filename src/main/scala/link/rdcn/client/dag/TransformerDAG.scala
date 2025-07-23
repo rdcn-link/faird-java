@@ -1,5 +1,7 @@
 package link.rdcn.client.dag
 
+import scala.annotation.varargs
+
 /**
  * @Author renhao
  * @Description:
@@ -71,14 +73,20 @@ case class TransformerDAG(
   }
 }
 object TransformerDAG{
-  def fromSeq(nodes: Map[String, DAGNode], edgesSeq: Seq[String]): TransformerDAG = {
+  @varargs
+  def pipe(head: DAGNode, tail: DAGNode*): TransformerDAG = {
+    val nodes = head +: tail
     if (nodes.isEmpty) {
       throw new IllegalArgumentException("one node at least")
     }
-    val pairs = edgesSeq.zip(edgesSeq.tail).toMap
-    val edges = pairs.map { case (currentElement, nextElement) =>
-      currentElement -> Seq(nextElement)}
-    TransformerDAG(nodes, edges)
+    val pairs = nodes.zipWithIndex.map {
+      case (node, index) =>
+        (index.toString, node)
+    }.toMap
+    val keysSeq =  pairs.keys.toSeq
+    val edges = keysSeq.zip(keysSeq.tail).map { case (currentElement, nextElement) =>
+      currentElement -> Seq(nextElement)}.toMap
+    TransformerDAG(pairs, edges)
   }
 }
 
