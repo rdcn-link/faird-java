@@ -1,6 +1,6 @@
 package link.rdcn.client.dag
 
-import link.rdcn.struct.{DataFrame, Row}
+import link.rdcn.struct.DataFrame
 
 /**
  * @Author renhao

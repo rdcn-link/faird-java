@@ -1,7 +1,6 @@
 package link.rdcn;
 
 import link.rdcn.client.Blob;
-import link.rdcn.client.DataFrame;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.DAGNode;
@@ -9,6 +8,7 @@ import link.rdcn.client.dag.SourceNode;
 import link.rdcn.client.dag.TransformerDAG;
 import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
+import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
 import org.apache.commons.io.IOUtils;
@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Function1;
 import scala.Option;
-import scala.collection.Iterator;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
@@ -225,8 +224,8 @@ public class JClientDemo {
         //自定义一个map算子 比如对第一列加1
         DAGNode udfMap = new UDFFunction() {
             @Override
-            public Iterator<Row> transform(Iterator<Row> iter) {
-                return iter.map(row -> {
+            public DataFrame transform(DataFrame dataFrame) {
+                return dataFrame.map(row -> {
                     long value = (long) row._1();
                     return Row.fromJavaList(Arrays.asList(value + 1, row._2()));
                 });
@@ -235,8 +234,8 @@ public class JClientDemo {
         //自定义一个过滤算子 比如只保留小于等于3的行
         DAGNode udfFilter = new UDFFunction() {
             @Override
-            public Iterator<Row> transform(Iterator<Row> iter) {
-                return iter.filter(row -> {
+            public DataFrame transform(DataFrame dataFrame) {
+                return dataFrame.filter(row -> {
                     long value = (long) row._1();
                     return value <= 3;
                 });

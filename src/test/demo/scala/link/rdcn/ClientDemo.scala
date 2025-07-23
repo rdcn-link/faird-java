@@ -1,9 +1,9 @@
 package link.rdcn
 
 import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
-import link.rdcn.client.{Blob, DataFrame, FairdClient, RemoteDataFrame}
+import link.rdcn.client.{Blob, FairdClient, RemoteDataFrame}
 import link.rdcn.provider.DataFrameDocument
-import link.rdcn.struct.Row
+import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.Model
@@ -100,7 +100,7 @@ object ClientDemo {
     println(dataFrameRowCount)
     println(dataFrameSize)
 
-    //可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
+//    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
     println("--------------打印非结构化数据文件列表数据帧--------------")
     dfBin.foreach((row: Row) => {
       //通过Tuple风格访问
@@ -161,15 +161,15 @@ object ClientDemo {
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1
     val udfMap: DAGNode = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get + 1, row.get(1)))
+      override def transform(dataFrame: DataFrame): DataFrame = {
+        dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + 1, row.get(1)))
       }
     }
 
     //自定义一个filter算子 比如只保留小于等于3的行
     val udfFilter: DAGNode = new UDFFunction() {
       //DataFrame
-      override def transform(iter: Iterator[Row]): Iterator[Row] = iter.filter((row: Row) => {
+      override def transform(dataFrame: DataFrame): DataFrame = dataFrame.filter((row: Row) => {
         val value: Long = row._1.asInstanceOf[Long]
         value <= 3L
       })
@@ -180,15 +180,13 @@ object ClientDemo {
     val transformerDAGMin: TransformerDAG = TransformerDAG.pipe(sourceNodeA)
     val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGMin)
     println("--------------打印最小DAG直接获取的数据帧--------------")
-    minDAGDfs.foreach(df => df.foreach(row => println(row))
-    )
+    minDAGDfs.foreach(df => df.foreach(row => println(row)))
 
     //可以多个节点
-    val transformerDAGPipe: TransformerDAG = TransformerDAG.pipe(sourceNodeA,udfFilter,udfMap)
+    val transformerDAGPipe: TransformerDAG = TransformerDAG.pipe(sourceNodeA, udfFilter, udfMap)
     val pipeDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPipe)
     println("--------------打印执行链式DAG的数据帧--------------")
-    pipeDAGDfs.foreach(df => df.foreach(row => println(row))
-    )
+    pipeDAGDfs.foreach(df => df.foreach(row => println(row)))
 
     //也可以通过构建边Map和节点Map构建DAG执行图
     //构建DAG执行图A -> B ，A是数据源节点B是自定义filter算子
@@ -205,41 +203,9 @@ object ClientDemo {
     //执行DAG图，返回一个数据帧列表
     val simpleDfs: Seq[DataFrame] = dc.execute(transformerDAG)
     println("--------------打印自定义filter算子操作后的数据帧--------------")
-    simpleDfs.foreach(df => df.foreach(row => println(row))
-    )
+    simpleDfs.foreach(df => df.foreach(row => println(row)))
 
     //可以构建更复杂的多数据源节点和操作的DAG
-    //多对一
-    //  A   B
-    //   \ /
-    //    C
-    val transformerMergeDAG: TransformerDAG = TransformerDAG(
-      Map("A" -> sourceNodeA,
-        "B" -> sourceNodeB,
-        "C" -> udfFilter),
-      Map("A" -> Seq("C"),
-        "B" -> Seq("C"))
-    )
-    val mergeDfs: Seq[DataFrame] = dc.execute(transformerMergeDAG)
-    println("--------------打印执行自定义DAG后的数据帧--------------")
-    mergeDfs.foreach(df => df.foreach(row => println(row)))
-
-    //一对多
-    //   A
-    //  / \
-    // B   C
-    val transformerForkDAG: TransformerDAG = TransformerDAG(
-      Map("A" -> sourceNodeA,
-        "B" -> udfMap,
-        "C" -> udfFilter),
-      Map("A" -> Seq("B"),
-        "A" -> Seq("C"))
-    )
-    val forkDfs: Seq[DataFrame] = dc.execute(transformerForkDAG)
-    println("--------------打印执行自定义DAG后的数据帧--------------")
-    forkDfs.foreach(df => df.limit(3).foreach(row => println(row)))
-
-    //多对多
     //   A  B
     //   |/\|
     //   C  D
@@ -247,9 +213,9 @@ object ClientDemo {
       Map("A" -> sourceNodeA,
         "B" -> sourceNodeB,
         "C" -> udfFilter,
-        "D" -> udfFilter),
-      Map("A" -> Seq("C,D"),
-        "B" -> Seq("C,D"))
+        "D" -> udfMap),
+      Map("A" -> Seq("C","D"),
+        "B" -> Seq("C","D"))
     )
     val complexDfs: Seq[DataFrame] = dc.execute(transformerComplexDAG)
     println("--------------打印执行自定义DAG后的数据帧--------------")

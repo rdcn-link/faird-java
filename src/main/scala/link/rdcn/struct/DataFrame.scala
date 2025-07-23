@@ -2,6 +2,8 @@ package link.rdcn.struct
 
 import link.rdcn.util.AutoClosingIterator
 
+import scala.annotation.varargs
+
 /**
  * @Author renhao
  * @Description:
@@ -17,6 +19,7 @@ trait DataFrame {
 
   def filter(f: Row => Boolean): DataFrame
 
+  @varargs
   def select(columns: String*): DataFrame
 
   def limit(n: Int): DataFrame

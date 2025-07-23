@@ -6,8 +6,6 @@ import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DataFrame, Row, StructType}
 import link.rdcn.util.{AutoClosingIterator, ResourceUtils}
 
-import scala.annotation.varargs
-
 /**
  * @Author renhao
  * @Description:

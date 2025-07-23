@@ -25,26 +25,26 @@ import scala.io.Source
 
 object DataFrameOperationTest extends TestBase {
   val udfB = (num: Int) => new UDFFunction {
-    override def transform(iter: Iterator[Row]): Iterator[Row] = {
-      iter.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
+    override def transform(dataFrame: DataFrame): DataFrame = {
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
     }
   }
 
   val udfC = (num: Int) => new UDFFunction {
-    override def transform(iter: Iterator[Row]): Iterator[Row] = {
-      iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
+    override def transform(dataFrame: DataFrame): DataFrame = {
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
     }
   }
 
   val udfD = new UDFFunction {
-    override def transform(iter: Iterator[Row]): Iterator[Row] = {
-      iter.map(row => Row.fromTuple(row.getAs[Long](0).get * 2, row.get(1)))
+    override def transform(dataFrame: DataFrame): DataFrame = {
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get * 2, row.get(1)))
     }
   }
 
   val udfE = new UDFFunction {
-    override def transform(iter: Iterator[Row]): Iterator[Row] = {
-      iter.map(row => Row(row.get(0)))
+    override def transform(dataFrame: DataFrame): DataFrame = {
+      dataFrame.map(row => Row(row.get(0)))
     }
   }
 
@@ -243,8 +243,8 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.take(num)
+      override def transform(dataFrame: DataFrame): DataFrame = {
+        dataFrame.limit(num)
       }
     }
 
@@ -279,8 +279,8 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.filter(row => row.getAs[Long](0).get <= num)
+      override def transform(dataFrame: DataFrame): DataFrame = {
+        dataFrame.filter(row => row.getAs[Long](0).get <= num)
       }
     }
 
@@ -487,23 +487,14 @@ class DataFrameOperationTest extends TestBase {
     assertEquals(expectedOutputACDE, actualOutputs(1))
   }
 
-  @Test
-  def transformerDAGPathDetectionTest(): Unit = {
-    val udf1 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1)))
-      }
-    }
-    val udf2 = new UDFFunction {
-      override def transform(iter: Iterator[Row]): Iterator[Row] = {
-        iter.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1)))
-      }
-    }
+  @ParameterizedTest
+  @ValueSource(ints = Array(10))
+  def transformerDAGPathDetectionTest(num: Int): Unit = {
     val dagNoStartEnd = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf1,
-        "C" -> udf2
+        "B" -> udfB(num),
+        "C" -> udfC(num)
       ),
       Map(
         "A" -> Seq("B", "C"),
@@ -519,8 +510,8 @@ class DataFrameOperationTest extends TestBase {
     val dagCycle = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf1,
-        "C" -> udf2
+        "B" -> udfB(num),
+        "C" -> udfC(num)
       ),
       Map(
         "A" -> Seq("B", "C"),
@@ -536,8 +527,8 @@ class DataFrameOperationTest extends TestBase {
     val notBeginWithSource = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf1,
-        "C" -> udf2
+        "B" -> udfB(num),
+        "C" -> udfC(num)
       ),
       Map(
         "B" -> Seq("A", "C"),
@@ -552,8 +543,8 @@ class DataFrameOperationTest extends TestBase {
     val opNotFoundByKey = TransformerDAG(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
-        "B" -> udf1,
-        "C" -> udf2
+        "B" -> udfB(num),
+        "C" -> udfC(num)
       ),
       Map(
         "J" -> Seq("N", "C"),

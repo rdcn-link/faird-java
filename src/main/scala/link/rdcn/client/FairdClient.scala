@@ -2,7 +2,7 @@ package link.rdcn.client
 
 import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
 import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
-import link.rdcn.struct.{DataFrame, Row}
+import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.Model
 

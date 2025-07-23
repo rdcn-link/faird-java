@@ -48,5 +48,5 @@ case class LocalDataFrame(
 
   override def collect(): List[Row] = ResourceUtils.using(stream){_.toList}
 
-  override def mapIterator[T](f: AutoClosingIterator[Row] => T): T = ResourceUtils.using(stream){f(_)}
+  override def mapIterator[T](f: AutoClosingIterator[Row] => T): T = f(stream)
 }
