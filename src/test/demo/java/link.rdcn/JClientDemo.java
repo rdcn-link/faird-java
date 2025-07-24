@@ -3,9 +3,9 @@ package link.rdcn;
 import link.rdcn.client.Blob;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.SerializableFunction;
-import link.rdcn.client.dag.DAGNode;
+import link.rdcn.client.dag.FlowNode;
 import link.rdcn.client.dag.SourceNode;
-import link.rdcn.client.dag.TransformerDAG;
+import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.DataFrame;
@@ -218,11 +218,11 @@ public class JClientDemo {
 
         //自定义算子和DAG执行图对数据帧进行操作
         //构建数据源节点
-        DAGNode sourceNodeA = new SourceNode("/csv/data_1.csv");
-        DAGNode sourceNodeB = new SourceNode("/csv/data_2.csv");
+        FlowNode sourceNodeA = new SourceNode("/csv/data_1.csv");
+        FlowNode sourceNodeB = new SourceNode("/csv/data_2.csv");
         //构建自定义算子节点对象
         //自定义一个map算子 比如对第一列加1
-        DAGNode udfMap = new UDFFunction() {
+        FlowNode udfMap = new UDFFunction() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 return dataFrame.map(row -> {
@@ -232,7 +232,7 @@ public class JClientDemo {
             }
         };
         //自定义一个过滤算子 比如只保留小于等于3的行
-        DAGNode udfFilter = new UDFFunction() {
+        FlowNode udfFilter = new UDFFunction() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 return dataFrame.filter(row -> {
@@ -244,14 +244,14 @@ public class JClientDemo {
 
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
         //至少一个节点
-        Map<String, DAGNode> javaNodesMapMin = new HashMap<>();
+        Map<String, FlowNode> javaNodesMapMin = new HashMap<>();
         javaNodesMapMin.put("A", sourceNodeA);
         //构建边Map，可以没有边，对应不进行操作
         Map<String, List<String>> javaEdgesMapMin = new HashMap<>();
         //通过边和节点Map构建DAG执行图
-        TransformerDAG transformerDAGMin = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
+        Flow flowMin = Flow.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
         //执行DAG图，返回一个数据帧列表
-        List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
+        List<DataFrame> minDAGDfs = dc.execute(flowMin);
         System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
         for (DataFrame df : minDAGDfs) {
             df.limit(3).foreach(row ->
@@ -261,8 +261,8 @@ public class JClientDemo {
             });
         }
         //对于线性依赖也可以简化为通过节点链pipe构造DAG
-        TransformerDAG transformerDAGSeq = TransformerDAG.pipe(new SourceNode("/csv/data_1.csv"));
-        List<DataFrame> seqDAGDfs = dc.execute(transformerDAGSeq);
+        Flow flowSeq = Flow.pipe(new SourceNode("/csv/data_1.csv"));
+        List<DataFrame> seqDAGDfs = dc.execute(flowSeq);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : seqDAGDfs) {
             df.foreach(row ->
@@ -273,15 +273,15 @@ public class JClientDemo {
         }
 
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
-        Map<String, DAGNode> javaNodesMap = new HashMap<>();
+        Map<String, FlowNode> javaNodesMap = new HashMap<>();
         javaNodesMap.put("A", sourceNodeA);
         javaNodesMap.put("B", udfFilter);
         //构建边Map，一个节点可以有多个下游节点
         Map<String, List<String>> javaEdgesMap = new HashMap<>();
         javaEdgesMap.put("A", Arrays.asList("B"));
         //通过边和节点Map构建DAG执行图
-        TransformerDAG transformerDAG = TransformerDAG.apply(convertToScalaNodesMap(javaNodesMap), convertToScalaEdgesMap(javaEdgesMap));
-        List<DataFrame> simpleDfs = dc.execute(transformerDAG);
+        Flow flow = Flow.apply(convertToScalaNodesMap(javaNodesMap), convertToScalaEdgesMap(javaEdgesMap));
+        List<DataFrame> simpleDfs = dc.execute(flow);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : simpleDfs) {
             df.foreach(row ->
@@ -296,8 +296,8 @@ public class JClientDemo {
         //  A   B
         //   \ /
         //    C
-        TransformerDAG transformerMergeDAG = TransformerDAG.apply(convertToScalaNodesMap(
-                new HashMap<String, DAGNode>() {{
+        Flow transformerMergeDAG = Flow.apply(convertToScalaNodesMap(
+                new HashMap<String, FlowNode>() {{
             put("A", sourceNodeA);
             put("B", sourceNodeB);
             put("C", udfFilter);
@@ -320,8 +320,8 @@ public class JClientDemo {
         //   A
         //  / \
         // B   C
-        TransformerDAG transformerForkDAG = TransformerDAG.apply(convertToScalaNodesMap(
-                new HashMap<String, DAGNode>() {{
+        Flow transformerForkDAG = Flow.apply(convertToScalaNodesMap(
+                new HashMap<String, FlowNode>() {{
                     put("A", sourceNodeA);
                     put("B", udfMap);
                     put("C", udfFilter);
@@ -343,8 +343,8 @@ public class JClientDemo {
         //   A  B
         //   |/\|
         //   C  D
-        TransformerDAG transformerComplexDAG = TransformerDAG.apply(convertToScalaNodesMap(
-                new HashMap<String, DAGNode>() {{
+        Flow transformerComplexDAG = Flow.apply(convertToScalaNodesMap(
+                new HashMap<String, FlowNode>() {{
                     put("A", sourceNodeA);
                     put("B", sourceNodeB);
                     put("C", udfFilter);
@@ -368,7 +368,7 @@ public class JClientDemo {
 
 
 
-    public static scala.collection.immutable.Map<String, DAGNode> convertToScalaNodesMap(Map<String, DAGNode> javaMap) {
+    public static scala.collection.immutable.Map<String, FlowNode> convertToScalaNodesMap(Map<String, FlowNode> javaMap) {
         return JavaConverters.mapAsScalaMapConverter(javaMap).asScala().toMap(
                 scala.Predef.$conforms() // This provides evidence for implicit conversion to scala.Tuple2
         );

@@ -8,26 +8,26 @@ import link.rdcn.struct.DataFrame
  * @Data 2025/7/12 21:07
  * @Modified By:
  */
-trait DAGNode
+trait FlowNode
 
-trait UDFFunction extends DAGNode with Serializable {
+trait UDFFunction extends FlowNode with Serializable {
   def transform(dataFrame: DataFrame): DataFrame
 }
 case class PythonWhlFunctionNode(
                             functionId: String,
                             functionName: String,
                             whlPath: String
-                            ) extends DAGNode
+                            ) extends FlowNode
 case class JavaCodeNode(
                    javaCode: String,
                    className: String
-                   ) extends DAGNode
+                   ) extends FlowNode
 
 case class PythonCodeNode(
                      code: String
-                     ) extends DAGNode
+                     ) extends FlowNode
 
 
 
 //只为DAG执行提供dataFrameName
-case class SourceNode (dataFrameName: String) extends DAGNode
+case class SourceNode (dataFrameName: String) extends FlowNode

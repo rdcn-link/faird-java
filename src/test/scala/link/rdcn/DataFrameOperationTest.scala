@@ -3,7 +3,7 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
-import link.rdcn.client.dag.{SourceNode, TransformerDAG, UDFFunction}
+import link.rdcn.client.dag.{SourceNode, Flow, UDFFunction}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.FlightRuntimeException
@@ -248,7 +248,7 @@ class DataFrameOperationTest extends TestBase {
       }
     }
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udf
@@ -284,7 +284,7 @@ class DataFrameOperationTest extends TestBase {
       }
     }
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udf
@@ -314,7 +314,7 @@ class DataFrameOperationTest extends TestBase {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
     val expectedOutput = addLineBreak(transformB(lines,num)).mkString("")
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num)
@@ -345,7 +345,7 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutput = addLineBreak(transformC(transformB(lines,num),num)).mkString("")
 
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -380,7 +380,7 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutputAB = addLineBreak(transformB(lines,num)).mkString("")
     val expectedOutputAC = addLineBreak(transformC(lines,num)).mkString("")
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -417,7 +417,7 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutputAC = addLineBreak(transformC(lines1, num)).mkString
     val expectedOutputBC = addLineBreak(transformC(lines2, num)).mkString
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> SourceNode("/csv/data_2.csv"),
@@ -457,7 +457,7 @@ class DataFrameOperationTest extends TestBase {
     val expectedOutputABDE = addLineBreak(transformE(transformD(transformB(lines1,num)))).mkString
     val expectedOutputACDE = addLineBreak(transformE(transformD(transformC(lines2,num)))).mkString
 
-    val transformerDAG = TransformerDAG(
+    val transformerDAG = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -490,7 +490,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def transformerDAGPathDetectionTest(num: Int): Unit = {
-    val dagNoStartEnd = TransformerDAG(
+    val dagNoStartEnd = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -507,7 +507,7 @@ class DataFrameOperationTest extends TestBase {
     })
     assertTrue(exceptionNoRoot.getMessage.contains("graph might contain cycles or be empty"))
 
-    val dagCycle = TransformerDAG(
+    val dagCycle = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -524,7 +524,7 @@ class DataFrameOperationTest extends TestBase {
     })
     assertTrue(exceptionCycle.getMessage.contains("Cycle detected"))
 
-    val notBeginWithSource = TransformerDAG(
+    val notBeginWithSource = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),
@@ -540,7 +540,7 @@ class DataFrameOperationTest extends TestBase {
     })
     assertTrue(exceptionNotBeginWithSource.getMessage.contains("not of type SourceOp"))
 
-    val opNotFoundByKey = TransformerDAG(
+    val opNotFoundByKey = Flow(
       Map(
         "A" -> SourceNode("/csv/data_1.csv"),
         "B" -> udfB(num),

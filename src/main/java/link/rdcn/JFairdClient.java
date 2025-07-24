@@ -10,7 +10,7 @@ package link.rdcn;
 
 import link.rdcn.client.FairdClient;
 import link.rdcn.client.RemoteDataFrame;
-import link.rdcn.client.dag.TransformerDAG;
+import link.rdcn.client.dag.Flow;
 import link.rdcn.user.Credentials;
 import org.apache.jena.rdf.model.Model;
 import scala.collection.JavaConverters;
@@ -54,8 +54,8 @@ public class JFairdClient {
         fairdClient.close();
     }
 
-    public List<link.rdcn.struct.DataFrame> execute(TransformerDAG transformerDAG) {
-        return convertToJavaList(fairdClient.execute(transformerDAG));
+    public List<link.rdcn.struct.DataFrame> execute(Flow flow) {
+        return convertToJavaList(fairdClient.execute(flow));
     }
 
 

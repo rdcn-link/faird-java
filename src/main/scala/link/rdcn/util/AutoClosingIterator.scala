@@ -8,7 +8,7 @@ import link.rdcn.Logging
  * @Data 2025/7/21 17:20
  * @Modified By:
  */
-class AutoClosingIterator[T](
+case class AutoClosingIterator[T](
                               underlying: Iterator[T],
                               val onClose: () => Unit,
                               val isFileList: Boolean = false

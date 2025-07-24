@@ -20,17 +20,17 @@ import scala.annotation.varargs
  * @Data 2025/7/12 21:30
  * @Modified By:
  */
-case class TransformerDAG(
-                           nodes: Map[String, DAGNode],
+case class Flow(
+                           nodes: Map[String, FlowNode],
                            edges: Map[String, Seq[String]]
                          ){
 
-  def getExecutionPaths(): Seq[Seq[DAGNode]] = {
+  def getExecutionPaths(): Seq[Seq[FlowNode]] = {
     if(edges.isEmpty){
       nodes.map(node => Seq(node._2)).toSeq
     }else{
       val keyPaths = extractAllPaths(edges)
-      val nodePaths:Seq[Seq[DAGNode]] = keyPaths.map(_.map(key => nodes.get(key).getOrElse(throw new IllegalArgumentException(
+      val nodePaths:Seq[Seq[FlowNode]] = keyPaths.map(_.map(key => nodes.get(key).getOrElse(throw new IllegalArgumentException(
         s"Invalid DAG: root node '$key' is not defined in the node map."
       ))))
       nodePaths
@@ -76,9 +76,9 @@ case class TransformerDAG(
     rootNodes.toSeq.flatMap(root => dfs(Seq(root), root, Set.empty))
   }
 }
-object TransformerDAG{
+object Flow{
   @varargs
-  def pipe(head: DAGNode, tail: DAGNode*): TransformerDAG = {
+  def pipe(head: FlowNode, tail: FlowNode*): Flow = {
     val nodes = head +: tail
     if (nodes.isEmpty) {
       throw new IllegalArgumentException("one node at least")
@@ -90,7 +90,7 @@ object TransformerDAG{
     val keysSeq =  pairs.keys.toSeq
     val edges = keysSeq.zip(keysSeq.tail).map { case (currentElement, nextElement) =>
       currentElement -> Seq(nextElement)}.toMap
-    TransformerDAG(pairs, edges)
+    Flow(pairs, edges)
   }
 }
 

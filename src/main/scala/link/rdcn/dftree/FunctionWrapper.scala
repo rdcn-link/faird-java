@@ -3,7 +3,8 @@ package link.rdcn.dftree
 import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
-import link.rdcn.struct.Row
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType}
+import link.rdcn.util.AutoClosingIterator
 import org.json.JSONObject
 import org.codehaus.janino.SimpleCompiler
 
@@ -122,13 +123,13 @@ object FunctionWrapper {
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
       input match {
-        case iter: Iterator[Row] => val
+        case _: AutoClosingIterator[_] => val
           compiler = new SimpleCompiler()
           compiler.cook(javaCode)
           val clazz = compiler.getClassLoader.loadClass(className)
           val instance = clazz.getDeclaredConstructor().newInstance()
-          val method = clazz.getMethod("transform", classOf[Iterator[Row]])
-          method.invoke(instance, input.asInstanceOf[AnyRef])
+          val method = clazz.getMethod("transform", classOf[DataFrame])
+          method.invoke(instance, LocalDataFrame(StructType.empty,input.asInstanceOf[AutoClosingIterator[Row]]))
         case other =>  throw new IllegalArgumentException(s"Unsupported input: $other")
       }
 

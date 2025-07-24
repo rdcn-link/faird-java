@@ -1,10 +1,12 @@
 package link.rdcn.client
 
-import link.rdcn.client.dag.{DAGNode, SourceNode, TransformerDAG, UDFFunction}
-import link.rdcn.dftree.{FunctionWrapper, Operation, SourceOp, TransformerNode}
+import link.rdcn.client.dag._
+import link.rdcn.dftree.FunctionWrapper.JavaCode
+import link.rdcn.dftree._
 import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.Model
+import org.json.JSONObject
 
 import scala.collection.JavaConverters._
 
@@ -69,13 +71,13 @@ class FairdClient private(
 
   def close(): Unit = protocolClient.close()
 
-  def execute(transformerDAG: TransformerDAG): Seq[DataFrame] = {
+  def execute(transformerDAG: Flow): Seq[DataFrame] = {
     val executePaths = transformerDAG.getExecutionPaths()
     executePaths.map(path => getRemoteDataFrameByDAGPath(path))
   }
 
 
-  private def getRemoteDataFrameByDAGPath(path: Seq[DAGNode]): DataFrame = {
+  private def getRemoteDataFrameByDAGPath(path: Seq[FlowNode]): DataFrame = {
     val dataFrameName = path.head.asInstanceOf[SourceNode].dataFrameName
     var operation: Operation = SourceOp()
     path.foreach(node => node match {
@@ -85,8 +87,15 @@ class FairdClient private(
         })
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
         operation = transformerNode
+      case f: JavaCodeNode =>
+        val jo = new JSONObject()
+        jo.put("type", LangType.JAVA_CODE.name)
+        jo.put("javaCode", f.javaCode)
+        jo.put("className", f.className)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[JavaCode], operation)
+        operation = transformerNode
       case s: SourceNode => // 不做处理
-      case _ => throw new IllegalArgumentException(s"This DAGNode ${node} is not supported please extend UDFFunction trait")
+      case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend UDFFunction trait")
     })
     RemoteDataFrame(dataFrameName, protocolClient, operation)
   }

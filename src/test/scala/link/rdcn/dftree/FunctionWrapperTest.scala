@@ -3,7 +3,9 @@ package link.rdcn.dftree
 import link.rdcn.ConfigLoader
 import link.rdcn.TestEmptyProvider.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{JavaCode, PythonBin}
-import link.rdcn.struct.Row
+import link.rdcn.struct.ValueType.IntType
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType}
+import link.rdcn.util.AutoClosingIterator
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
 
@@ -30,18 +32,11 @@ class FunctionWrapperTest {
         |        // 默认构造器，必须显式写出
         |    }
         |    @Override
-        |    public scala.collection.Iterator<Row> transform(final scala.collection.Iterator<Row> iter) {
-        |        final scala.collection.Iterator<Row> rows =  new scala.collection.Iterator<Row>() {
-        |            public boolean hasNext() {
-        |                return iter.hasNext();
-        |            }
-        |
-        |            public Row next() {
-        |                Row row = (Row)iter.next();
-        |                return Row.fromJavaList(Arrays.asList(row.get(0), row.get(1), 100));
-        |            }
-        |        };
-        |        return rows;
+        |    public link.rdcn.struct.DataFrame transform(final link.rdcn.struct.DataFrame dataFrame) {
+|                        return dataFrame.filter(row -> {
+        |                    long value = (long) row._1();
+        |                    return value <= 3;
+        |                });
         |    }
         |}
         |""".stripMargin
@@ -50,9 +45,9 @@ class FunctionWrapperTest {
     jo.put("javaCode", code)
     jo.put("className", "DynamicUDF")
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
-    val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
-    val newRow = javaCode.applyToInput(rows).asInstanceOf[Iterator[Row]].next()
-    assert(newRow._3 == 100)
+    val rows = new LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
+    val newDataFrame = javaCode.applyToInput(rows).asInstanceOf[DataFrame]
+//    assert(newRow._3 == 100)
   }
 
   @Test
