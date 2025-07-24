@@ -25,7 +25,7 @@ object ClientDemo {
   def main(args: Array[String]): Unit = {
     // 通过用户名密码非加密连接FairdClient
     // FairdClient dc = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
-    // 通过用户名密码tls加密连接FairdClient 需要用户端进行相关配置
+    // 通过用户名密码tls加密连接FairdClient
     val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
     // 匿名连接FairdClient
     // FairdClient dcAnonymous = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
@@ -56,10 +56,8 @@ object ClientDemo {
     println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
     println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
     println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
-    println(hostInfo(ConfigKeys.LOGGING_FILE_NAME))
-    println(hostInfo(ConfigKeys.LOGGING_LEVEL_ROOT))
-    println(hostInfo(ConfigKeys.LOGGING_PATTERN_CONSOLE))
-    println(hostInfo(ConfigKeys.LOGGING_PATTERN_FILE))
+    //key
+    //路径换为fairdHome
 
     //获得服务器资源信息
     println("--------------打印服务器资源信息--------------")
@@ -78,6 +76,7 @@ object ClientDemo {
     //打开非结构化数据的文件列表数据帧
     val dfBin: DataFrame = dc.open("/bin")
 
+    //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
     println("--------------打印数据帧Document--------------")
@@ -100,6 +99,7 @@ object ClientDemo {
     println(dataFrameRowCount)
     println(dataFrameSize)
 
+    //client api demo, operation demo, blob demo,dag demo
 //    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
     println("--------------打印非结构化数据文件列表数据帧--------------")
     dfBin.foreach((row: Row) => {
@@ -125,6 +125,7 @@ object ClientDemo {
       println(byteSize)
       println(bytes.hashCode())
     })
+
 
     //获取数据
     //对数据进行collect操作可以将数据帧的所有行收集到内存中，但是要注意内存溢出的问题

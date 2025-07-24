@@ -5,7 +5,7 @@ import io.circe.{DecodingFailure, parser}
 import link.rdcn.SimpleSerializer
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.Row
-import link.rdcn.user.Credentials
+import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
@@ -51,7 +51,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
 
   val location = {
     if (useTLS) {
-      System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"), "target/test-classes/tls/faird").toString)
+      System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"), "target","test-classes","tls","faird").toString)
       Location.forGrpcTls(url, port)
     } else
       Location.forGrpcInsecure(url, port)
@@ -65,13 +65,20 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     flightClient.authenticate(clientAuthHandler)
     userToken = Some(clientAuthHandler.getSessionToken)
     val paramFields: Seq[Field] = List(
-      new Field("credentials", FieldType.nullable(new ArrowType.Binary()), null),
+      new Field("credentials", FieldType.nullable(new ArrowType.Utf8), null),
     )
     val schema = new Schema(paramFields.asJava)
     val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
-    val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarBinaryVector]
+    val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarCharVector]
     credentialsVector.allocateNew(1)
-    credentialsVector.set(0, SimpleSerializer.serialize(credentials))
+    val credentialsJsonString =
+    s"""
+       |{
+       |    "username" : "${credentials.asInstanceOf[UsernamePassword].username}",
+       |    "password" : "${credentials.asInstanceOf[UsernamePassword].password}"
+       |}
+       |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
+    credentialsVector.set(0, credentialsJsonString.getBytes("UTF-8"))
     vectorSchemaRoot.setRowCount(1)
     val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
     val result = flightClient.doAction(new Action(s"login.${userToken.orNull}", body)).asScala

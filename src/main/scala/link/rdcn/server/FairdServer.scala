@@ -1,13 +1,15 @@
 package link.rdcn.server
 
 import com.sun.management.OperatingSystemMXBean
-import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
+import io.circe.generic.auto._
+import io.circe.parser._
 import link.rdcn.ConfigKeys._
+import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_LOGGED_IN}
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
 import link.rdcn.struct.{DataFrame, LocalDataFrame, StructType, ValueType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, DataOperationType, UsernamePassword}
 import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
@@ -196,11 +198,15 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
           val root = DataUtils.getVectorSchemaRootFromBytes(body,childAllocator)
-          val credentialsBytes = root.getFieldVectors.get(0).asInstanceOf[VarBinaryVector].getObject(0)
-          val credentials = SimpleSerializer.deserialize(credentialsBytes).asInstanceOf[Credentials]
-          val authenticatedUser: AuthenticatedUser = authProvider.authenticate(credentials)
-          val loginToken: String = actionType.split("\\.")(1)
-          authenticatedUserMap.put(loginToken, authenticatedUser)
+          val credentialsJsonString: String = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
+          val credentials = decode[UsernamePassword](credentialsJsonString)
+          credentials match {
+            case Left(_) => throw new AuthorizationException(INVALID_CREDENTIALS)
+            case Right(usernamePassword: UsernamePassword) =>
+              val authenticatedUser: AuthenticatedUser = authProvider.authenticate(usernamePassword)
+              val loginToken: String = actionType.split("\\.")(1)
+              authenticatedUserMap.put(loginToken, authenticatedUser)
+          }
           listener.onCompleted()
       case actionType if actionType.startsWith("putRequest") =>
         val dfName =  actionType.split(":")(1)

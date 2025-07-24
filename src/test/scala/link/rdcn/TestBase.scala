@@ -82,15 +82,15 @@ object TestBase {
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       if (credentials.isInstanceOf[UsernamePassword]) {
         val usernamePassword = credentials.asInstanceOf[UsernamePassword]
-        if (usernamePassword.userName == null && usernamePassword.password == null) {
+        if (usernamePassword.username == null && usernamePassword.password == null) {
           throw new AuthorizationException(USER_NOT_FOUND)
         }
-        else if (usernamePassword.userName == adminUsername && usernamePassword.password == adminPassword) {
+        else if (usernamePassword.username == adminUsername && usernamePassword.password == adminPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
-        } else if (usernamePassword.userName == userUsername && usernamePassword.password == userPassword) {
+        } else if (usernamePassword.username == userUsername && usernamePassword.password == userPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
         }
-        else if (usernamePassword.userName != "admin") {
+        else if (usernamePassword.username != "admin") {
           throw new AuthorizationException(USER_NOT_FOUND)
         } else {
           throw new AuthorizationException(INVALID_CREDENTIALS)

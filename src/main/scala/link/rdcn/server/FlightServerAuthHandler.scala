@@ -21,7 +21,7 @@ object UserSessionStore {
   val activeSessions: ConcurrentHashMap[String, Credentials] = new ConcurrentHashMap[String, Credentials]() // token -> username
 
   def validateUser(usernamePassword: UsernamePassword): Option[String] = {
-    val userName = usernamePassword.userName
+    val userName = usernamePassword.username
     val password = usernamePassword.password
     users.get(userName) match {
       case _ => //假设任何时候都通过认证

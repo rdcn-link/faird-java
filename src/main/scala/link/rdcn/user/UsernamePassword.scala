@@ -7,4 +7,4 @@ package link.rdcn.user
  * @Data 2025/7/1 15:04
  * @Modified By:
  */
-case class UsernamePassword(userName: String, password: String) extends Credentials
+case class UsernamePassword(username: String, password: String) extends Credentials
