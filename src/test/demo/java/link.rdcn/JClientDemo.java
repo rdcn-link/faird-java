@@ -254,7 +254,7 @@ public class JClientDemo {
         List<DataFrame> minDAGDfs = dc.execute(transformerDAGMin);
         System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
         for (DataFrame df : minDAGDfs) {
-            df.foreach(row ->
+            df.limit(3).foreach(row ->
             {
                 System.out.println(row);
                 return null;

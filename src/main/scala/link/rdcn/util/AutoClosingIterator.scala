@@ -10,7 +10,8 @@ import link.rdcn.Logging
  */
 class AutoClosingIterator[T](
                               underlying: Iterator[T],
-                              val onClose: () => Unit
+                              val onClose: () => Unit,
+                              val isFileList: Boolean = false
                             ) extends Iterator[T] with AutoCloseable with Logging {
 
   private var closed = false
@@ -20,7 +21,7 @@ class AutoClosingIterator[T](
   override def hasNext: Boolean = {
     if (!hasMore || closed) return false
     val more = underlying.hasNext
-    if (!more) {
+    if (!more && !isFileList) {
       hasMore = false
       close()
     }
@@ -28,9 +29,9 @@ class AutoClosingIterator[T](
   }
 
   override def next(): T = {
-    if (!hasNext) throw new NoSuchElementException("next on empty iterator")
+    if (!hasNext && !isFileList) throw new NoSuchElementException("next on empty iterator")
     val value = underlying.next()
-    if (!underlying.hasNext) {
+    if (!underlying.hasNext && !isFileList) {
       hasMore = false
       close()
     }

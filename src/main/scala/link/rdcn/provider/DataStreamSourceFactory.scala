@@ -70,7 +70,7 @@ object DataStreamSourceFactory{
       override def schema: StructType = StructType.binaryStructType
 
 
-      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(stream)()
+      override def iterator: AutoClosingIterator[Row] = new AutoClosingIterator(stream,()=>{},true)
     }
   }
 

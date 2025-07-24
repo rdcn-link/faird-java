@@ -271,8 +271,12 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
           Row(currentSeq.init :+ new Blob(blobIter, currentSeq(0).asInstanceOf[String]): _*)
         }
       }
+
     }
-    AutoClosingIterator(stream)()
+    if (!isBinaryColumn)
+      AutoClosingIterator(stream)()
+    else
+      new AutoClosingIterator(stream,()=>{},true)
   }
 
   private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {

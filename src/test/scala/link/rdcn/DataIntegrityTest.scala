@@ -47,7 +47,7 @@ object DataIntegrityTest {
 class DataIntegrityTest extends TestBase {
 
   @ParameterizedTest
-  @ValueSource(ints = Array(1))
+  @ValueSource(ints = Array(2))
   def readBinaryTest(num: Int): Unit = {
     val absolutePath = Paths.get(binDir,s"binary_data_$num.bin")
     val attrs = Files.readAttributes(absolutePath, classOf[BasicFileAttributes])
@@ -71,7 +71,7 @@ class DataIntegrityTest extends TestBase {
     val expectedLastAccessTime = expectedRow.getAs[Long](5).getOrElse(null)
 
     val df = dc.open("/bin")
-    df.limit(num).foreach(
+    df.filter(row=>row._1.asInstanceOf[String]==s"binary_data_$num.bin").foreach(
       row => {
         println(row)
         val name = row.getAs[String](0).getOrElse(null)

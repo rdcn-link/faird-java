@@ -180,7 +180,7 @@ object ClientDemo {
     val transformerDAGMin: TransformerDAG = TransformerDAG.pipe(sourceNodeA)
     val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGMin)
     println("--------------打印最小DAG直接获取的数据帧--------------")
-    minDAGDfs.foreach(df => df.foreach(row => println(row)))
+    minDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
     //可以多个节点
     val transformerDAGPipe: TransformerDAG = TransformerDAG.pipe(sourceNodeA, udfFilter, udfMap)
