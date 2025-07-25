@@ -20,6 +20,7 @@ import java.util.UUID
 
 //用于Demo的Provider
 class TestProvider(baseDirString: String = "src/test/demo", subDirString: String = "data") {
+
   val baseDir = getOutputDir(baseDirString, subDirString)
   // 生成的临时目录结构
   val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))

@@ -46,8 +46,9 @@ class FunctionWrapperTest {
     jo.put("className", "DynamicUDF")
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
     val rows = new LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
-    val newDataFrame = javaCode.applyToInput(rows).asInstanceOf[DataFrame]
-//    assert(newRow._3 == 100)
+    val newDataFrame = javaCode.applyToInput(rows.stream).asInstanceOf[DataFrame]
+    println(newDataFrame)
+    //    assert(newRow._3 == 100)
   }
 
   @Test

@@ -143,8 +143,8 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         val jep = JepInterpreterManager.getInterpreter
         val in = input.execute(dataFrame)
         in.mapIterator[DataFrame](iter => {
-          val newStream = in.mapIterator[Iterator[Row]](functionWrapper.applyToInput(_, Some(jep)).asInstanceOf[Iterator[Row]])
-          getDataFrameByStream(AutoClosingIterator(newStream)(iter.onClose))
+          val newStream = functionWrapper.applyToInput(_, Some(jep))
+          getDataFrameByStream(AutoClosingIterator(iter)(iter.onClose))
         })
 
     }
