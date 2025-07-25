@@ -19,7 +19,8 @@ case class FairdConfig(
                         loggingFileName: String,
                         loggingLevelRoot: String,
                         loggingPatternConsole: String,
-                        loggingPatternFile: String
+                        loggingPatternFile: String,
+                        pythonHome: String
                       )
 
 object FairdConfig {
@@ -43,7 +44,8 @@ object FairdConfig {
       loggingFileName = getOrDefault(ConfigKeys.LOGGING_FILE_NAME,"./access.log"),
       loggingLevelRoot = getOrDefault(ConfigKeys.LOGGING_LEVEL_ROOT,"INFO"),
       loggingPatternConsole = getOrDefault(ConfigKeys.LOGGING_PATTERN_CONSOLE,"%d{HH:mm:ss} %-5level %logger{36} - %msg%n"),
-      loggingPatternFile = getOrDefault(ConfigKeys.LOGGING_PATTERN_FILE,"%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n")
+      loggingPatternFile = getOrDefault(ConfigKeys.LOGGING_PATTERN_FILE,"%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n"),
+      pythonHome = getOrDefault(ConfigKeys.PYTHON_HOME,null),
     )
   }
 }

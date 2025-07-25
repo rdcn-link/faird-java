@@ -1,7 +1,7 @@
 package link.rdcn.client
 
 import link.rdcn.client.dag._
-import link.rdcn.dftree.FunctionWrapper.JavaCode
+import link.rdcn.dftree.FunctionWrapper.{JavaCode, PythonBin, PythonCode}
 import link.rdcn.dftree._
 import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
@@ -87,12 +87,26 @@ class FairdClient private(
         })
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
         operation = transformerNode
-      case f: JavaCodeNode =>
+      case node: JavaCodeNode =>
         val jo = new JSONObject()
         jo.put("type", LangType.JAVA_CODE.name)
-        jo.put("javaCode", f.javaCode)
-        jo.put("className", f.className)
+        jo.put("javaCode", node.javaCode)
+        jo.put("className", node.className)
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[JavaCode], operation)
+        operation = transformerNode
+      case node: PythonWhlFunctionNode =>
+        val jo = new JSONObject()
+        jo.put("type", LangType.PYTHON_BIN.name)
+        jo.put("functionId", node.functionId)
+        jo.put("functionName", node.functionName)
+        jo.put("whlPath", node.whlPath)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonBin], operation)
+        operation = transformerNode
+      case node: PythonCodeNode =>
+        val jo = new JSONObject()
+        jo.put("type", LangType.PYTHON_CODE.name)
+        jo.put("code", node.code)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonCode], operation)
         operation = transformerNode
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend UDFFunction trait")

@@ -24,7 +24,11 @@ object ConfigKeys {
   val LOGGING_PATTERN_FILE  = "logging.pattern.file"
 
   // === 网络安全配置 ===
-  val FAIRD_TLS_ENABLED     = "faird.tls.enabled"
+  val FAIRD_TLS_ENABLED     =  "faird.tls.enabled"
   val FAIRD_TLS_CERT_PATH    = "faird.tls.cert.path"
   val FAIRD_TLS_KEY_PATH     = "faird.tls.key.path"
+
+  // === 运行时环境变量配置 ===
+
+  val PYTHON_HOME     = "python.home"
 }

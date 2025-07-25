@@ -21,12 +21,12 @@ object ClienMultiLanguageCodeDemo {
     val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
 
     // 使用自定义的java代码对数据帧进行操作
-    val code =
+    val javaCode =
       """
         |import java.util.*;
-        |
+        |import link.rdcn.util.*;
         |import link.rdcn.client.dag.UDFFunction;
-        |import link.rdcn.struct.Row;
+        |import link.rdcn.struct.*;
         |
         |public class DynamicUDF implements UDFFunction {
         |    public DynamicUDF() {
@@ -34,31 +34,54 @@ object ClienMultiLanguageCodeDemo {
         |    }
         |    @Override
         |    public link.rdcn.struct.DataFrame transform(final link.rdcn.struct.DataFrame dataFrame) {
-        |        return dataFrame.filter(row -> {
-        |                    long value = (long) row._1();
-        |                    return value <= 3;
-        |       });
-        |    }
+        |            final scala.collection.Iterator<Row> iter = ((LocalDataFrame)dataFrame).stream();
+        |            final scala.collection.Iterator<Row> rows =  new scala.collection.Iterator<Row>() {
+        |            public boolean hasNext() {
+        |                return iter.hasNext();
+        |            }
+        |            public Row next() {
+        |                Row row = (Row)iter.next();
+        |                return Row.fromJavaList(Arrays.asList(row.get(0), row.get(1), 100));
+        |            }
+        |        };
+        |                return DataUtils.getDataFrameByStream(rows);
+        |            }
         |}
         |""".stripMargin
 
     //构建数据源节点
     val sourceNode: FlowNode = SourceNode("/csv/data_1.csv")
     //构建java代码操作节点
-    val javaCodeNode = JavaCodeNode(code, "DynamicUDF")
+    val javaCodeNode = JavaCodeNode(javaCode, "DynamicUDF")
     val transformerDAGJavaCode: Flow = Flow.pipe(sourceNode, javaCodeNode)
     val javaDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGJavaCode)
     println("--------------打印通过自定义Java代码操作的数据帧--------------")
     javaDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
-    // 使用指定依赖的自定义python操作对数据帧进行操作
+    // 使用指定依赖的自定义python二进制文件对数据帧进行操作
     ConfigLoader.init(getResourcePath(""))
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
     val pythonWhlFunction = PythonWhlFunctionNode("id1", "normalize", whlPath)
     val transformerDAGPythonWhl: Flow = Flow.pipe(sourceNode, pythonWhlFunction)
     val pythonBinDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPythonWhl)
-    println("--------------打印通过自定义Java代码操作的数据帧--------------")
+    println("--------------打印通过自定义Python代码操作的数据帧--------------")
     pythonBinDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+
+    // 使用自定义python代码对数据帧进行操作
+    val pythonCode =
+      """
+        |def map_value_squre_10(input_data):
+        |    id = input_data.get(0)
+        |    value = input_data.get(1)
+        |    new_row = [id, value*100]
+        |    output_data = new_row
+        |    return output_data
+        |""".stripMargin
+    val pythonCodeFunction = PythonCodeNode(pythonCode)
+    val transformerDAGPythonCode: Flow = Flow.pipe(sourceNode, pythonCodeFunction)
+    val pythonCodeDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPythonCode)
+    println("--------------打印通过自定义Python代码操作的数据帧--------------")
+    pythonCodeDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
   }
 

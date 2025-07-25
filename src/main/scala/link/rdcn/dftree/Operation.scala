@@ -1,10 +1,10 @@
 package link.rdcn.dftree
 
 import link.rdcn.client.DataFrameCall
-import link.rdcn.dftree.FunctionWrapper.{JavaBin, JavaCode, PythonBin, PythonCode}
+import link.rdcn.dftree.FunctionWrapper.{JavaBin, PythonBin}
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.AutoClosingIterator
-import link.rdcn.util.DataUtils.{getDataFrameByStream, inferExcelSchema}
+import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
 import java.util.concurrent.Executors
@@ -143,7 +143,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         val jep = JepInterpreterManager.getInterpreter
         val in = input.execute(dataFrame)
         in.mapIterator[DataFrame](iter => {
-          val newStream = functionWrapper.applyToInput(_, Some(jep))
+          functionWrapper.applyToInput(iter, Some(jep))
           getDataFrameByStream(AutoClosingIterator(iter)(iter.onClose))
         })
 

@@ -1,10 +1,10 @@
 package link.rdcn.dftree
 
-import jep.{ClassEnquirer, JepConfig, JepException, SharedInterpreter, SubInterpreter}
+import jep._
 import link.rdcn.{ConfigLoader, Logging}
 
-import java.nio.file.{Files, Path, Paths}
-import sys.process._
+import java.nio.file.{Files, Paths}
+import scala.sys.process._
 /**
  * @Author renhao
  * @Description:
@@ -54,7 +54,8 @@ object JepInterpreterManager extends Logging{
     try{
       val sitePackagePath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "python", functionId).toString
       //将依赖环境安装到指定目录
-      val env = "PATH" -> sys.env.getOrElse("PATH", sys.env.getOrElse("PYTHONHOME", ""))
+      val env = Option(ConfigLoader.fairdConfig.pythonHome).map("PATH" -> _)
+        .getOrElse("PATH" -> sys.env.getOrElse("PATH", ""))
       val cmd = Seq(getPythonExecutablePath(env._2), "-m", "pip", "install", "--upgrade", "--target", sitePackagePath, whlPath)
       val output = Process(cmd, None, env).!!
       logger.debug(output)

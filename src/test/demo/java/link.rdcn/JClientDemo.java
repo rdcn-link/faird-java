@@ -3,14 +3,16 @@ package link.rdcn;
 import link.rdcn.client.Blob;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.SerializableFunction;
+import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.FlowNode;
 import link.rdcn.client.dag.SourceNode;
-import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.UDFFunction;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.DataFrame;
+import link.rdcn.struct.LocalDataFrame;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
+import link.rdcn.util.DataUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.jena.rdf.model.Model;
 import org.slf4j.Logger;
@@ -232,7 +234,7 @@ public class JClientDemo {
             }
         };
         //自定义一个过滤算子 比如只保留小于等于3的行
-        FlowNode udfFilter = new UDFFunction() {
+        FlowNode udfFilter2 = new UDFFunction() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 return dataFrame.filter(row -> {
@@ -240,6 +242,17 @@ public class JClientDemo {
                     return value <= 3;
                 });
             }
+        };
+
+        FlowNode udfFilter = new UDFFunction() {
+            @Override
+            public DataFrame transform(DataFrame dataFrame) {
+                scala.collection.Iterator<Row> newRow = ((LocalDataFrame)dataFrame).stream();
+
+
+                return DataUtils.getDataFrameByStream(newRow);
+            }
+
         };
 
         //构建节点Map，节点名对应节点对象，可以是数据源节点或者自定义算子节点
@@ -265,7 +278,7 @@ public class JClientDemo {
         List<DataFrame> seqDAGDfs = dc.execute(flowSeq);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : seqDAGDfs) {
-            df.foreach(row ->
+            df.limit(3).foreach(row ->
             {
                 System.out.println(row);
                 return null;
@@ -284,7 +297,7 @@ public class JClientDemo {
         List<DataFrame> simpleDfs = dc.execute(flow);
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : simpleDfs) {
-            df.foreach(row ->
+            df.limit(3).foreach(row ->
             {
                 System.out.println(row);
                 return null;
@@ -309,7 +322,7 @@ public class JClientDemo {
         List<DataFrame> mergeDfs = dc.execute(transformerMergeDAG);
         System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
         for (DataFrame df : mergeDfs) {
-            df.foreach(row ->
+            df.limit(3).foreach(row ->
             {
                 System.out.println(row);
                 return null;

@@ -3,11 +3,11 @@ package link.rdcn.dftree
 import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
-import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType}
+import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.AutoClosingIterator
 import link.rdcn.util.DataUtils.getDataFrameByStream
-import org.json.JSONObject
 import org.codehaus.janino.SimpleCompiler
+import org.json.JSONObject
 
 import java.util
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -130,7 +130,7 @@ object FunctionWrapper {
           val clazz = compiler.getClassLoader.loadClass(className)
           val instance = clazz.getDeclaredConstructor().newInstance()
           val method = clazz.getMethod("transform", classOf[DataFrame])
-          method.invoke(instance, getDataFrameByStream(input.asInstanceOf[AutoClosingIterator[Row]]))
+          method.invoke(instance, getDataFrameByStream(input.asInstanceOf[AutoClosingIterator[Row]])).asInstanceOf[DataFrame]
         case other =>  throw new IllegalArgumentException(s"Unsupported input: $other")
       }
 
