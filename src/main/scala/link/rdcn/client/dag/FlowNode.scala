@@ -10,7 +10,7 @@ import link.rdcn.struct.DataFrame
  */
 trait FlowNode
 
-trait UDFFunction extends FlowNode with Serializable {
+trait Transformer11 extends FlowNode with Serializable {
   def transform(dataFrame: DataFrame): DataFrame
 }
 case class PythonWhlFunctionNode(
@@ -26,6 +26,11 @@ case class JavaCodeNode(
 case class PythonCodeNode(
                      code: String
                      ) extends FlowNode
+case class BinNode(
+                                  functionId: String,
+                                  functionName: String,
+                                  binPath: String
+                                ) extends FlowNode
 
 
 

@@ -3,7 +3,7 @@ package link.rdcn
 
 import link.rdcn.DataFrameOperationTest._
 import link.rdcn.TestBase._
-import link.rdcn.client.dag.{SourceNode, Flow, UDFFunction}
+import link.rdcn.client.dag.{SourceNode, Flow, Transformer11}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.FlightRuntimeException
@@ -24,25 +24,25 @@ import scala.io.Source
  */
 
 object DataFrameOperationTest extends TestBase {
-  val udfB = (num: Int) => new UDFFunction {
+  val udfB = (num: Int) => new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
       dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
     }
   }
 
-  val udfC = (num: Int) => new UDFFunction {
+  val udfC = (num: Int) => new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
       dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
     }
   }
 
-  val udfD = new UDFFunction {
+  val udfD = new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
       dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get * 2, row.get(1)))
     }
   }
 
-  val udfE = new UDFFunction {
+  val udfE = new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
       dataFrame.map(row => Row(row.get(0)))
     }
@@ -242,7 +242,7 @@ class DataFrameOperationTest extends TestBase {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
-    val udf = new UDFFunction {
+    val udf = new Transformer11 {
       override def transform(dataFrame: DataFrame): DataFrame = {
         dataFrame.limit(num)
       }
@@ -278,7 +278,7 @@ class DataFrameOperationTest extends TestBase {
     val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
-    val udf = new UDFFunction {
+    val udf = new Transformer11 {
       override def transform(dataFrame: DataFrame): DataFrame = {
         dataFrame.filter(row => row.getAs[Long](0).get <= num)
       }

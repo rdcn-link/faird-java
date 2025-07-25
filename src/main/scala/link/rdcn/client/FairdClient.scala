@@ -81,7 +81,7 @@ class FairdClient private(
     val dataFrameName = path.head.asInstanceOf[SourceNode].dataFrameName
     var operation: Operation = SourceOp()
     path.foreach(node => node match {
-      case f: UDFFunction =>
+      case f: Transformer11 =>
         val genericFunctionCall = DataFrameCall(new SerializableFunction[DataFrame, DataFrame] {
           override def apply(v1: DataFrame): DataFrame = f.transform(v1)
         })

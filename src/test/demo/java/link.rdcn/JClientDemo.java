@@ -6,7 +6,7 @@ import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.FlowNode;
 import link.rdcn.client.dag.SourceNode;
-import link.rdcn.client.dag.UDFFunction;
+import link.rdcn.client.dag.Transformer11;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.LocalDataFrame;
@@ -224,7 +224,7 @@ public class JClientDemo {
         FlowNode sourceNodeB = new SourceNode("/csv/data_2.csv");
         //构建自定义算子节点对象
         //自定义一个map算子 比如对第一列加1
-        FlowNode udfMap = new UDFFunction() {
+        FlowNode udfMap = new Transformer11() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 return dataFrame.map(row -> {
@@ -234,7 +234,7 @@ public class JClientDemo {
             }
         };
         //自定义一个过滤算子 比如只保留小于等于3的行
-        FlowNode udfFilter2 = new UDFFunction() {
+        FlowNode udfFilter2 = new Transformer11() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 return dataFrame.filter(row -> {
@@ -244,7 +244,7 @@ public class JClientDemo {
             }
         };
 
-        FlowNode udfFilter = new UDFFunction() {
+        FlowNode udfFilter = new Transformer11() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
                 scala.collection.Iterator<Row> newRow = ((LocalDataFrame)dataFrame).stream();

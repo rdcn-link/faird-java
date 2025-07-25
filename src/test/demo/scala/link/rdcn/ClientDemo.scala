@@ -1,6 +1,6 @@
 package link.rdcn
 
-import link.rdcn.client.dag.{FlowNode, SourceNode, Flow, UDFFunction}
+import link.rdcn.client.dag.{FlowNode, SourceNode, Flow, Transformer11}
 import link.rdcn.client.{Blob, FairdClient, RemoteDataFrame}
 import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.{DataFrame, Row}
@@ -160,14 +160,14 @@ object ClientDemo {
 
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1
-    val udfMap: FlowNode = new UDFFunction {
+    val udfMap: FlowNode = new Transformer11 {
       override def transform(dataFrame: DataFrame): DataFrame = {
         dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + 1, row.get(1)))
       }
     }
 
     //自定义一个filter算子 比如只保留小于等于3的行
-    val udfFilter: FlowNode = new UDFFunction() {
+    val udfFilter: FlowNode = new Transformer11() {
       //DataFrame
       override def transform(dataFrame: DataFrame): DataFrame = dataFrame.filter((row: Row) => {
         val value: Long = row._1.asInstanceOf[Long]

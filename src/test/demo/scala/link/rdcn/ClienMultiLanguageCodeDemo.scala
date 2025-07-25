@@ -25,10 +25,10 @@ object ClienMultiLanguageCodeDemo {
       """
         |import java.util.*;
         |import link.rdcn.util.*;
-        |import link.rdcn.client.dag.UDFFunction;
+        |import link.rdcn.client.dag.Transformer11;
         |import link.rdcn.struct.*;
         |
-        |public class DynamicUDF implements UDFFunction {
+        |public class DynamicUDF implements Transformer11 {
         |    public DynamicUDF() {
         |        // 默认构造器，必须显式写出
         |    }
@@ -67,21 +67,13 @@ object ClienMultiLanguageCodeDemo {
     println("--------------打印通过自定义Python代码操作的数据帧--------------")
     pythonBinDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
-    // 使用自定义python代码对数据帧进行操作
-    val pythonCode =
-      """
-        |def map_value_squre_10(input_data):
-        |    id = input_data.get(0)
-        |    value = input_data.get(1)
-        |    new_row = [id, value*100]
-        |    output_data = new_row
-        |    return output_data
-        |""".stripMargin
-    val pythonCodeFunction = PythonCodeNode(pythonCode)
-    val transformerDAGPythonCode: Flow = Flow.pipe(sourceNode, pythonCodeFunction)
-    val pythonCodeDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPythonCode)
-    println("--------------打印通过自定义Python代码操作的数据帧--------------")
-    pythonCodeDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+    // 使用自定义二进制程序对数据帧进行操作（示意）
+    val binPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "bin", "func.exe").toString
+    val binFunction = BinNode("id2","func",binPath)
+    val transformerDAGBin: Flow = Flow.pipe(sourceNode, binFunction)
+    val binDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGBin)
+    println("--------------打印通过二进制程序对代码操作的数据帧--------------")
+    binDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
   }
 
