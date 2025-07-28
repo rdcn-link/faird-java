@@ -36,6 +36,7 @@ object ClienMultiLanguageCodeDemo {
         |    public link.rdcn.struct.DataFrame transform(final link.rdcn.struct.DataFrame dataFrame) {
         |            final scala.collection.Iterator<Row> iter = ((LocalDataFrame)dataFrame).stream();
         |            final scala.collection.Iterator<Row> rows =  new scala.collection.Iterator<Row>() {
+        |            //TODO: compiler不能编译匿名函数
         |            public boolean hasNext() {
         |                return iter.hasNext();
         |            }
@@ -50,9 +51,9 @@ object ClienMultiLanguageCodeDemo {
         |""".stripMargin
 
     //构建数据源节点
-    val sourceNode: FlowNode = SourceNode("/csv/data_1.csv")
+    val sourceNode: FlowNode = FlowNode.source("/csv/data_1.csv")
     //构建java代码操作节点
-    val javaCodeNode = JavaCodeNode(javaCode, "DynamicUDF")
+    val javaCodeNode = FlowNode.fromJavaClass("DynamicUDF", javaCode)
     val transformerDAGJavaCode: Flow = Flow.pipe(sourceNode, javaCodeNode)
     val javaDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGJavaCode)
     println("--------------打印通过自定义Java代码操作的数据帧--------------")
@@ -61,7 +62,7 @@ object ClienMultiLanguageCodeDemo {
     // 使用指定依赖的自定义python二进制文件对数据帧进行操作
     ConfigLoader.init(getResourcePath(""))
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
-    val pythonWhlFunction = PythonWhlFunctionNode("id1", "normalize", whlPath)
+    val pythonWhlFunction = FlowNode.fromRepository("id1", "normalize", whlPath)
     val transformerDAGPythonWhl: Flow = Flow.pipe(sourceNode, pythonWhlFunction)
     val pythonBinDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPythonWhl)
     println("--------------打印通过自定义Python代码操作的数据帧--------------")
@@ -69,7 +70,7 @@ object ClienMultiLanguageCodeDemo {
 
     // 使用自定义二进制程序对数据帧进行操作（示意）
     val binPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "bin", "func.exe").toString
-    val binFunction = BinNode("id2","func",binPath)
+    val binFunction = FlowNode.fromBin("id2","func",binPath)
     val transformerDAGBin: Flow = Flow.pipe(sourceNode, binFunction)
     val binDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGBin)
     println("--------------打印通过二进制程序对代码操作的数据帧--------------")

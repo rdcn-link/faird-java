@@ -36,3 +36,25 @@ case class BinNode(
 
 //只为DAG执行提供dataFrameName
 case class SourceNode (dataFrameName: String) extends FlowNode
+
+object FlowNode {
+  def source(dataFrameName: String): SourceNode = {
+    SourceNode(dataFrameName)
+  }
+
+  def fromJavaClass(className: String, javaCode: String): JavaCodeNode = {
+    JavaCodeNode(javaCode, className)
+  }
+
+  def fromAnonymousFunction(func: DataFrame => DataFrame): Transformer11 = {
+    (dataFrame: DataFrame) => func(dataFrame)
+  }
+
+  def fromRepository(functionId: String, functionName: String, whlPath: String): PythonWhlFunctionNode = {
+    PythonWhlFunctionNode(functionId, functionName, whlPath)
+  }
+
+  def fromBin(functionId: String, functionName: String, binPath: String): BinNode = {
+    BinNode(functionId, functionName, binPath)
+  }
+}
