@@ -54,8 +54,8 @@
 //  def readBinaryTest(): Unit = {
 //    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
 //
-//    //    val df = dc.open("C:\\Users\\Yomi\\PycharmProjects\\Faird\\Faird\\target\\test_output\\bin\\data_1.csv")
-//    val df = dc.open("\\bin")
+//    //    val df = dc.get("C:\\Users\\Yomi\\PycharmProjects\\Faird\\Faird\\target\\test_output\\bin\\data_1.csv")
+//    val df = dc.get("\\bin")
 //
 //    val cnt=0
 //    df.foreach(
@@ -72,7 +72,7 @@
 //      .add("bin", BinaryType)
 //
 //    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    val df = dc.open("dacp://10.0.0.1/bindata")
+//    val df = dc.get("dacp://10.0.0.1/bindata")
 //    var totalBytes: Long = 0L
 //    var realBytes: Long = 0L
 //    var count: Int = 0
@@ -125,7 +125,7 @@
 //
 //    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
 //
-//    val df = dc.open("C:\\Users\\NatsusakiYomi\\Downloads\\数据")
+//    val df = dc.get("C:\\Users\\NatsusakiYomi\\Downloads\\数据")
 //    var totalBytes: Long = 0L
 //    var realBytes: Long = 0L
 //    var count: Int = 0
@@ -168,7 +168,7 @@
 //      .add("name", StringType)
 //
 //    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    val df = dc.open("/Users/renhao/Downloads/MockData/hdfs")
+//    val df = dc.get("/Users/renhao/Downloads/MockData/hdfs")
 //    var totalBytes: Long = 0L
 //    var realBytes: Long = 0L
 //    var count: Int = 0
@@ -210,7 +210,7 @@
 //    val schema = StructType.empty
 //      .add("col1", StringType)
 //      .add("col2", StringType)
-//    val df = dc.open("/Users/renhao/Downloads/MockData/hdfs")
+//    val df = dc.get("/Users/renhao/Downloads/MockData/hdfs")
 //    df.limit(10).foreach(row => {
 //      println(row)
 //    })
@@ -228,7 +228,7 @@
 //      .add("type", StringType)
 //      .add("name", StringType)
 //      .add("url", StringType)
-//    val df = dc.open("/Users/renhao/Downloads/MockData/ldbc")
+//    val df = dc.get("/Users/renhao/Downloads/MockData/ldbc")
 //    df.limit(10).foreach(println)
 //  }
 //}

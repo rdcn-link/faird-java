@@ -1,7 +1,7 @@
-package link.rdcn
+package link.rdcn.client
 
+import link.rdcn.TestBase
 import link.rdcn.TestBase.{csvDfInfos, dc}
-import link.rdcn.client.Blob
 import link.rdcn.struct.StructType.binaryStructType
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
@@ -11,7 +11,7 @@ class DataParsingTest extends TestBase {
 
   @Test
   def CSVParsingTest(): Unit = {
-    val df = dc.open("/csv/data_1.csv")
+    val df = dc.get("/csv/data_1.csv")
     df.limit(1).foreach(
       row => {
         println(row)
@@ -35,7 +35,7 @@ class DataParsingTest extends TestBase {
 
   @Test
   def BinaryParsingTest(): Unit = {
-    val df = dc.open("/bin")
+    val df = dc.get("/bin")
     df.limit(1).foreach(
       row => {
         println(row)

@@ -1,9 +1,9 @@
-package link.rdcn
+package link.rdcn.client
 
-import link.rdcn.DataIntegrityTest.isFolderContentsMatch
+import link.rdcn.TestBase
 import link.rdcn.TestBase.{baseDir, binDir, dc}
 import link.rdcn.TestEmptyProvider.outputDir
-import link.rdcn.client.Blob
+import link.rdcn.client.DataIntegrityTest.isFolderContentsMatch
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
 import org.apache.commons.io.IOUtils
@@ -70,7 +70,7 @@ class DataIntegrityTest extends TestBase {
     val expectedModifiedTime = expectedRow.getAs[Long](4).getOrElse(null)
     val expectedLastAccessTime = expectedRow.getAs[Long](5).getOrElse(null)
 
-    val df = dc.open("/bin")
+    val df = dc.get("/bin")
     df.filter(row=>row._1.asInstanceOf[String]==s"binary_data_$num.bin").foreach(
       row => {
         println(row)

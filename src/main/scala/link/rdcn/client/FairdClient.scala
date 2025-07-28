@@ -48,7 +48,7 @@ class FairdClient private(
   private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
   protocolClient.login(credentials)
 
-  def open(dataFrameName: String): RemoteDataFrame =
+  def get(dataFrameName: String): RemoteDataFrame =
     RemoteDataFrame(dataFrameName, protocolClient)
 
   def listDataSetNames(): Seq[String] =

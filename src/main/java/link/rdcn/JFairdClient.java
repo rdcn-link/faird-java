@@ -26,8 +26,8 @@ public class JFairdClient {
         this.fairdClient = fairdClient;
     }
 
-    public RemoteDataFrame open(String dataFrameName) {
-        return fairdClient.open(dataFrameName);
+    public RemoteDataFrame get(String dataFrameName) {
+        return fairdClient.get(dataFrameName);
     }
 
     public List<String> listDataSetNames() {

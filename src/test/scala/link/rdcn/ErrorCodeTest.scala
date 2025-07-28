@@ -5,7 +5,7 @@ import link.rdcn.server.exception.ServerException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class ErrorHandlerTest {
+class ErrorCodeTest {
   @Test()
   def testInvalidError(): Unit = {
     val exception = new ClientException(ErrorCode.UNKNOWN_ERROR)

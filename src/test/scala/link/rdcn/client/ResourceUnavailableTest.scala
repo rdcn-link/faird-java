@@ -1,7 +1,8 @@
-package link.rdcn
+package link.rdcn.client
 
 import link.rdcn.TestBase.dc
 import link.rdcn.util.ExceptionHandler
+import link.rdcn.{ErrorCode, TestBase}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
@@ -11,7 +12,7 @@ class ResourceUnavailableTest extends TestBase {
   //df不存在
   @Test
   def testAccessInvalidDataFrame(): Unit = {
-    val df = dc.open("/csv/invalid.csv") // 假设没有该文件
+    val df = dc.get("/csv/invalid.csv") // 假设没有该文件
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => df.foreach(_ => {})

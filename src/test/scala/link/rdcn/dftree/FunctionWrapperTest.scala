@@ -38,7 +38,6 @@ class FunctionWrapperTest {
         |            public boolean hasNext() {
         |                return iter.hasNext();
         |            }
-        |
         |            public Row next() {
         |                Row row = (Row)iter.next();
         |                return Row.fromJavaList(Arrays.asList(row.get(0), row.get(1), 100));

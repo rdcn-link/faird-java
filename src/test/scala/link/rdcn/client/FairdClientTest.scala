@@ -1,7 +1,8 @@
-package link.rdcn
+package link.rdcn.client
 
 import link.rdcn.ConfigKeys._
 import link.rdcn.ResourceKeys._
+import link.rdcn.TestBase
 import link.rdcn.TestBase._
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
@@ -19,7 +20,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  */
 
 
-class ClientAPITest extends TestBase {
+class FairdClientTest extends TestBase {
   val csvModel: Model = genModel
   val binModel: Model = genModel
 

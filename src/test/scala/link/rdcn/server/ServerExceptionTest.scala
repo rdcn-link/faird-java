@@ -1,9 +1,10 @@
-package link.rdcn
+package link.rdcn.server
 
+import link.rdcn.ErrorCode
+import link.rdcn.TestEmptyProvider._
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.TestEmptyProvider._
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test

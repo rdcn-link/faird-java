@@ -1,14 +1,15 @@
-package link.rdcn
+package link.rdcn.server
 
+import link.rdcn.TestEmptyProvider.{adminPassword, adminUsername}
 import link.rdcn.client.FairdClient
 import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.TestEmptyProvider.{adminPassword, adminUsername}
+import link.rdcn.{ErrorCode, TestBase}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 
-class ClientAuthorizationTest extends TestBase {
+class FlightServerAuthHandlerTest extends TestBase {
 
   @Test()
   def testLoginWhenUsernameIsNotAdmin(): Unit = {
@@ -37,7 +38,7 @@ class ClientAuthorizationTest extends TestBase {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
-      () => dc.open("/csv/data_1.csv").foreach(_ => ())
+      () => dc.get("/csv/data_1.csv").foreach(_ => ())
     )
     assertEquals(ErrorCode.USER_NOT_LOGGED_IN, ExceptionHandler.getErrorCode(serverException))
   }
