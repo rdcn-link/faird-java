@@ -2,9 +2,9 @@ package link.rdcn.dftree
 
 import link.rdcn.ConfigLoader
 import link.rdcn.TestEmptyProvider.getResourcePath
-import link.rdcn.dftree.FunctionWrapper.{JavaCode, PythonBin}
+import link.rdcn.dftree.FunctionWrapper.{JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
-import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType}
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType, ValueType}
 import link.rdcn.util.AutoClosingIterator
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
@@ -71,6 +71,25 @@ class FunctionWrapperTest {
     val newRow = pythonBin.applyToInput(rows, Some(jep)).asInstanceOf[Iterator[Row]].next()
     assert(newRow._1 == 0.33)
     assert(newRow._2 == 0.67)
+  }
+
+  @Test
+  def javaJarTest(): Unit = {
+    ConfigLoader.init(getResourcePath(""))
+    val jarPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "java", "faird-jar-1.0-SNAPSHOT.jar").toString
+    val jo = new JSONObject()
+    jo.put("type", LangType.JAVA_JAR.name)
+    jo.put("functionId", "id1")
+    jo.put("jarPath", jarPath)
+    val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
+    val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
+    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())
+    val newDf = javaJar.applyToInput(dataFrame).asInstanceOf[DataFrame]
+    newDf.foreach(row => {
+      assert(row._1 == 1)
+      assert(row._2 == 2)
+      assert(row._3 == 100)
+    })
   }
 }
 

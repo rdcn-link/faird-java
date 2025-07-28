@@ -109,7 +109,7 @@ class FairdClient private(
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonCode], operation)
         operation = transformerNode
       case s: SourceNode => // 不做处理
-      case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend UDFFunction trait")
+      case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
     })
     RemoteDataFrame(dataFrameName, protocolClient, operation)
   }

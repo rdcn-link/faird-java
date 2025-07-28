@@ -3,13 +3,16 @@ package link.rdcn.dftree
 import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
+import link.rdcn.client.dag.Transformer11
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.AutoClosingIterator
 import link.rdcn.util.DataUtils.getDataFrameByStream
-import org.codehaus.janino.SimpleCompiler
 import org.json.JSONObject
+import org.codehaus.janino.SimpleCompiler
 
+import java.net.URLClassLoader
 import java.util
+import java.util.ServiceLoader
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
 
 
@@ -108,6 +111,7 @@ object FunctionWrapper {
         case row: Row               => genericFunctionCall.transform(row)
         case (r1: Row, r2: Row)     => genericFunctionCall.transform((r1, r2))
         case iter: Iterator[Row]    => genericFunctionCall.transform(iter)
+        case df: DataFrame          => genericFunctionCall.transform(df)
         case other                  => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
     }
@@ -165,6 +169,29 @@ object FunctionWrapper {
     }
   }
 
+  case class JavaJar(functionID: String, jarPath: String) extends FunctionWrapper {
+    //对接算子库后去掉 jarPath
+    override def toJson: JSONObject = {
+      val jo = new JSONObject()
+      jo.put("type", LangType.JAVA_JAR.name)
+      jo.put("functionId", functionID)
+      jo.put("jarPath", jarPath)
+    }
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
+      val jarFile = new java.io.File(jarPath)
+      val urls = Array(jarFile.toURI.toURL)
+      val classLoader = new URLClassLoader(urls, null) //null 表示以 bootstrap classloader 为父类加载器，也就是完全隔离宿主环境
+      val serviceLoader = ServiceLoader.load(classOf[Transformer11], classLoader).iterator()
+      if(!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
+      val udfFunction = serviceLoader.next()
+      input match {
+        case df: DataFrame => udfFunction.transform(df)
+        case other => throw new IllegalArgumentException(s"Unsupported input: $other")
+      }
+    }
+  }
+
   def apply(jsonObj: JSONObject): FunctionWrapper = {
     val funcType = jsonObj.getString("type")
     funcType match {
@@ -172,6 +199,7 @@ object FunctionWrapper {
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionId"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
+      case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionId"), jsonObj.getString("jarPath"))
     }
   }
 

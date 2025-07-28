@@ -13,6 +13,7 @@ sealed trait LangType {
 object LangType {
   case object JAVA_BIN extends LangType { val name = "JAVA_BIN" }
   case object JAVA_CODE extends LangType { val name = "JAVA_CODE" }
+  case object JAVA_JAR extends LangType {val name = "JAVA_JAR"}
   case object PYTHON_CODE extends LangType { val name = "PYTHON_CODE" }
   case object PYTHON_BIN extends LangType { val name = "PYTHON_BIN" }
   case object TYPESCRIPT_CODE extends LangType { val name = "TYPESCRIPT_CODE" }
