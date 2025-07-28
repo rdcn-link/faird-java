@@ -5,17 +5,21 @@
   <groupId>link.rdcn</groupId>
   <artifactId>faird-java</artifactId>
   <version>1.0-20250707</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
-  <name>Faird</name>
+  <name>faird-java</name>
   <url>http://maven.apache.org</url>
+  <modules>
+    <module>faird-core</module>
+    <module>faird-api</module>
+    <module>faird-plugin-impl</module>
+  </modules>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <scala.version>2.12.8</scala.version>
-    <scala-maven.version>4.8.1</scala-maven.version>
   </properties>
 
   <dependencies>
@@ -24,130 +28,8 @@
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi-ooxml</artifactId>
-      <version>5.4.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>flight-core</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>arrow-vector</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>flight-grpc</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>flight-sql</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>flight-sql-jdbc-core</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.arrow</groupId>
-      <artifactId>flight-sql-jdbc-driver</artifactId>
-      <version>13.0.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>commons-net</groupId>
-      <artifactId>commons-net</artifactId>
-      <version>3.11.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.jena</groupId>
-      <artifactId>jena-core</artifactId>
-      <version>3.17.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.jena</groupId>
-      <artifactId>jena-arq</artifactId>
-      <version>3.17.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.jena</groupId>
-      <artifactId>jena-base</artifactId>
-      <version>3.17.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>2.20.0</version>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <version>5.13.1</version>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/com.beachape/enumeratum -->
-    <dependency>
-      <groupId>com.beachape</groupId>
-      <artifactId>enumeratum_2.12</artifactId>
-      <version>1.9.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>2.20.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.codehaus.janino</groupId>
-      <artifactId>janino</artifactId>
-      <version>3.1.10</version>
-    </dependency>
-
-    <!-- Circe JSON library -->
-    <dependency>
-      <groupId>io.circe</groupId>
-      <artifactId>circe-core_2.12</artifactId>
-      <version>0.14.6</version>
-    </dependency>
-    <dependency>
-      <groupId>io.circe</groupId>
-      <artifactId>circe-generic_2.12</artifactId>
-      <version>0.14.6</version>
-    </dependency>
-    <dependency>
-      <groupId>io.circe</groupId>
-      <artifactId>circe-parser_2.12</artifactId>
-      <version>0.14.6</version>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <version>5.13.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20250517</version>
-    </dependency>
-    <dependency>
-      <groupId>black.ninia</groupId>
-      <artifactId>jep</artifactId>
-      <version>4.2.2</version>
-    </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <!-- 编译 Scala -->
@@ -176,7 +58,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version> <!-- 或其他稳定版本 -->
+        <version>3.11.0</version>
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
@@ -256,44 +138,6 @@
           </execution>
         </executions>
       </plugin>
-<!--      <plugin>-->
-<!--        <groupId>org.apache.maven.plugins</groupId>-->
-<!--        <artifactId>maven-shade-plugin</artifactId>-->
-<!--        <version>3.4.1</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <phase>package</phase>-->
-<!--            <goals>-->
-<!--              <goal>shade</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <transformers>-->
-<!--                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
-<!--                  <mainClass>com.example.Main</mainClass>-->
-<!--                </transformer>-->
-<!--              </transformers>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
     </plugins>
   </build>
-  <distributionManagement>
-    <snapshotRepository>
-      <id>sdc</id>
-      <url>http://10.0.82.220:8081/repository/maven-snapshots/</url>
-    </snapshotRepository>
-    <repository>
-      <id>sdc</id>
-      <url>http://10.0.82.220:8081/repository/maven-releases</url>
-    </repository>
-  </distributionManagement>
-
-  <repositories>
-    <repository>
-      <id>sdc</id>
-      <name>Repository</name>
-      <url>http://10.0.82.220:8081/repository/maven-public/</url>
-    </repository>
-  </repositories>
 </project>
