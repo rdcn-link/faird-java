@@ -118,7 +118,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameLimit(num: Int): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail.take(num).mkString("\n") + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.take(num).mkString("\n") + "\n"
     val df = dc.get("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -134,7 +134,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(2))
   def testDataFrameFilter(id: Int): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq(id) + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq(id) + "\n"
     val df = dc.get("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -152,7 +152,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameMap(num: Long): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -182,7 +182,7 @@ class DataFrameOperationTest extends TestBase {
 
   @Test
   def testDataFrameMapColumn(): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -210,7 +210,7 @@ class DataFrameOperationTest extends TestBase {
 
   @Test
   def testDataFrameSelect(): Unit = {
-    val expectedOutput = Source.fromFile(csvDir + "\\data_1.csv").getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -239,7 +239,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(0, 10, 20000))
   def testDataFrameUDFTake(num: Int): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new Transformer11 {
@@ -275,7 +275,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(0, 10, 20000))
   def testDataFrameUDFFilter(num: Int): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new Transformer11 {
@@ -311,7 +311,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFMap(num: Int): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = addLineBreak(transformB(lines,num)).mkString("")
 
     val transformerDAG = Flow(
@@ -341,7 +341,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFLinearDAG(num: Int): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = addLineBreak(transformC(transformB(lines,num),num)).mkString("")
 
 
@@ -376,7 +376,7 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFForkDAG(num: Int): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutputAB = addLineBreak(transformB(lines,num)).mkString("")
     val expectedOutputAC = addLineBreak(transformC(lines,num)).mkString("")
 
@@ -412,8 +412,8 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFJoinDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
-    val lines2 = Source.fromFile(csvDir + "\\data_2.csv").getLines().toSeq.tail
+    val lines1 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
+    val lines2 = Source.fromFile(Paths.get(csvDir,"data_2.csv").toString).getLines().toSeq.tail
     val expectedOutputAC = addLineBreak(transformC(lines1, num)).mkString
     val expectedOutputBC = addLineBreak(transformC(lines2, num)).mkString
 
@@ -452,8 +452,8 @@ class DataFrameOperationTest extends TestBase {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFHybridDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
-    val lines2 = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines1 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
+    val lines2 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutputABDE = addLineBreak(transformE(transformD(transformB(lines1,num)))).mkString
     val expectedOutputACDE = addLineBreak(transformE(transformD(transformC(lines2,num)))).mkString
 
@@ -559,7 +559,7 @@ class DataFrameOperationTest extends TestBase {
 
   @Test
   def testDataFrameRowIndexAccess(): Unit = {
-    val lines = Source.fromFile(csvDir + "\\data_1.csv").getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.mkString("\n") + "\n"
 
     val df = dc.get("/csv/data_1.csv")

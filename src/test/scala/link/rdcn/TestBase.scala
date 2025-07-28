@@ -90,6 +90,9 @@ object TestBase {
         } else if (usernamePassword.username == userUsername && usernamePassword.password == userPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
         }
+        else if (usernamePassword.username == anonymousUsername) {
+          new TestAuthenticatedUser(anonymousUsername, genToken())
+        }
         else if (usernamePassword.username != "admin") {
           throw new AuthorizationException(USER_NOT_FOUND)
         } else {

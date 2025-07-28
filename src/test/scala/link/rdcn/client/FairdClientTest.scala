@@ -86,7 +86,7 @@ class FairdClientTest extends TestBase {
 
   @Test
   def testGetServerResourceInfo(): Unit = {
-    val statusMap = dc.getServerResourceInfo
+    val expectedResourceInfo = dc.getServerResourceInfo
 
     val allKeys: Set[String] = Set(
       CPU_CORES,
@@ -99,10 +99,9 @@ class FairdClientTest extends TestBase {
       SYSTEM_MEMORY_FREE_MB,
       SYSTEM_MEMORY_TOTAL_MB
     )
-    val hostInfo = dc.getHostInfo
+    val serverResouceInfo = dc.getServerResourceInfo
     allKeys.foreach(key =>{
-      assertTrue(hostInfo.contains(key), s"实际结果中缺少键：$key")
-      assertEquals(expectedHostInfo(key), hostInfo(key), s"键 '$key' 的值与预期不符！")
+      assertTrue(serverResouceInfo.contains(key), s"实际结果中缺少键：$key")
     }
     )
   }

@@ -5,7 +5,7 @@ import io.circe.{DecodingFailure, parser}
 import link.rdcn.SimpleSerializer
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.Row
-import link.rdcn.user.{Credentials, UsernamePassword}
+import link.rdcn.user.{AnonymousCredentials, Credentials, UsernamePassword}
 import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
@@ -71,11 +71,16 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     val vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator)
     val credentialsVector = vectorSchemaRoot.getVector("credentials").asInstanceOf[VarCharVector]
     credentialsVector.allocateNew(1)
+    val userPassword = credentials match {
+      case _: UsernamePassword => credentials.asInstanceOf[UsernamePassword]
+      case AnonymousCredentials => UsernamePassword("anonymous", "anonymous")
+      case _ => throw new IllegalArgumentException("Unsupported credential type")
+    }
     val credentialsJsonString =
-    s"""
+      s"""
        |{
-       |    "username" : "${credentials.asInstanceOf[UsernamePassword].username}",
-       |    "password" : "${credentials.asInstanceOf[UsernamePassword].password}"
+       |    "username" : "${userPassword.username}",
+       |    "password" : "${userPassword.password}"
        |}
        |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
     credentialsVector.set(0, credentialsJsonString.getBytes("UTF-8"))

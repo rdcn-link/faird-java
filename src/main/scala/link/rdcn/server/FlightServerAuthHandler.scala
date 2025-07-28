@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.{Optional, UUID}
 
 object UserSessionStore {
-  val users: Map[String, String] = Map("admin@instdb.cn" -> "admin001")
+  val users: Map[String, String] = Map("admin@instdb.cn" -> "admin001", "anoymous" -> "anoymous", "admin" -> "admin")
   val activeSessions: ConcurrentHashMap[String, Credentials] = new ConcurrentHashMap[String, Credentials]() // token -> username
 
   def validateUser(usernamePassword: UsernamePassword): Option[String] = {
