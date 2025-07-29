@@ -160,11 +160,11 @@ object ClientDemo {
 
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1
-    val udfMap: FlowNode = FlowNode.fromAnonymousFunction(dataFrame =>
+    val udfMap: FlowNode = FlowNode.fromJavaClass(dataFrame =>
       dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + 1, row.get(1))))
 
     //自定义一个filter算子 比如只保留小于等于3的行
-    val udfFilter: FlowNode = FlowNode.fromAnonymousFunction(dataFrame =>
+    val udfFilter: FlowNode = FlowNode.fromJavaClass(dataFrame =>
       dataFrame.filter((row: Row) => {
         val value: Long = row._1.asInstanceOf[Long]
         value <= 3L

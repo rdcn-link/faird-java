@@ -46,7 +46,7 @@ object FlowNode {
     JavaCodeNode(javaCode, className)
   }
 
-  def fromAnonymousFunction(func: DataFrame => DataFrame): Transformer11 = {
+  def fromJavaClass(func: DataFrame => DataFrame): Transformer11 = {
     (dataFrame: DataFrame) => func(dataFrame)
   }
 
