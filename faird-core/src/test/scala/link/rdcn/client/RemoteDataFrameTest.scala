@@ -1,8 +1,9 @@
 package link.rdcn.client
 
-import link.rdcn.TestBase
-import link.rdcn.TestBase._
-import link.rdcn.client.DataFrameOperationTest.{addLineBreak, getLine, transformB, transformC, transformD, transformE, udfB, udfC, udfD, udfE}
+import link.rdcn.TestBase.getOutputDir
+import link.rdcn.TestProvider
+import link.rdcn.TestProvider._
+import link.rdcn.client.DataFrameOperationTest._
 import link.rdcn.client.dag.{Flow, SourceNode, Transformer11}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
@@ -23,7 +24,7 @@ import scala.io.Source
  * @Modified By:
  */
 
-object DataFrameOperationTest extends TestBase {
+object DataFrameOperationTest {
   val udfB = (num: Int) => new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
       dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
@@ -96,7 +97,7 @@ object DataFrameOperationTest extends TestBase {
 
 }
 
-class DataFrameOperationTest extends TestBase {
+class DataFrameOperationTest extends TestProvider {
   val outputDir = getOutputDir("test_output","output")
 
 

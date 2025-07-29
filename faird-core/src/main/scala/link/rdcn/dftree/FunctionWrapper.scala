@@ -181,7 +181,7 @@ object FunctionWrapper {
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
-      val classLoader = new URLClassLoader(urls, null) //null 表示以 bootstrap classloader 为父类加载器，也就是完全隔离宿主环境
+      val classLoader = new URLClassLoader(urls, getClass.getClassLoader) //null 表示以 bootstrap classloader 为父类加载器，也就是完全隔离宿主环境
       val serviceLoader = ServiceLoader.load(classOf[Transformer11], classLoader).iterator()
       if(!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()

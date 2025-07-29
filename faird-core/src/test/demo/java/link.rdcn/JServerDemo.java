@@ -10,9 +10,9 @@ import link.rdcn.server.FairdServer;
 
 public class JServerDemo {
     public static void main(String[] args) {
-        TestProvider provider = new TestProvider();
+        TestDemoProvider provider = new TestDemoProvider();
         //根据fairdHome自动读取配置文件
-        FairdServer server = new FairdServer(provider.dataProvider(),provider.authProvider(),provider.getResourcePath("tls"));
+        FairdServer server = new FairdServer(provider.dataProvider(),provider.authProvider(),TestBase.getResourcePath("tls"));
         server.start();
     }
 }

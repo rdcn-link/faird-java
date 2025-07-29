@@ -1,7 +1,7 @@
 package link.rdcn.dftree
 
 import link.rdcn.ConfigLoader
-import link.rdcn.TestEmptyProvider.getResourcePath
+import link.rdcn.TestBase.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
 import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType, ValueType}
@@ -24,10 +24,10 @@ class FunctionWrapperTest {
       """
         |import java.util.*;
         |import link.rdcn.util.*;
-        |import link.rdcn.client.dag.UDFFunction;
+        |import link.rdcn.client.dag.Transformer11;
         |import link.rdcn.struct.*;
         |
-        |public class DynamicUDF implements UDFFunction {
+        |public class DynamicUDF implements Transformer11 {
         |    public DynamicUDF() {
         |        // 默认构造器，必须显式写出
         |    }
@@ -52,8 +52,13 @@ class FunctionWrapperTest {
     jo.put("javaCode", code)
     jo.put("className", "DynamicUDF")
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
-    val rows = new LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
+    val rows = LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
     val newDataFrame = javaCode.applyToInput(rows.stream).asInstanceOf[DataFrame]
+    newDataFrame.foreach(row => {
+      assert(row._1 == 1)
+      assert(row._2 == 2)
+      assert(row._3 == 100)
+    })
   }
 
   @Test
@@ -84,8 +89,8 @@ class FunctionWrapperTest {
     val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
     val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())
-    val newDf = javaJar.applyToInput(dataFrame).asInstanceOf[DataFrame]
-    newDf.foreach(row => {
+    val newDataFrame = javaJar.applyToInput(dataFrame).asInstanceOf[DataFrame]
+    newDataFrame.foreach(row => {
       assert(row._1 == 1)
       assert(row._2 == 2)
       assert(row._3 == 100)

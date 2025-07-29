@@ -6,7 +6,8 @@
  */
 package link.rdcn
 
-import link.rdcn.TestEmptyProvider.getResourcePath
+
+import link.rdcn.TestBase.getResourcePath
 import link.rdcn.client.FairdClient
 import link.rdcn.client.dag._
 import link.rdcn.struct.DataFrame

@@ -1,15 +1,15 @@
 package link.rdcn.server
 
-import link.rdcn.TestEmptyProvider.{adminPassword, adminUsername}
+import link.rdcn.TestBase.{adminPassword, adminUsername}
 import link.rdcn.client.FairdClient
 import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.{ErrorCode, TestBase}
+import link.rdcn.{ErrorCode, TestProvider}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 
-class FlightServerAuthHandlerTest extends TestBase {
+class FlightServerAuthHandlerTest extends TestProvider {
 
   @Test()
   def testLoginWhenUsernameIsNotAdmin(): Unit = {

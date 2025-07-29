@@ -1,13 +1,13 @@
 package link.rdcn.client
 
-import link.rdcn.TestBase
-import link.rdcn.TestBase.{csvDfInfos, dc}
+import link.rdcn.TestProvider
+import link.rdcn.TestProvider.{csvDfInfos, dc}
 import link.rdcn.struct.StructType.binaryStructType
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
 import org.junit.jupiter.api.Test
 
-class DataParsingTest extends TestBase {
+class DataParsingTest extends TestProvider {
 
   @Test
   def CSVParsingTest(): Unit = {

@@ -1,6 +1,7 @@
 package link.rdcn.server
 
 import link.rdcn.ErrorCode
+import link.rdcn.TestBase.{adminPassword, adminUsername}
 import link.rdcn.TestEmptyProvider._
 import link.rdcn.client.FairdClient
 import link.rdcn.user.UsernamePassword

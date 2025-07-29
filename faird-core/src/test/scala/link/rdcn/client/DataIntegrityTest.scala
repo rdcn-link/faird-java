@@ -1,8 +1,8 @@
 package link.rdcn.client
 
-import link.rdcn.TestBase
-import link.rdcn.TestBase.{baseDir, binDir, dc}
 import link.rdcn.TestEmptyProvider.outputDir
+import link.rdcn.TestProvider
+import link.rdcn.TestProvider.{baseDir, binDir, dc}
 import link.rdcn.client.DataIntegrityTest.isFolderContentsMatch
 import link.rdcn.struct.Row
 import link.rdcn.util.DataUtils
@@ -44,7 +44,7 @@ object DataIntegrityTest {
   }
 }
 
-class DataIntegrityTest extends TestBase {
+class DataIntegrityTest extends TestProvider {
 
   @ParameterizedTest
   @ValueSource(ints = Array(2))

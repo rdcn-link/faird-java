@@ -15,8 +15,9 @@ import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.riot.Lang
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileOutputStream, InputStream, StringReader}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, FileOutputStream, InputStream, InputStreamReader, StringReader}
 import java.nio.file.Paths
+import java.util.Properties
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable
@@ -51,7 +52,11 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
 
   val location = {
     if (useTLS) {
-      System.setProperty("javax.net.ssl.trustStore", Paths.get(System.getProperty("user.dir"), "target","test-classes", "tls", "faird").toString)
+      val props = new Properties()
+      val confPathURI = this.getClass.getProtectionDomain().getCodeSource().getLocation().toURI
+      val fis = new InputStreamReader(new FileInputStream(Paths.get(confPathURI).resolve("user.conf").toString), "UTF-8")
+      try props.load(fis) finally fis.close()
+      System.setProperty("javax.net.ssl.trustStore", Paths.get(props.getProperty("tls.path")).toString())
       Location.forGrpcTls(url, port)
     } else
       Location.forGrpcInsecure(url, port)

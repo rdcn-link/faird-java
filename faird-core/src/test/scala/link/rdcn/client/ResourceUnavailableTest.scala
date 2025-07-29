@@ -1,13 +1,13 @@
 package link.rdcn.client
 
-import link.rdcn.TestBase.dc
+import link.rdcn.TestProvider.dc
 import link.rdcn.util.ExceptionHandler
-import link.rdcn.{ErrorCode, TestBase}
+import link.rdcn.{ErrorCode, TestProvider}
 import org.apache.arrow.flight.FlightRuntimeException
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 
-class ResourceUnavailableTest extends TestBase {
+class ResourceUnavailableTest extends TestProvider {
 
   //df不存在
   @Test

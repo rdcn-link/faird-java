@@ -18,7 +18,7 @@ class FlowNodeTest {
 
   @Test
   def testFromJavaClass(): Unit = {
-    assertEquals(JavaCodeNode("javaCode", "className"), FlowNode.fromJavaClass("javaCode", "className"))
+    assertEquals(JavaCodeNode("javaCode", "className"), FlowNode.fromJavaClass("className", "javaCode"))
   }
 
   @Test

@@ -6,6 +6,7 @@
  */
 package link.rdcn
 
+import link.rdcn.TestBase.getResourcePath
 import link.rdcn.server.FairdServer
 
 import java.nio.file.Paths
@@ -13,9 +14,9 @@ import java.nio.file.Paths
 
 object ServerDemo {
   def main(args: Array[String]): Unit = {
-    val provider = new TestProvider
+    val provider = new TestDemoProvider
     //根据fairdHome自动读取配置文件
-    val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(provider.getResourcePath("tls")).toString())
+    val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(getResourcePath("tls")).toString())
     server.start()
   }
 }

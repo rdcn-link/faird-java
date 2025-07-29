@@ -7,7 +7,6 @@ import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.Model
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.FileOutputStream
 import java.nio.file.{Path, Paths}
@@ -20,7 +19,6 @@ import scala.collection.JavaConverters._
  * @Modified By:
  */
 object ClientDemo {
-  private val log: Logger = LoggerFactory.getLogger(classOf[JClientDemo])
 
   def main(args: Array[String]): Unit = {
     // 通过用户名密码非加密连接FairdClient
@@ -110,7 +108,7 @@ object ClientDemo {
       val byteSize: Option[Long] = row.getAs[Long](3)
       //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
       //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
-      val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
+      val path: Path = Paths.get("faird-core","src", "test", "demo", "data", "output", name)
       blob.offerStream(inputStream => {
         val outputStream = new FileOutputStream(path.toFile)
         IOUtils.copy(inputStream, outputStream)

@@ -1,69 +1,56 @@
 /**
  * @Author Yomi
  * @Description:
- * @Data 2025/7/16 14:19
+ * @Data 2025/7/29 17:30
  * @Modified By:
  */
 package link.rdcn
 
-import link.rdcn.ErrorCode._
-import link.rdcn.server.exception._
-import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
-import link.rdcn.struct._
-import link.rdcn.user._
-import link.rdcn.util.DataUtils._
-import org.apache.jena.rdf.model.{Model, ModelFactory}
+import link.rdcn.ConfigKeys._
+import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_FOUND, USER_NOT_LOGGED_IN}
+import link.rdcn.TestBase._
+import link.rdcn.client.FairdClient
+import link.rdcn.server.FairdServer
+import link.rdcn.server.exception.AuthorizationException
+import link.rdcn.struct.StructType
+import link.rdcn.struct.ValueType.{DoubleType, LongType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
+import link.rdcn.util.DataUtils
+import link.rdcn.util.DataUtils.listFiles
+import org.junit.jupiter.api.{AfterAll, BeforeAll}
 
 import java.io.File
-import java.nio.file.{Files, Path, Paths}
-import java.util.UUID
+import java.nio.file.Paths
 
-//用于Demo的Provider
-class TestProvider(baseDirString: String = "src/test/demo", subDirString: String = "data") {
+trait TestProvider {
 
-  val baseDir = getOutputDir(baseDirString, subDirString)
+}
+
+object TestProvider {
+  val baseDir = getOutputDir("test_output")
   // 生成的临时目录结构
-  val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))
-  val csvDir = getOutputDir(baseDirString, Seq(subDirString, "csv").mkString(File.separator))
-  val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
+  val binDir = Paths.get(baseDir, "bin").toString
+  val csvDir = Paths.get(baseDir, "csv").toString
+
+  //必须在DfInfos前执行一次
+  TestDataGenerator.generateTestData(binDir, csvDir, baseDir)
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir).map(file => {
-    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
+    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\", "/"), Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   lazy val binDfInfos = Seq(
-    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\","/"),Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
-  lazy val excelDfInfos = listFiles(excelDir).map(file => {
-    DataFrameInfo(Paths.get("/excel").resolve(file.getName).toString.replace("\\","/"), Paths.get(file.getAbsolutePath).toUri, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
-  })
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\", "/"), Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
-  val dataSetExcel = DataSet("excel", "3", excelDfInfos.toList)
-
-  val adminUsername = "admin@instdb.cn"
-  val adminPassword = "admin001"
-  val userUsername = "user"
-  val userPassword = "user"
-  val anonymousUsername = "anonymous"
-
-  //权限
-  val permissions = Map(
-    adminUsername -> Set("/csv/data_1.csv", "/bin",
-      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv", "/excel/data.xlsx")
-  )
-
-  //生成Token
-  val genToken = () => UUID.randomUUID().toString
-
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
 
   }
 
-
-  val authProvider = new AuthProvider {
+  val authprovider = new AuthProvider {
 
     override def authenticate(credentials: Credentials): AuthenticatedUser = {
       if (credentials.isInstanceOf[UsernamePassword]) {
@@ -76,7 +63,10 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
         } else if (usernamePassword.username == userUsername && usernamePassword.password == userPassword) {
           new TestAuthenticatedUser(adminUsername, genToken())
         }
-        else if (usernamePassword.username != "admin") {
+        else if (usernamePassword.username == anonymousUsername) {
+          new TestAuthenticatedUser(anonymousUsername, genToken())
+        }
+        else if (usernamePassword.username != adminUsername) {
           throw new AuthorizationException(USER_NOT_FOUND)
         } else {
           throw new AuthorizationException(INVALID_CREDENTIALS)
@@ -100,37 +90,75 @@ class TestProvider(baseDirString: String = "src/test/demo", subDirString: String
     }
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
-    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel)
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-      Paths.get(baseDir,relativePath).toString
+      Paths.get(getOutputDir("test_output"), relativePath).toString
     }
+  }
+
+  private var fairdServer: Option[FairdServer] = None
+  var dc: FairdClient = _
+  val configCache = ConfigLoader.fairdConfig
+  var expectedHostInfo: Map[String, String] = _
+
+  @BeforeAll
+  def startServer(): Unit = {
+    TestDataGenerator.generateTestData(binDir, csvDir, baseDir)
+    getServer
+    connectClient
 
   }
 
-
-  // 默认构造函数
-  def this() = {
-    this("src/test/demo", "data") // 调用主构造函数
+  @AfterAll
+  def stop(): Unit = {
+    stopServer()
+    DataUtils.closeAllFileSources()
+    TestDataGenerator.cleanupTestData(baseDir)
   }
 
-  def genModel: Model = {
-    ModelFactory.createDefaultModel()
+  def getServer: FairdServer = synchronized {
+    if (fairdServer.isEmpty) {
+      val s = new FairdServer(dataProvider, authprovider, Paths.get(getResourcePath("")).toString())
+
+      s.start()
+      //      println(s"Server (Location): Listening on port ${s.getPort}")
+      fairdServer = Some(s)
+      expectedHostInfo =
+        Map(
+          FAIRD_HOST_NAME -> ConfigLoader.fairdConfig.hostName,
+          FAIRD_HOST_PORT -> ConfigLoader.fairdConfig.hostPort.toString,
+          FAIRD_HOST_TITLE -> ConfigLoader.fairdConfig.hostTitle,
+          FAIRD_HOST_POSITION -> ConfigLoader.fairdConfig.hostPosition,
+          FAIRD_HOST_DOMAIN -> ConfigLoader.fairdConfig.hostDomain,
+          FAIRD_TLS_ENABLED -> ConfigLoader.fairdConfig.useTLS.toString,
+          FAIRD_TLS_CERT_PATH -> ConfigLoader.fairdConfig.certPath,
+          FAIRD_TLS_KEY_PATH -> ConfigLoader.fairdConfig.keyPath,
+          LOGGING_FILE_NAME -> ConfigLoader.fairdConfig.loggingFileName,
+          LOGGING_LEVEL_ROOT -> ConfigLoader.fairdConfig.loggingLevelRoot,
+          LOGGING_PATTERN_FILE -> ConfigLoader.fairdConfig.loggingPatternFile,
+          LOGGING_PATTERN_CONSOLE -> ConfigLoader.fairdConfig.loggingPatternConsole
+
+        )
+
+    }
+    fairdServer.get
   }
 
-
-  def getOutputDir(subDirs: String*): String = {
-    val outDir = Paths.get(System.getProperty("user.dir"), subDirs: _*) // 项目根路径
-    Files.createDirectories(outDir)
-    outDir.toString
+  def connectClient: Unit = synchronized {
+    dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
   }
 
-  def getResourcePath(resourceName: String): String = {
-    val url = Option(getClass.getClassLoader.getResource(resourceName))
-      .orElse(Option(getClass.getResource(resourceName)))
-      .getOrElse(throw new RuntimeException(s"Resource not found: $resourceName"))
-    val nativePath: Path = Paths.get(url.toURI())
-    nativePath.toString
+  def stopServer(): Unit = synchronized {
+    fairdServer.foreach(_.close())
+    fairdServer = None
+  }
+
+  def getExpectedDataFrameSize(dataFrameName: String): Long = {
+    dataProvider.dataSetsScalaList.foreach(ds => {
+      val dfInfo = ds.getDataFrameInfo(dataFrameName)
+      if (dfInfo.nonEmpty) return DataUtils.countLinesFast(new File(dfInfo.get.path))
+    })
+    -1L
   }
 
 }
-
