@@ -2,7 +2,7 @@ package link.rdcn.dftree
 
 import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.dftree.FunctionWrapper.{JavaCode, JavaJar, PythonBin}
+import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
 import link.rdcn.struct._
 import link.rdcn.util.AutoClosingIterator
