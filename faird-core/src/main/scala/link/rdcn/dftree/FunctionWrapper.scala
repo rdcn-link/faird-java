@@ -4,12 +4,13 @@ import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.client.dag.Transformer11
-import link.rdcn.struct.{DataFrame, Row}
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
+import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.JSONObject
 import org.codehaus.janino.SimpleCompiler
 
+import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
 import java.net.{URL, URLClassLoader}
 import java.util
 import java.util.ServiceLoader
@@ -192,6 +193,46 @@ object FunctionWrapper {
       }
     }
   }
+  case class CppBin(cppPath: String) extends FunctionWrapper {
+
+    override def toJson: JSONObject = new JSONObject().put("type", LangType.CPP_BIN.name)
+      .put("cppPath", cppPath)
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+      val pb = new ProcessBuilder(cppPath)
+      val process = pb.start()
+      val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
+      val reader = new BufferedReader(new InputStreamReader(process.getInputStream))
+      val inputDataFrame = input.asInstanceOf[DataFrame]
+      val inputSchema = inputDataFrame.schema
+      inputDataFrame.mapIterator[DataFrame](iter => {
+        val stream = new Iterator[String] {
+          override def hasNext: Boolean = iter.hasNext
+
+          override def next(): String = {
+            val row = iter.next()
+            val jsonStr = row.toJsonString(inputSchema)
+            // 写入 stdin
+            writer.write(jsonStr)
+            writer.newLine()
+            writer.flush()
+            // 从 stdout 读取一行响应 JSON
+            val response = reader.readLine()
+            if (response == null) throw new RuntimeException("Unexpected end of output from C++ process.")
+            response
+          }
+        }
+        val r = DataUtils.getStructTypeStreamFromJson(stream)
+        val autoClosingIterator = AutoClosingIterator(r._1)(() => {
+          iter.close()
+          writer.close()
+          reader.close()
+          process.destroy()
+        })
+        LocalDataFrame(r._2, autoClosingIterator)
+      })
+    }
+  }
 
   def apply(jsonObj: JSONObject): FunctionWrapper = {
     val funcType = jsonObj.getString("type")
@@ -201,6 +242,7 @@ object FunctionWrapper {
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionId"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
       case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionId"), jsonObj.getString("jarPath"))
+      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("cppPath"))
     }
   }
 

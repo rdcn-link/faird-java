@@ -1,6 +1,9 @@
 package link.rdcn.struct
 
-import scala.collection.JavaConverters.asScalaBufferConverter
+import jdk.nashorn.api.scripting.JSObject
+import org.json.JSONObject
+
+import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter}
 /**
  * @Author renhao
  * @Description:
@@ -29,6 +32,12 @@ class Row (val values: Seq[Any]) {
   def iterator: Iterator[Any] = values.iterator
 
   def isEmpty: Boolean = values.isEmpty
+
+  def toJsonString(structType: StructType): String = {
+    val jo = new JSONObject()
+    structType.columns.map(_.name).zip(values).foreach(kv => jo.put(kv._1, kv._2))
+    jo.toString
+  }
 
   override def toString: String = {
     val elems = values.map {
@@ -85,6 +94,11 @@ object Row {
 
   def fromJavaList(list: java.util.List[Object]): Row = {
     new Row(list.asScala)
+  }
+
+  def fromJsonString(jsonStr: String): Row = {
+    val jo = new JSONObject(jsonStr)
+    Row.fromSeq(jo.keys().asScala.toSeq.map(jo.get(_)))
   }
 
   /** 空行 */

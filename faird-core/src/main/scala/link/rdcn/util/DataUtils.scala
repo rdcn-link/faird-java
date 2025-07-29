@@ -13,6 +13,7 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.poi.ss.usermodel.{Cell, CellType, DateUtil}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.json.JSONObject
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileInputStream, IOException}
 import java.nio.charset.StandardCharsets
@@ -81,6 +82,16 @@ object DataUtils extends Logging{
     arrowRoot.setRowCount(rowCount)
     val unloader = new VectorUnloader(arrowRoot)
     unloader.getRecordBatch
+  }
+
+  def getStructTypeStreamFromJson(iter: Iterator[String]): (Iterator[Row], StructType) = {
+    if(iter.hasNext){
+      val firstLine = iter.next()
+      val jo = new JSONObject(firstLine)
+      val structType: StructType = StructType(jo.keys().asScala.map(key => Column(key, inferValueType(jo.get(key)))).toSeq)
+      val stream: Iterator[Row] = iter.map(Row.fromJsonString(_)) ++ Seq(Row.fromJsonString(firstLine)).iterator
+      (stream, structType)
+    }else (Iterator.empty, StructType.empty)
   }
 
   def convertStringRowToTypedRow(row: Row, schema: StructType): Row = {
