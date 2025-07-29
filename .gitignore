@@ -39,3 +39,4 @@ build/
 .DS_Store
 
 native/
+/src/test/demo/data/output/
