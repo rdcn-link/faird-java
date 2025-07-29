@@ -26,7 +26,7 @@
         </dependency>
         <dependency>
             <groupId>link.rdcn</groupId>
-            <artifactId>faird-api</artifactId>
+            <artifactId>faird-plugin</artifactId>
             <version>1.0-20250707</version>
             <scope>provided</scope>
         </dependency>
