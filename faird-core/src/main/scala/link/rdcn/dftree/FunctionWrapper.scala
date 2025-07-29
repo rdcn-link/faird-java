@@ -10,7 +10,7 @@ import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.JSONObject
 import org.codehaus.janino.SimpleCompiler
 
-import java.net.URLClassLoader
+import java.net.{URL, URLClassLoader}
 import java.util
 import java.util.ServiceLoader
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -181,8 +181,9 @@ object FunctionWrapper {
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
-      val classLoader = new URLClassLoader(urls, null) //null 表示以 bootstrap classloader 为父类加载器，也就是完全隔离宿主环境
-      val serviceLoader = ServiceLoader.load(classOf[Transformer11], classLoader).iterator()
+      val parentLoader = getClass.getClassLoader
+      val pluginLoader = new PluginClassLoader(urls, parentLoader)
+      val serviceLoader = ServiceLoader.load(classOf[Transformer11], pluginLoader).iterator()
       if(!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()
       input match {
@@ -208,5 +209,29 @@ object FunctionWrapper {
     val base64Str: String = java.util.Base64.getEncoder.encodeToString(objectBytes)
     JavaBin(base64Str)
   }
+
+  private class PluginClassLoader(urls: Array[URL], parent: ClassLoader)
+    extends URLClassLoader(urls, parent) {
+
+    override def loadClass(name: String, resolve: Boolean): Class[_] = synchronized {
+      // 必须由父加载器加载的类（避免 LinkageError）
+      if (name.startsWith("scala.") ||
+        name.startsWith("link.rdcn.") // 主程序中定义的接口、DataFrame等
+      ) {
+        return super.loadClass(name, resolve) // 委托给 parent
+      }
+
+      try {
+        val clazz = findClass(name)
+        if (resolve) resolveClass(clazz)
+        clazz
+      } catch {
+        case _: ClassNotFoundException =>
+          super.loadClass(name, resolve)
+      }
+    }
+  }
+
+
 }
 
