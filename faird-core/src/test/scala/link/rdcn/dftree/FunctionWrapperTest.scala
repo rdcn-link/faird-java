@@ -4,7 +4,7 @@ import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
-import link.rdcn.struct.{DataFrame, LocalDataFrame, Row, StructType, ValueType}
+import link.rdcn.struct._
 import link.rdcn.util.AutoClosingIterator
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
@@ -95,6 +95,23 @@ class FunctionWrapperTest {
       assert(row._2 == 2)
       assert(row._3 == 100)
     })
+  }
+
+  @Test
+  def cppBinTest(): Unit = {
+    ConfigLoader.init(getResourcePath(""))
+    val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor").toString
+    val jo = new JSONObject()
+    jo.put("type", LangType.CPP_BIN.name)
+    jo.put("cppPath", cppPath)
+    val cppBin = FunctionWrapper(jo).asInstanceOf[CppBin]
+    val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
+    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())
+    val newDf = cppBin.applyToInput(dataFrame).asInstanceOf[DataFrame]
+    newDf.foreach(row => {
+      assert(row._1 == true)
+    })
+
   }
 }
 

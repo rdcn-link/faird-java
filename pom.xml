@@ -11,7 +11,7 @@
   <url>http://maven.apache.org</url>
   <modules>
     <module>faird-core</module>
-    <module>faird-api</module>
+    <module>faird-plugin</module>
     <module>faird-plugin-impl</module>
   </modules>
 

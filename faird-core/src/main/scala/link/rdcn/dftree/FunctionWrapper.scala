@@ -4,13 +4,14 @@ import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.client.dag.Transformer11
-import link.rdcn.struct.{DataFrame, Row}
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
+import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.JSONObject
 import org.codehaus.janino.SimpleCompiler
 
-import java.net.URLClassLoader
+import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
+import java.net.{URL, URLClassLoader}
 import java.util
 import java.util.ServiceLoader
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -181,14 +182,55 @@ object FunctionWrapper {
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
-      val classLoader = new URLClassLoader(urls, getClass.getClassLoader) //null 表示以 bootstrap classloader 为父类加载器，也就是完全隔离宿主环境
-      val serviceLoader = ServiceLoader.load(classOf[Transformer11], classLoader).iterator()
+      val parentLoader = getClass.getClassLoader
+      val pluginLoader = new PluginClassLoader(urls, parentLoader)
+      val serviceLoader = ServiceLoader.load(classOf[Transformer11], pluginLoader).iterator()
       if(!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()
       input match {
         case df: DataFrame => udfFunction.transform(df)
         case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
+    }
+  }
+  case class CppBin(cppPath: String) extends FunctionWrapper {
+
+    override def toJson: JSONObject = new JSONObject().put("type", LangType.CPP_BIN.name)
+      .put("cppPath", cppPath)
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+      val pb = new ProcessBuilder(cppPath)
+      val process = pb.start()
+      val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
+      val reader = new BufferedReader(new InputStreamReader(process.getInputStream))
+      val inputDataFrame = input.asInstanceOf[DataFrame]
+      val inputSchema = inputDataFrame.schema
+      inputDataFrame.mapIterator[DataFrame](iter => {
+        val stream = new Iterator[String] {
+          override def hasNext: Boolean = iter.hasNext
+
+          override def next(): String = {
+            val row = iter.next()
+            val jsonStr = row.toJsonString(inputSchema)
+            // 写入 stdin
+            writer.write(jsonStr)
+            writer.newLine()
+            writer.flush()
+            // 从 stdout 读取一行响应 JSON
+            val response = reader.readLine()
+            if (response == null) throw new RuntimeException("Unexpected end of output from C++ process.")
+            response
+          }
+        }
+        val r = DataUtils.getStructTypeStreamFromJson(stream)
+        val autoClosingIterator = AutoClosingIterator(r._1)(() => {
+          iter.close()
+          writer.close()
+          reader.close()
+          process.destroy()
+        })
+        LocalDataFrame(r._2, autoClosingIterator)
+      })
     }
   }
 
@@ -200,6 +242,7 @@ object FunctionWrapper {
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionId"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
       case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionId"), jsonObj.getString("jarPath"))
+      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("cppPath"))
     }
   }
 
@@ -208,5 +251,29 @@ object FunctionWrapper {
     val base64Str: String = java.util.Base64.getEncoder.encodeToString(objectBytes)
     JavaBin(base64Str)
   }
+
+  private class PluginClassLoader(urls: Array[URL], parent: ClassLoader)
+    extends URLClassLoader(urls, parent) {
+
+    override def loadClass(name: String, resolve: Boolean): Class[_] = synchronized {
+      // 必须由父加载器加载的类（避免 LinkageError）
+      if (name.startsWith("scala.") ||
+        name.startsWith("link.rdcn.") // 主程序中定义的接口、DataFrame等
+      ) {
+        return super.loadClass(name, resolve) // 委托给 parent
+      }
+
+      try {
+        val clazz = findClass(name)
+        if (resolve) resolveClass(clazz)
+        clazz
+      } catch {
+        case _: ClassNotFoundException =>
+          super.loadClass(name, resolve)
+      }
+    }
+  }
+
+
 }
 
