@@ -67,7 +67,7 @@ class FunctionWrapperTest {
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
     val jo = new JSONObject()
     jo.put("type", LangType.PYTHON_BIN.name)
-    jo.put("functionId", "id1")
+    jo.put("functionID", "id1")
     jo.put("functionName", "normalize")
     jo.put("whlPath", whlPath)
     val pythonBin = FunctionWrapper(jo).asInstanceOf[PythonBin]
@@ -81,11 +81,9 @@ class FunctionWrapperTest {
   @Test
   def javaJarTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val jarPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "java", "faird-plugin-impl-1.0-20250707.jar").toString
     val jo = new JSONObject()
     jo.put("type", LangType.JAVA_JAR.name)
-    jo.put("functionId", "id1")
-    jo.put("jarPath", jarPath)
+    jo.put("functionID", "my-java-app-2")
     val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
     val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())

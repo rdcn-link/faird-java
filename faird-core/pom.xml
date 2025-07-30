@@ -18,6 +18,8 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.version>2.12.8</scala.version>
+        <akka.version>2.5.32</akka.version>
+        <akka.http.version>10.1.15</akka.http.version> <!-- Akka HTTP 10.1.x 系列版本，与Scala 2.12和Akka 2.5.x兼容 -->
     </properties>
 
     <dependencies>
@@ -36,6 +38,28 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.4.1</version>
         </dependency>
+
+        <!-- Akka HTTP -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http_2.12</artifactId> <!-- 更改为 _2.12 -->
+            <version>${akka.http.version}</version>
+        </dependency>
+
+        <!-- Akka Stream -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-stream_2.12</artifactId> <!-- 更改为 _2.12 -->
+            <version>${akka.version}</version>
+        </dependency>
+
+        <!-- Akka Actor (Akka HTTP和Akka Stream的传递依赖) -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-actor_2.12</artifactId>
+            <version>${akka.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.arrow</groupId>
             <artifactId>flight-core</artifactId>

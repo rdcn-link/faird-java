@@ -23,6 +23,14 @@ case class JavaCodeNode(
                    className: String
                    ) extends FlowNode
 
+case class JavaJarNode(
+                        functionId: String
+                       ) extends FlowNode
+
+case class CppNode(
+                        functionId: String
+                       ) extends FlowNode
+
 case class PythonCodeNode(
                      code: String
                      ) extends FlowNode
@@ -52,6 +60,10 @@ object FlowNode {
 
   def fromRepository(functionId: String, functionName: String, whlPath: String): PythonWhlFunctionNode = {
     PythonWhlFunctionNode(functionId, functionName, whlPath)
+  }
+
+  def fromRepository(functionId: String): JavaJarNode = {
+    JavaJarNode(functionId)
   }
 
   def fromBin(functionId: String, functionName: String, binPath: String): BinNode = {

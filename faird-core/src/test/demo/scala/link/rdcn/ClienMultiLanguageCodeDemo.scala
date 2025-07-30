@@ -60,8 +60,15 @@ object ClienMultiLanguageCodeDemo {
     println("--------------打印通过自定义Java代码操作的数据帧--------------")
     javaDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
-    // 使用指定依赖的自定义python二进制文件对数据帧进行操作
+    // 使用算子库指定id的算子对数据帧进行操作
     ConfigLoader.init(getResourcePath(""))
+    val remoteOperator = FlowNode.fromRepository("my-java-app-2")
+    val transformerDAGRemoteOperator: Flow = Flow.pipe(sourceNode, remoteOperator)
+    val remoteOperatorDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGRemoteOperator)
+    println("--------------打印通过算子库指定id的算子操作的数据帧--------------")
+    remoteOperatorDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+
+    // 使用指定依赖的自定义python二进制文件对数据帧进行操作
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
     val pythonWhlFunction = FlowNode.fromRepository("id1", "normalize", whlPath)
     val transformerDAGPythonWhl: Flow = Flow.pipe(sourceNode, pythonWhlFunction)

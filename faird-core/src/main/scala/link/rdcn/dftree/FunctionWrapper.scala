@@ -1,21 +1,25 @@
 package link.rdcn.dftree
 
+import akka.actor.ActorSystem
 import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.client.dag.Transformer11
 import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
-import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import link.rdcn.util.DataUtils.getDataFrameByStream
-import org.json.JSONObject
+import link.rdcn.util.{AutoClosingIterator, DataUtils}
 import org.codehaus.janino.SimpleCompiler
+import org.json.JSONObject
 
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
 import java.net.{URL, URLClassLoader}
+import java.nio.file.Paths
 import java.util
 import java.util.ServiceLoader
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
-
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 /**
  * @Author renhao
@@ -26,10 +30,14 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
 
 sealed trait FunctionWrapper {
   def toJson: JSONObject
+
   def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any
 }
 
 object FunctionWrapper {
+  val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
+  implicit val system: ActorSystem = ActorSystem("SharedHttpClient")
+  val operatorClient = new OperatorClient(system = system)
 
   case class PythonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
     override def toJson: JSONObject = {
@@ -37,6 +45,7 @@ object FunctionWrapper {
       jo.put("type", LangType.PYTHON_CODE.name)
       jo.put("code", code)
     }
+
     override def toString(): String = "PythonCodeNode Function"
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
@@ -53,7 +62,7 @@ object FunctionWrapper {
           val lst2 = new util.ArrayList[AnyRef]()
           r1.toSeq.foreach(x => lst1.add(x.asInstanceOf[AnyRef]))
           r2.toSeq.foreach(x => lst2.add(x.asInstanceOf[AnyRef]))
-          interp.set("input_data",  (lst1, lst2))
+          interp.set("input_data", (lst1, lst2))
           interp.exec(code)
           interp.getValue("output_data", classOf[Object])
         case iter: Iterator[Row] =>
@@ -83,6 +92,7 @@ object FunctionWrapper {
 
               currentBatchIter.hasNext
             }
+
             override def next(): Row = {
               if (!hasNext) throw new NoSuchElementException("No more rows")
               currentBatchIter.next()
@@ -101,19 +111,22 @@ object FunctionWrapper {
       val restoredBytes = java.util.Base64.getDecoder.decode(serializedBase64)
       SimpleSerializer.deserialize(restoredBytes).asInstanceOf[GenericFunctionCall]
     }
+
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.JAVA_BIN.name)
       jo.put("serializedBase64", serializedBase64)
     }
+
     override def toString(): String = "Java_bin Function"
+
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       input match {
-        case row: Row               => genericFunctionCall.transform(row)
-        case (r1: Row, r2: Row)     => genericFunctionCall.transform((r1, r2))
-        case iter: Iterator[Row]    => genericFunctionCall.transform(iter)
-        case df: DataFrame          => genericFunctionCall.transform(df)
-        case other                  => throw new IllegalArgumentException(s"Unsupported input: $other")
+        case row: Row => genericFunctionCall.transform(row)
+        case (r1: Row, r2: Row) => genericFunctionCall.transform((r1, r2))
+        case iter: Iterator[Row] => genericFunctionCall.transform(iter)
+        case df: DataFrame => genericFunctionCall.transform(df)
+        case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
     }
   }
@@ -130,13 +143,13 @@ object FunctionWrapper {
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
       input match {
         case _: AutoClosingIterator[_] => val
-          compiler = new SimpleCompiler()
+        compiler = new SimpleCompiler()
           compiler.cook(javaCode)
           val clazz = compiler.getClassLoader.loadClass(className)
           val instance = clazz.getDeclaredConstructor().newInstance()
           val method = clazz.getMethod("transform", classOf[DataFrame])
           method.invoke(instance, getDataFrameByStream(input.asInstanceOf[AutoClosingIterator[Row]])).asInstanceOf[DataFrame]
-        case other =>  throw new IllegalArgumentException(s"Unsupported input: $other")
+        case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
 
     }
@@ -147,7 +160,7 @@ object FunctionWrapper {
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.PYTHON_BIN.name)
-      jo.put("functionId", functionID)
+      jo.put("functionID", functionID)
       jo.put("functionName", functionName)
       jo.put("whlPath", whlPath)
     }
@@ -170,22 +183,23 @@ object FunctionWrapper {
     }
   }
 
-  case class JavaJar(functionID: String, jarPath: String) extends FunctionWrapper {
-    //对接算子库后去掉 jarPath
+  case class JavaJar(functionID: String) extends FunctionWrapper {
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.JAVA_JAR.name)
-      jo.put("functionId", functionID)
-      jo.put("jarPath", jarPath)
+      jo.put("functionID", functionID)
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
+      val downloadFuture = operatorClient.downloadPackage(functionID, operatorDir)
+      Await.result(downloadFuture, 30.seconds)
+      val jarPath = Paths.get(operatorDir, functionID + ".jar").toString()
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
       val parentLoader = getClass.getClassLoader
       val pluginLoader = new PluginClassLoader(urls, parentLoader)
       val serviceLoader = ServiceLoader.load(classOf[Transformer11], pluginLoader).iterator()
-      if(!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
+      if (!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()
       input match {
         case df: DataFrame => udfFunction.transform(df)
@@ -193,12 +207,14 @@ object FunctionWrapper {
       }
     }
   }
-  case class CppBin(cppPath: String) extends FunctionWrapper {
+
+  case class CppBin(functionID: String) extends FunctionWrapper {
 
     override def toJson: JSONObject = new JSONObject().put("type", LangType.CPP_BIN.name)
-      .put("cppPath", cppPath)
+      .put("functionID", functionID)
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+      val cppPath = Paths.get(operatorDir, functionID).toString()
       val pb = new ProcessBuilder(cppPath)
       val process = pb.start()
       val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
@@ -239,10 +255,10 @@ object FunctionWrapper {
     funcType match {
       case LangType.PYTHON_CODE.name => PythonCode(jsonObj.getString("code"))
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
-      case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionId"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
+      case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionID"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
-      case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionId"), jsonObj.getString("jarPath"))
-      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("cppPath"))
+      case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"))
+      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"))
     }
   }
 

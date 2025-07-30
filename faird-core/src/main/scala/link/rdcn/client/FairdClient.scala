@@ -1,7 +1,7 @@
 package link.rdcn.client
 
 import link.rdcn.client.dag._
-import link.rdcn.dftree.FunctionWrapper.{JavaCode, PythonBin, PythonCode}
+import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaCode, JavaJar, PythonBin, PythonCode}
 import link.rdcn.dftree._
 import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
@@ -97,7 +97,7 @@ class FairdClient private(
       case node: PythonWhlFunctionNode =>
         val jo = new JSONObject()
         jo.put("type", LangType.PYTHON_BIN.name)
-        jo.put("functionId", node.functionId)
+        jo.put("functionID", node.functionId)
         jo.put("functionName", node.functionName)
         jo.put("whlPath", node.whlPath)
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonBin], operation)
@@ -107,6 +107,18 @@ class FairdClient private(
         jo.put("type", LangType.PYTHON_CODE.name)
         jo.put("code", node.code)
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonCode], operation)
+        operation = transformerNode
+      case node: JavaJarNode =>
+        val jo = new JSONObject()
+        jo.put("type", LangType.JAVA_JAR.name)
+        jo.put("functionID", node.functionId)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[JavaJar], operation)
+        operation = transformerNode
+      case node: CppNode =>
+        val jo = new JSONObject()
+        jo.put("type", LangType.CPP_BIN.name)
+        jo.put("functionID", node.functionId)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[CppBin], operation)
         operation = transformerNode
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
