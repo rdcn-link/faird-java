@@ -11,19 +11,22 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
+import link.rdcn.dftree.FunctionWrapper.operatorClient
 import org.json.JSONObject
 
 import java.io.File
+import java.nio.file.Paths
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val system: ActorSystem = ActorSystem("HttpClient")) {
+  val baseUrl = s"http://$host:$port"
 
   def getOperatorInfo(functionId: String): Future[JSONObject] = {
-    val downloadUrl = s"http://10.0.89.38:8088/fileInfo?id=$functionId"
+    val downloadUrl = s"$baseUrl/fileInfo?id=$functionId"
     val request = HttpRequest(
       method = HttpMethods.GET,
       uri = downloadUrl
@@ -38,14 +41,14 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
             Future.successful(jsonObject)
           } catch {
             case ex: Exception =>
-              Future.failed(new RuntimeException(s"JSON 解析失败: ${ex.getMessage}. 原始响应体: $jsonString", ex))
+              Future.failed(new RuntimeException(s"JSON parsing faild: ${ex.getMessage}. 原始响应体: $jsonString", ex))
           }
         }
       } else {
         response.entity.toStrict(5.seconds).map(_.data.utf8String).flatMap { body =>
-          Future.failed(new RuntimeException(s"请求失败，状态码: ${response.status}, 响应体: $body"))
+          Future.failed(new RuntimeException(s"Request failed，Status: ${response.status}, body: $body"))
         }.recoverWith {
-          case ex: Exception => Future.failed(new RuntimeException(s"请求失败，状态码: ${response.status}, 无法获取响应体: ${ex.getMessage}", ex))
+          case ex: Exception => Future.failed(new RuntimeException(s"Request failed，Status: ${response.status}, cannot get body: ${ex.getMessage}", ex))
         }
       }
     }
@@ -56,8 +59,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
     val file = new File(filePath)
 
     if (!file.exists()) {
-      println(s"错误: 文件不存在于路径: $filePath")
-      Future.failed(new IllegalArgumentException(s"错误: 文件不存在于路径: $filePath"))
+      Future.failed(new IllegalArgumentException(s"File does not exist: $filePath"))
     }
 
     // 创建文件上传的 ByteString 源
@@ -99,7 +101,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
 
     val request = HttpRequest(
       method = HttpMethods.POST,
-      uri = "http://10.0.89.38:8088/uploadPackage",
+      uri = s"$baseUrl/uploadPackage",
       entity = formData.toEntity()
     )
     Http().singleRequest(request).flatMap { response =>
@@ -108,9 +110,9 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
         Future.successful("success")
       } else {
         response.entity.toStrict(5.seconds).map(_.data.utf8String).flatMap { body =>
-          Future.failed(new RuntimeException(s"上传失败，状态码: ${response.status}, 响应体: $body"))
+          Future.failed(new RuntimeException(s"Upload failed，Status: ${response.status}, body: $body"))
         }.recoverWith {
-          case ex: Exception => Future.failed(new RuntimeException(s"上传失败，状态码: ${response.status}, 无法获取响应体: ${ex.getMessage}", ex))
+          case ex: Exception => Future.failed(new RuntimeException(s"Upload failed，Status: ${response.status}, cannot get body: ${ex.getMessage}", ex))
         }
       }
     }
@@ -119,11 +121,11 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
 
   def downloadPackage(functionId: String, targetPath: String = ""): Future[Unit] = {
     implicit val system: ActorSystem = ActorSystem("HttpDownloadClient")
+    val infoFuture = operatorClient.getOperatorInfo(functionId)
+    val info = Await.result(infoFuture, 30.seconds)
 
-    val downloadUrl = s"http://10.0.89.38:8088/downloadPackage?id=$functionId"
-    val outputFilePath = targetPath + s"\\$functionId.jar" // 下载文件保存路径
-
-    println(s"准备从 $downloadUrl 下载文件到 $outputFilePath")
+    val downloadUrl = s"$baseUrl/downloadPackage?id=$functionId"
+    val outputFilePath = Paths.get(targetPath,info.get("desc").asInstanceOf[String]).toString // 下载文件保存路径
 
     // 创建 HTTP GET 请求
     val request = HttpRequest(
@@ -134,24 +136,25 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
     // 发送请求并处理响应
     Http().singleRequest(request).flatMap { response =>
       if (response.status.isSuccess()) {
-        println(s"成功接收到响应: ${response.status}")
         val outputFile = new File(outputFilePath)
         val fileSink = FileIO.toPath(outputFile.toPath)
 
         response.entity.dataBytes.runWith(fileSink).map(_ => ()).andThen { // map to Unit, andThen for side effects
-          case Success(_) => println(s"文件下载完成: ${outputFile.getAbsolutePath}")
+          case Success(_) => println(s"Download success: ${outputFile.getAbsolutePath}")
           case Failure(ex) =>
-            println(s"文件写入失败: ${ex.getMessage}")
+            println(s"Data write to file failed: ${ex.getMessage}")
             response.discardEntityBytes() // 确保丢弃未消费的实体字节
         }
       } else {
         response.entity.toStrict(5.seconds).map(_.data.utf8String).flatMap { body =>
-          Future.failed(new RuntimeException(s"下载失败，状态码: ${response.status}, 响应体: $body"))
+          Future.failed(new RuntimeException(s"Download failed，Status: ${response.status}, body: $body"))
         }.recoverWith {
-          case ex: Exception => Future.failed(new RuntimeException(s"下载失败，状态码: ${response.status}, 无法获取响应体: ${ex.getMessage}", ex))
+          case ex: Exception => Future.failed(new RuntimeException(s"Download failed，Status: ${response.status}, cannot get body: ${ex.getMessage}", ex))
         }
       }
     }
   }
+
+
 
 }

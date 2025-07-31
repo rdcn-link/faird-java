@@ -2,21 +2,19 @@ package link.rdcn.dftree
 
 import akka.actor.ActorSystem
 import jep.Jep
-import link.rdcn.SimpleSerializer
+import link.rdcn.{ConfigLoader, SimpleSerializer}
 import link.rdcn.client.GenericFunctionCall
-import link.rdcn.client.dag.Transformer11
 import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
-import link.rdcn.util.{AutoClosingIterator, DataUtils}
-import org.codehaus.janino.SimpleCompiler
+import link.rdcn.util.{AutoClosingIterator, ByteArrayClassLoader, DataUtils}
 import org.json.JSONObject
 
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
 import java.net.{URL, URLClassLoader}
 import java.nio.file.Paths
 import java.util
-import java.util.ServiceLoader
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import java.util.{Base64, ServiceLoader}
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
@@ -37,7 +35,12 @@ sealed trait FunctionWrapper {
 object FunctionWrapper {
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
   implicit val system: ActorSystem = ActorSystem("SharedHttpClient")
-  val operatorClient = new OperatorClient(system = system)
+  Runtime.getRuntime.addShutdownHook(new Thread {
+    override def run(): Unit = {
+      system.terminate()
+    }
+  })
+  val operatorClient = new OperatorClient("10.0.89.38",8088,system = system)
 
   case class PythonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
     override def toJson: JSONObject = {
@@ -131,21 +134,22 @@ object FunctionWrapper {
     }
   }
 
-  case class JavaCode(javaCode: String, className: String) extends FunctionWrapper {
+  case class JavaCode(clazzStr: String) extends FunctionWrapper {
 
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.JAVA_CODE.name)
-      jo.put("javaCode", javaCode)
-      jo.put("className", className)
+      jo.put("clazz", clazzStr)
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
       input match {
-        case _: AutoClosingIterator[_] => val
-        compiler = new SimpleCompiler()
-          compiler.cook(javaCode)
-          val clazz = compiler.getClassLoader.loadClass(className)
+        case _: AutoClosingIterator[_] =>
+          val clazzMap =  SimpleSerializer.deserialize(Base64.getDecoder.decode(clazzStr)).asInstanceOf[java.util.HashMap[String, Array[Byte]]]
+          val classLoader = new ByteArrayClassLoader(clazzMap.asScala.toMap, Thread.currentThread().getContextClassLoader)
+          val mainClassName = clazzMap.asScala.keys.find(!_.contains("$"))
+      .getOrElse(throw new RuntimeException("cannot find main class name"))
+          val clazz = classLoader.loadClass(mainClassName)
           val instance = clazz.getDeclaredConstructor().newInstance()
           val method = clazz.getMethod("transform", classOf[DataFrame])
           method.invoke(instance, getDataFrameByStream(input.asInstanceOf[AutoClosingIterator[Row]])).asInstanceOf[DataFrame]
@@ -193,12 +197,13 @@ object FunctionWrapper {
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       val downloadFuture = operatorClient.downloadPackage(functionID, operatorDir)
       Await.result(downloadFuture, 30.seconds)
-      val jarPath = Paths.get(operatorDir, functionID + ".jar").toString()
+//      val jarPath = Paths.get(operatorDir, functionID + ".jar").toString()
+      val jarPath = Paths.get("C:\\Users\\Yomi\\PycharmProjects\\Faird\\Faird\\faird-core\\target\\test-classes\\lib\\java\\"+ "faird-plugin-1.0-20250707.jar").toString()
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
       val parentLoader = getClass.getClassLoader
       val pluginLoader = new PluginClassLoader(urls, parentLoader)
-      val serviceLoader = ServiceLoader.load(classOf[Transformer11], pluginLoader).iterator()
+      val serviceLoader = ServiceLoader.load(classOf[link.rdcn.client.dag.Transformer11], pluginLoader).iterator()
       if (!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()
       input match {
@@ -214,7 +219,7 @@ object FunctionWrapper {
       .put("functionID", functionID)
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
-      val cppPath = Paths.get(operatorDir, functionID).toString()
+      val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp",functionID).toString()
       val pb = new ProcessBuilder(cppPath)
       val process = pb.start()
       val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
@@ -250,15 +255,26 @@ object FunctionWrapper {
     }
   }
 
+  case class RepositoryOperator(functionID: String) extends FunctionWrapper {
+
+    override def toJson: JSONObject = new JSONObject().put("type", LangType.REPOSITORY_OPERATOR.name)
+      .put("functionID", functionID)
+
+    override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
+
+    }
+  }
+
   def apply(jsonObj: JSONObject): FunctionWrapper = {
     val funcType = jsonObj.getString("type")
     funcType match {
       case LangType.PYTHON_CODE.name => PythonCode(jsonObj.getString("code"))
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionID"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
-      case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCode"), jsonObj.getString("className"))
+      case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("clazz"))
       case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"))
       case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"))
+      case LangType.REPOSITORY_OPERATOR.name => RepositoryOperator(jsonObj.getString("functionID"))
     }
   }
 

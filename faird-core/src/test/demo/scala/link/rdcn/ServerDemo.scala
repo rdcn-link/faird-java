@@ -15,8 +15,14 @@ import java.nio.file.Paths
 object ServerDemo {
   def main(args: Array[String]): Unit = {
     val provider = new TestDemoProvider
-    //根据fairdHome自动读取配置文件
+    /**
+     * 根据fairdHome自动读取配置文件
+     * 非加密连接
+     * val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(getResourcePath("")).toString())
+     * tls加密连接
+     */
     val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(getResourcePath("tls")).toString())
+
     server.start()
   }
 }

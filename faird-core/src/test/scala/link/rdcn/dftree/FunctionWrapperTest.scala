@@ -1,15 +1,18 @@
 package link.rdcn.dftree
 
-import link.rdcn.ConfigLoader
+import link.rdcn.{ConfigLoader, SimpleSerializer}
 import link.rdcn.TestBase.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
 import link.rdcn.struct._
 import link.rdcn.util.AutoClosingIterator
+import org.codehaus.janino.SimpleCompiler
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
 
 import java.nio.file.Paths
+import java.util.Base64
+import scala.collection.JavaConverters.{mapAsJavaMapConverter, mapAsScalaMapConverter}
 /**
  * @Author renhao
  * @Description:
@@ -47,10 +50,13 @@ class FunctionWrapperTest {
         |            }
         |}
         |""".stripMargin
+
+    val compiler = new SimpleCompiler()
+    compiler.cook(code)
+    val clazz = compiler.getBytecodes.asScala.toMap
     val jo = new JSONObject()
     jo.put("type", LangType.JAVA_CODE.name)
-    jo.put("javaCode", code)
-    jo.put("className", "DynamicUDF")
+    jo.put("clazz", Base64.getEncoder.encodeToString(SimpleSerializer.serialize(new java.util.HashMap[String, Array[Byte]](clazz.asJava))))
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
     val rows = LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
     val newDataFrame = javaCode.applyToInput(rows.stream).asInstanceOf[DataFrame]
@@ -98,10 +104,10 @@ class FunctionWrapperTest {
   @Test
   def cppBinTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor").toString
+    val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor_win.exe").toString
     val jo = new JSONObject()
     jo.put("type", LangType.CPP_BIN.name)
-    jo.put("cppPath", cppPath)
+    jo.put("functionID", "cpp_processor")
     val cppBin = FunctionWrapper(jo).asInstanceOf[CppBin]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
     val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())

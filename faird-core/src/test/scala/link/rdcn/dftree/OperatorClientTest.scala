@@ -6,9 +6,10 @@
  */
 package link.rdcn.dftree
 
+import akka.actor.ActorSystem
 import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.dftree.FunctionWrapper._
+import link.rdcn.dftree.OperatorClientTest.{operatorClient, operatorDir}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.{AfterAll, Test}
 
@@ -18,6 +19,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 object OperatorClientTest {
+  implicit val system: ActorSystem = ActorSystem("HttpClient")
+  val operatorClient = new OperatorClient("10.0.89.38", 8088, system)
+  val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
 
   @AfterAll
   def close(): Unit = {
@@ -27,12 +31,13 @@ object OperatorClientTest {
 
 class OperatorClientTest {
 
+
   @Test
   def uploadPackageTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
     val jarPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "java", "faird-plugin-impl-1.0-20250707.jar").toString
-    val functionId = "my-java-app-3"
-    val responseBody = operatorClient.uploadPackage(jarPath, functionId, "jar", "Java Application", "main")
+    val functionId = "aaa.bbb.id2"
+    val responseBody = operatorClient.uploadPackage(jarPath, functionId, "JAVA_JAR", "Java Application", "main")
     assertTrue(Await.result(responseBody, 30.seconds).contains("success"), "Upload failed")
   }
 
@@ -44,7 +49,7 @@ class OperatorClientTest {
     // 阻塞等待 Future 完成
     val jsonInfo = Await.result(downloadFuture, 30.seconds)
     assertEquals("my-java-app-2", jsonInfo.getString("id"))
-    assertEquals("faird-plugin-impl-1.0-20250707.jar", jsonInfo.getString("fileName"))
+    assertEquals("faird-plugin-1.0-20250707.jar", jsonInfo.getString("fileName"))
     assertEquals("jar", jsonInfo.getString("type"))
     assertEquals("Java Application", jsonInfo.getString("desc"))
     assertEquals("main", jsonInfo.getString("functionName"))

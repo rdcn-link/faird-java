@@ -18,6 +18,7 @@ object LangType {
   case object PYTHON_BIN extends LangType { val name = "PYTHON_BIN" }
   case object TYPESCRIPT_CODE extends LangType { val name = "TYPESCRIPT_CODE" }
   case object CPP_BIN extends LangType {val name = "CPP_BIN"}
+  case object REPOSITORY_OPERATOR extends LangType {val name = "REPOSITORY_OPERATOR"}
 
   val all: List[LangType] = List(JAVA_BIN, PYTHON_CODE, TYPESCRIPT_CODE)
   def fromName(s: String): LangType = all.find(_.name == s).getOrElse(throw new Exception(s"$s This programming language is not supported"))

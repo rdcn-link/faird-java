@@ -213,5 +213,7 @@ object ClientDemo {
     val complexDfs: Seq[DataFrame] = dc.execute(transformerComplexDAG)
     println("--------------打印执行自定义DAG后的数据帧--------------")
     complexDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+
+    System.exit(0)
   }
 }

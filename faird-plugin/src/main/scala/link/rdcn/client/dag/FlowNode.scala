@@ -13,33 +13,14 @@ trait FlowNode
 trait Transformer11 extends FlowNode with Serializable {
   def transform(dataFrame: DataFrame): DataFrame
 }
-case class PythonWhlFunctionNode(
-                            functionId: String,
-                            functionName: String,
-                            whlPath: String
-                            ) extends FlowNode
+
 case class JavaCodeNode(
-                   javaCode: String,
-                   className: String
+                   clazz: Map[String,Array[Byte]]
                    ) extends FlowNode
 
-case class JavaJarNode(
-                        functionId: String
-                       ) extends FlowNode
-
-case class CppNode(
-                        functionId: String
-                       ) extends FlowNode
-
-case class PythonCodeNode(
-                     code: String
-                     ) extends FlowNode
-case class BinNode(
-                                  functionId: String,
-                                  functionName: String,
-                                  binPath: String
-                                ) extends FlowNode
-
+case class RepositoryNode(
+                    functionId: String,
+                  ) extends FlowNode
 
 
 //只为DAG执行提供dataFrameName
@@ -50,23 +31,16 @@ object FlowNode {
     SourceNode(dataFrameName)
   }
 
-  def fromJavaClass(className: String, javaCode: String): JavaCodeNode = {
-    JavaCodeNode(javaCode, className)
+  def fromJavaClass(clazz: Map[String,Array[Byte]]): JavaCodeNode = {
+    JavaCodeNode(clazz)
   }
 
   def fromJavaClass(func: DataFrame => DataFrame): Transformer11 = {
     (dataFrame: DataFrame) => func(dataFrame)
   }
 
-  def fromRepository(functionId: String, functionName: String, whlPath: String): PythonWhlFunctionNode = {
-    PythonWhlFunctionNode(functionId, functionName, whlPath)
+  def fromRepository(functionId: String): RepositoryNode = {
+    RepositoryNode(functionId)
   }
 
-  def fromRepository(functionId: String): JavaJarNode = {
-    JavaJarNode(functionId)
-  }
-
-  def fromBin(functionId: String, functionName: String, binPath: String): BinNode = {
-    BinNode(functionId, functionName, binPath)
-  }
 }

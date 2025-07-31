@@ -1,15 +1,16 @@
 package link.rdcn.dftree
 
 import link.rdcn.client.DataFrameCall
-import link.rdcn.dftree.FunctionWrapper.{JavaBin, JavaCode, JavaJar, PythonBin, PythonCode}
+import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaBin, JavaJar, PythonBin, RepositoryOperator, operatorClient, operatorDir}
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.AutoClosingIterator
-import link.rdcn.util.DataUtils.{getDataFrameByStream, inferExcelSchema}
+import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
+import java.nio.file.Paths
 import java.util.concurrent.Executors
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
@@ -143,12 +144,36 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         val in = input.execute(dataFrame)
         javaJar.applyToInput(in).asInstanceOf[DataFrame]
       }
+      case repositoryOperator: RepositoryOperator =>
+//        val in = input.execute(dataFrame)
+        val id = repositoryOperator.functionID
+        val infoFuture = operatorClient.getOperatorInfo(id)
+        val info = Await.result(infoFuture, 30.seconds)
+        info.get("type") match {
+          case LangType.CPP_BIN.name => CppBin(id).applyToInput(input).asInstanceOf[DataFrame]
+          case LangType.JAVA_JAR.name => JavaJar(id).applyToInput(input).asInstanceOf[DataFrame]
+          case LangType.PYTHON_BIN.name =>
+            val downloadFuture = operatorClient.downloadPackage(id, operatorDir)
+            Await.result(downloadFuture, 30.seconds)
+            val whlPath = Paths.get(operatorDir, info.get("desc").toString).toString()
+            val jo = new JSONObject()
+            Await.result(Future {
+            jo.put("type", LangType.PYTHON_BIN.name)
+            jo.put("functionID", "id1")
+            jo.put("functionName", "normalize")
+            jo.put("whlPath", whlPath)
+            val pythonBin = FunctionWrapper(jo).asInstanceOf[PythonBin]
+              val jep = JepInterpreterManager.getJepInterpreter(id, whlPath)
+              val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
+              val iter = pythonBin.applyToInput(rows, Some(jep)).asInstanceOf[Iterator[Row]]
+            getDataFrameByStream(iter)}(singleThreadEc), Duration.Inf)
+          case _ => throw new IllegalArgumentException(s"Unsupported operator type: ${info.get("type")}")
+        }
       case _ =>
         val jep = JepInterpreterManager.getInterpreter
         val in = input.execute(dataFrame)
         in.mapIterator[DataFrame](iter => {
-          val newStream = functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[Iterator[Row]]
-          getDataFrameByStream(AutoClosingIterator(newStream)(jep.close()))
+          functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[DataFrame]
         })
     }
   }
