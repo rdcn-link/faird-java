@@ -1,7 +1,7 @@
 package link.rdcn.provider
 
 import link.rdcn.struct.{Row, StructType}
-import link.rdcn.util.{AutoClosingIterator, DataUtils, JdbcUtils}
+import link.rdcn.util.{ClosableIterator, DataUtils, JdbcUtils}
 
 import java.io.File
 import java.nio.file.attribute.BasicFileAttributes
@@ -22,7 +22,7 @@ object DataStreamSourceFactory{
 
   def createCsvDataStreamSource(csvFile: File, delimiter: String = ",", header: Boolean = true): DataStreamSource = {
     val fileRowCount = DataUtils.countLinesFast(csvFile)
-    val iterLines: AutoClosingIterator[String] = DataUtils.getFileLines(csvFile)
+    val iterLines: ClosableIterator[String] = DataUtils.getFileLines(csvFile)
     val headerArray = new ArrayBuffer[String]()
     if(header) iterLines.next().split(delimiter, -1).map(headerArray.append(_))
 
@@ -38,7 +38,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows)(iterLines.onClose)
+      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(iterLines.onClose)
     }
   }
 
@@ -50,7 +50,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows.map(Row.fromSeq(_)))()
+      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows.map(Row.fromSeq(_)))()
     }
   }
 
@@ -70,7 +70,7 @@ object DataStreamSourceFactory{
       override def schema: StructType = StructType.binaryStructType
 
 
-      override def iterator: AutoClosingIterator[Row] = new AutoClosingIterator(stream,()=>{},true)
+      override def iterator: ClosableIterator[Row] = new ClosableIterator(stream, ()=>{},true)
     }
   }
 
@@ -99,7 +99,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(iterRows)(()=>{
+      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(()=>{
         rs.close()
         stmt.close()
         conn.close()

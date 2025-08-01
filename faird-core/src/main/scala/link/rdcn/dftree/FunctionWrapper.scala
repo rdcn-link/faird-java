@@ -4,7 +4,7 @@ import jep.Jep
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
-import link.rdcn.util.{AutoClosingIterator, ByteArrayClassLoader, DataUtils}
+import link.rdcn.util.{ByteArrayClassLoader, ClosableIterator, DataUtils}
 import link.rdcn.{ConfigLoader, SimpleSerializer}
 import org.json.JSONObject
 
@@ -127,25 +127,25 @@ object FunctionWrapper {
     }
   }
 
-  case class JavaCode(clazzStr: String) extends FunctionWrapper {
+  case class JavaCode(javaCodeString: String) extends FunctionWrapper {
 
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.JAVA_CODE.name)
-      jo.put("clazz", clazzStr)
+      jo.put("javaCodeString", javaCodeString)
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
       input match {
-        case _: AutoClosingIterator[_] =>
-          val clazzMap =  SimpleSerializer.deserialize(Base64.getDecoder.decode(clazzStr)).asInstanceOf[java.util.HashMap[String, Array[Byte]]]
+        case _: ClosableIterator[_] =>
+          val clazzMap =  SimpleSerializer.deserialize(Base64.getDecoder.decode(javaCodeString)).asInstanceOf[java.util.Map[String, Array[Byte]]]
           val classLoader = new ByteArrayClassLoader(clazzMap.asScala.toMap, Thread.currentThread().getContextClassLoader)
           val mainClassName = clazzMap.asScala.keys.find(!_.contains("$"))
       .getOrElse(throw new RuntimeException("cannot find main class name"))
           val clazz = classLoader.loadClass(mainClassName)
           val instance = clazz.getDeclaredConstructor().newInstance()
           val method = clazz.getMethod("transform", classOf[DataFrame])
-          method.invoke(instance, getDataFrameByStream(input.asInstanceOf[AutoClosingIterator[Row]])).asInstanceOf[DataFrame]
+          method.invoke(instance, getDataFrameByStream(input.asInstanceOf[ClosableIterator[Row]])).asInstanceOf[DataFrame]
         case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
 
@@ -237,7 +237,7 @@ object FunctionWrapper {
           }
         }
         val r = DataUtils.getStructTypeStreamFromJson(stream)
-        val autoClosingIterator = AutoClosingIterator(r._1)(() => {
+        val autoClosingIterator = ClosableIterator(r._1)(() => {
           iter.close()
           writer.close()
           reader.close()
@@ -264,7 +264,7 @@ object FunctionWrapper {
       case LangType.PYTHON_CODE.name => PythonCode(jsonObj.getString("code"))
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionID"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
-      case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("clazz"))
+      case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCodeString"))
       case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"),jsonObj.getString("fileName"))
       case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"))
       case LangType.REPOSITORY_OPERATOR.name => RepositoryOperator(jsonObj.getString("functionID"))

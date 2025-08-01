@@ -1,10 +1,10 @@
 package link.rdcn.server
 
-import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
 import link.rdcn.struct.ValueType.BinaryType
+import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.DataUtils
-import org.apache.arrow.vector.{BigIntVector, BitVector, Float4Vector, Float8Vector, IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
+import org.apache.arrow.vector._
 
 import java.io.File
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -23,7 +23,7 @@ case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
     val streamSplitChunk: Iterator[Row] = if(schema.contains(BinaryType)){
       dataFrame.mapIterator[Iterator[Row]](stream => {
         stream.flatMap(row => {
-          val file = row.getAs[File](6).get
+          val file = row.getAs[File](6)
           DataUtils.readFileInChunks(file).map(bytes => {
             (row._1, row._2, row._3, row._4, row._5, row._6, bytes)
           })

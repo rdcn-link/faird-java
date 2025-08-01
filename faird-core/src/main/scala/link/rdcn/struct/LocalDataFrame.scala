@@ -1,6 +1,6 @@
 package link.rdcn.struct
 
-import link.rdcn.util.{AutoClosingIterator, DataUtils, ResourceUtils}
+import link.rdcn.util.{ClosableIterator, DataUtils, ResourceUtils}
 
 /**
  * @Author renhao
@@ -11,16 +11,16 @@ import link.rdcn.util.{AutoClosingIterator, DataUtils, ResourceUtils}
 
 case class LocalDataFrame(
                       schema: StructType,
-                      stream: AutoClosingIterator[Row]
+                      stream: ClosableIterator[Row]
                     ) extends DataFrame {
 
   override def map(f: Row => Row): DataFrame = {
-    val iter = AutoClosingIterator(stream.map(f(_)))(stream.close())
+    val iter = ClosableIterator(stream.map(f(_)))(stream.close())
     DataUtils.getDataFrameByStream(iter)
   }
 
   override def filter(f: Row => Boolean): DataFrame = {
-    val iter =  AutoClosingIterator(stream.filter(f(_)))(stream.close())
+    val iter =  ClosableIterator(stream.filter(f(_)))(stream.close())
     DataUtils.getDataFrameByStream(iter)
   }
 
@@ -35,11 +35,11 @@ case class LocalDataFrame(
       }
       Row.fromSeq(selectedValues)
     }
-    LocalDataFrame(selectedSchema, AutoClosingIterator(selectedStream)(stream.onClose))
+    LocalDataFrame(selectedSchema, ClosableIterator(selectedStream)(stream.onClose))
   }
 
   override def limit(n: Int): DataFrame = {
-    LocalDataFrame(schema, AutoClosingIterator(stream.take(n))(stream.onClose))
+    LocalDataFrame(schema, ClosableIterator(stream.take(n))(stream.onClose))
   }
 
   override def reduce(f: ((Row, Row)) => Row): DataFrame = ???
@@ -48,5 +48,5 @@ case class LocalDataFrame(
 
   override def collect(): List[Row] = ResourceUtils.using(stream){_.toList}
 
-  override def mapIterator[T](f: AutoClosingIterator[Row] => T): T = f(stream)
+  override def mapIterator[T](f: ClosableIterator[Row] => T): T = f(stream)
 }

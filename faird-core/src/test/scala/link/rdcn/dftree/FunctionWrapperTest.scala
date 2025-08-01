@@ -5,7 +5,7 @@ import link.rdcn.TestBase.getResourcePath
 import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaCode, JavaJar, PythonBin}
 import link.rdcn.struct.ValueType.IntType
 import link.rdcn.struct._
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.util.ClosableIterator
 import org.codehaus.janino.SimpleCompiler
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
@@ -58,7 +58,7 @@ class FunctionWrapperTest {
     jo.put("type", LangType.JAVA_CODE.name)
     jo.put("clazz", Base64.getEncoder.encodeToString(SimpleSerializer.serialize(new java.util.HashMap[String, Array[Byte]](clazz.asJava))))
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
-    val rows = LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),AutoClosingIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
+    val rows = LocalDataFrame(StructType.empty.add("id",IntType).add("value",IntType),ClosableIterator(Seq(Row.fromSeq(Seq(1,2))).iterator)())
     val newDataFrame = javaCode.applyToInput(rows.stream).asInstanceOf[DataFrame]
     newDataFrame.foreach(row => {
       assert(row._1 == 1)
@@ -73,7 +73,7 @@ class FunctionWrapperTest {
     val whlPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "link-0.1-py3-none-any.whl").toString
     val jo = new JSONObject()
     jo.put("type", LangType.PYTHON_BIN.name)
-    jo.put("functionID", "id1")
+    jo.put("functionID", "aaa.bbb.id1")
     jo.put("functionName", "normalize")
     jo.put("whlPath", whlPath)
     val pythonBin = FunctionWrapper(jo).asInstanceOf[PythonBin]
@@ -93,7 +93,7 @@ class FunctionWrapperTest {
     jo.put("fileName","faird-plugin-impl-1.0-20250707.jar")
     val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
-    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())
+    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), ClosableIterator(rows)())
     val newDataFrame = javaJar.applyToInput(dataFrame).asInstanceOf[DataFrame]
     newDataFrame.foreach(row => {
       assert(row._1 == 1)
@@ -105,13 +105,13 @@ class FunctionWrapperTest {
   @Test
   def cppBinTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor_win.exe").toString
+    val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor.exe").toString
     val jo = new JSONObject()
     jo.put("type", LangType.CPP_BIN.name)
-    jo.put("functionID", "cpp_processor")
+    jo.put("functionID", "cpp_processor.exe")
     val cppBin = FunctionWrapper(jo).asInstanceOf[CppBin]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
-    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())
+    val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), ClosableIterator(rows)())
     val newDf = cppBin.applyToInput(dataFrame).asInstanceOf[DataFrame]
     newDf.foreach(row => {
       assert(row._1 == true)

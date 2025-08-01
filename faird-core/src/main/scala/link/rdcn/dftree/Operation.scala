@@ -1,9 +1,9 @@
 package link.rdcn.dftree
 
 import link.rdcn.client.DataFrameCall
-import link.rdcn.dftree.FunctionWrapper.{CppBin, JavaBin, JavaJar, PythonBin, RepositoryOperator, operatorClient, operatorDir}
+import link.rdcn.dftree.FunctionWrapper._
 import link.rdcn.struct.{DataFrame, Row}
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.util.ClosableIterator
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import org.json.{JSONArray, JSONObject}
 
@@ -133,7 +133,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
           val in = input.execute(dataFrame)
           in.mapIterator[DataFrame](iter => {
             val newStream =  functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[Iterator[Row]]
-            getDataFrameByStream(AutoClosingIterator(newStream)(iter.onClose))
+            getDataFrameByStream(ClosableIterator(newStream)(iter.onClose))
           })
         }(singleThreadEc), Duration.Inf)
       case j: JavaBin if j.genericFunctionCall.isInstanceOf[DataFrameCall] => {
@@ -145,15 +145,15 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
         javaJar.applyToInput(in).asInstanceOf[DataFrame]
       }
       case repositoryOperator: RepositoryOperator =>
-//        val in = input.execute(dataFrame)
+        val in = input.execute(dataFrame)
         val id = repositoryOperator.functionID
         val infoFuture = operatorClient.getOperatorInfo(id)
         val info = Await.result(infoFuture, 30.seconds)
         val fileName = info.get("fileName").toString
         info.get("type") match {
-          case LangType.CPP_BIN.name => CppBin(id).applyToInput(input).asInstanceOf[DataFrame]
+          case LangType.CPP_BIN.name =>
+            CppBin(id).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.JAVA_JAR.name =>
-            val in = input.execute(dataFrame)
             JavaJar(id,fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.PYTHON_BIN.name =>
             val downloadFuture = operatorClient.downloadPackage(id, operatorDir)
@@ -165,11 +165,8 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
             jo.put("functionID", "id1")
             jo.put("functionName", "normalize")
             jo.put("whlPath", whlPath)
-            val pythonBin = FunctionWrapper(jo).asInstanceOf[PythonBin]
-              val jep = JepInterpreterManager.getJepInterpreter(id, whlPath)
-              val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
-              val iter = pythonBin.applyToInput(rows, Some(jep)).asInstanceOf[Iterator[Row]]
-            getDataFrameByStream(iter)}(singleThreadEc), Duration.Inf)
+              TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonBin], input).execute(dataFrame)
+            }(singleThreadEc), Duration.Inf)
           case _ => throw new IllegalArgumentException(s"Unsupported operator type: ${info.get("type")}")
         }
       case _ =>

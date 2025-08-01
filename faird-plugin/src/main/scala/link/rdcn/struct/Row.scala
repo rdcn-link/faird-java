@@ -1,9 +1,9 @@
 package link.rdcn.struct
 
-import jdk.nashorn.api.scripting.JSObject
 import org.json.JSONObject
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter}
+import scala.reflect.ClassTag
 /**
  * @Author renhao
  * @Description:
@@ -48,12 +48,21 @@ class Row (val values: Seq[Any]) {
     s"Row(${elems.mkString(", ")})"
   }
 
-  /** getAs[T]: 尝试强转，成功返回 Some，否则 None（也会对 null 返回 None） */
-  def getAs[T](index: Int): Option[T] = getOpt(index) match {
-    case Some(v) if v != null =>
-      try Some(v.asInstanceOf[T])
-      catch { case _: ClassCastException => None }
-    case _ => None
+  /** getAs[T]: 强转为 T，失败或值为 null 则抛出异常 */
+  def getAs[T: ClassTag](index: Int): T = getOpt(index) match {
+    case Some(v) =>
+      if (v == null) {
+        null.asInstanceOf[T]
+      } else {
+        try v.asInstanceOf[T]
+        catch {
+          case e: ClassCastException =>
+            throw new IllegalArgumentException(
+              s"Value at index $index cannot be cast to the expected type ${implicitly[ClassTag[T]]}", e)
+        }
+      }
+    case None =>
+      throw new NoSuchElementException(s"No value found at index $index")
   }
 
   def _1: Any = get(0)

@@ -1,6 +1,6 @@
 package link.rdcn.struct
 
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.util.ClosableIterator
 
 import scala.annotation.varargs
 
@@ -13,7 +13,7 @@ import scala.annotation.varargs
 trait DataFrame {
   val schema: StructType
 
-  def mapIterator[T](f: AutoClosingIterator[Row] => T): T
+  def mapIterator[T](f: ClosableIterator[Row] => T): T
 
   def map(f: Row => Row): DataFrame
 

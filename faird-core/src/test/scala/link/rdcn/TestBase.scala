@@ -6,7 +6,7 @@ import link.rdcn.provider._
 import link.rdcn.server.exception._
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.user._
-import link.rdcn.util.AutoClosingIterator
+import link.rdcn.util.ClosableIterator
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.vocabulary.RDF
 
@@ -91,7 +91,7 @@ abstract class DataProviderImpl extends DataProvider {
 
       override def schema: StructType = StructType.empty
 
-      override def iterator: AutoClosingIterator[Row] = AutoClosingIterator(Iterator.empty)()
+      override def iterator: ClosableIterator[Row] = ClosableIterator(Iterator.empty)()
     })
     dataFrameInfo.inputSource match {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.path))

@@ -26,7 +26,7 @@ class DataParsingTest extends TestProvider {
         assertTrue(row.get(0).isInstanceOf[Long], "field should be a Long")
         assertTrue(row.get(1).isInstanceOf[Double], "field should be a Double")
 
-        val id: Long = row.getAs[Long](0).getOrElse(-1)
+        val id: Long = row.getAs[Long](0)
         assertTrue(id >= 0, "id should be positive")
       }
     )
@@ -60,12 +60,12 @@ class DataParsingTest extends TestProvider {
         assertTrue(row.get(5).isInstanceOf[Long], "field should be a Long")
         assertTrue(row.get(6).isInstanceOf[Blob], "field should be a Blob")
 
-        val name = row.getAs[String](0).orNull
-        val size = row.getAs[Long](1).getOrElse(-1L)
-        val fileType = row.getAs[String](2).orNull
-        val createdTime = row.getAs[Long](3).getOrElse(-1L)
-        val modifiedTime = row.getAs[Long](4).getOrElse(-1L)
-        val lastAccessTime = row.getAs[Long](5).getOrElse(-1L)
+        val name = row.getAs[String](0)
+        val size = row.getAs[Long](1)
+        val fileType = row.getAs[String](2)
+        val createdTime = row.getAs[Long](3)
+        val modifiedTime = row.getAs[Long](4)
+        val lastAccessTime = row.getAs[Long](5)
 
         assertTrue(name.nonEmpty, "name should not be empty")
         assertTrue(size >= 0, "byteSize should not be negative")

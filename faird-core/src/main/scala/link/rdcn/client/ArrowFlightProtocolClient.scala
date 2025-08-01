@@ -6,7 +6,7 @@ import link.rdcn.SimpleSerializer
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.Row
 import link.rdcn.user.{AnonymousCredentials, Credentials, UsernamePassword}
-import link.rdcn.util.{AutoClosingIterator, DataUtils}
+import link.rdcn.util.{ClosableIterator, DataUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
@@ -153,7 +153,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     flightClient.close()
   }
 
-  def getRows(dataFrameName: String, operationNode: String): AutoClosingIterator[Row] = {
+  def getRows(dataFrameName: String, operationNode: String): ClosableIterator[Row] = {
     //上传参数
     val result = flightClient.doAction(new Action(s"putRequest:$dataFrameName:${userToken.orNull}", operationNode.getBytes("UTF-8"))).asScala
     result.hasNext
@@ -291,9 +291,9 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
 
     }
     if (!isBinaryColumn)
-      AutoClosingIterator(stream)()
+      ClosableIterator(stream)()
     else
-      new AutoClosingIterator(stream,()=>{},true)
+      new ClosableIterator(stream, ()=>{},true)
   }
 
   private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {

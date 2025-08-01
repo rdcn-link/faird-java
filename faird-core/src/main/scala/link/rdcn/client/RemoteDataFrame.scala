@@ -4,7 +4,7 @@ import link.rdcn.Logging
 import link.rdcn.dftree._
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DataFrame, Row, StructType}
-import link.rdcn.util.{AutoClosingIterator, ResourceUtils}
+import link.rdcn.util.{ClosableIterator, ResourceUtils}
 
 /**
  * @Author renhao
@@ -54,7 +54,7 @@ case class RemoteDataFrame(dataFrameName: String, client: ArrowFlightProtocolCli
 
   private def getSchema: String = client.getSchema(dataFrameName)
 
-  override def mapIterator[T](f: AutoClosingIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)){f(_)}
+  override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)){f(_)}
 }
 
 case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrame) {

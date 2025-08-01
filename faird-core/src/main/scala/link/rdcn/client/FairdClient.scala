@@ -1,15 +1,13 @@
 package link.rdcn.client
 
-import link.rdcn.SimpleSerializer
 import link.rdcn.client.dag._
-import link.rdcn.dftree.FunctionWrapper.{JavaCode, RepositoryOperator}
+import link.rdcn.dftree.FunctionWrapper.RepositoryOperator
 import link.rdcn.dftree._
-import link.rdcn.struct.DataFrame
+import link.rdcn.struct.{DataFrame, ExecutionResult}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.Model
 import org.json.JSONObject
 
-import java.util.Base64
 import scala.collection.JavaConverters._
 
 /**
@@ -73,9 +71,18 @@ class FairdClient private(
 
   def close(): Unit = protocolClient.close()
 
-  def execute(transformerDAG: Flow): Seq[DataFrame] = {
+  def execute(transformerDAG: Flow): ExecutionResult = {
     val executePaths = transformerDAG.getExecutionPaths()
-    executePaths.map(path => getRemoteDataFrameByDAGPath(path))
+    val dfs: Seq[DataFrame] = executePaths.map(path => getRemoteDataFrameByDAGPath(path))
+    new ExecutionResult() {
+      override def single(): DataFrame = dfs.head
+
+      override def get(name: String): DataFrame = dfs(name.toInt-1)
+
+      override def map(): Map[String, DataFrame] = dfs.zipWithIndex.map {
+        case (dataFrame, id) => (id.toString, dataFrame)
+      }.toMap
+    }
   }
 
 
@@ -88,12 +95,6 @@ class FairdClient private(
           override def apply(v1: DataFrame): DataFrame = f.transform(v1)
         })
         val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
-        operation = transformerNode
-      case node: JavaCodeNode =>
-        val jo = new JSONObject()
-        jo.put("type", LangType.JAVA_CODE.name)
-        jo.put("clazz", Base64.getEncoder.encodeToString(SimpleSerializer.serialize(new java.util.HashMap[String, Array[Byte]](node.clazz.asJava))))
-        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[JavaCode], operation)
         operation = transformerNode
       case node: RepositoryNode =>
         val jo = new JSONObject()

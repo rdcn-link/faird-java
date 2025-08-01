@@ -264,7 +264,7 @@ public class JClientDemo {
         //通过边和节点Map构建DAG执行图
         Flow flowMin = Flow.apply(convertToScalaNodesMap(javaNodesMapMin), convertToScalaEdgesMap(javaEdgesMapMin));
         //执行DAG图，返回一个数据帧列表
-        List<DataFrame> minDAGDfs = dc.execute(flowMin);
+        List<DataFrame> minDAGDfs = new ArrayList<>(dc.execute(flowMin).map().values());
         System.out.println("--------------打印最小DAG直接获取的数据帧--------------");
         for (DataFrame df : minDAGDfs) {
             df.limit(3).foreach(row ->
@@ -275,7 +275,7 @@ public class JClientDemo {
         }
         //对于线性依赖也可以简化为通过节点链pipe构造DAG
         Flow flowSeq = Flow.pipe(new SourceNode("/csv/data_1.csv"));
-        List<DataFrame> seqDAGDfs = dc.execute(flowSeq);
+        List<DataFrame> seqDAGDfs = new ArrayList<>(dc.execute(flowSeq).map().values());
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : seqDAGDfs) {
             df.limit(3).foreach(row ->
@@ -294,7 +294,7 @@ public class JClientDemo {
         javaEdgesMap.put("A", Arrays.asList("B"));
         //通过边和节点Map构建DAG执行图
         Flow flow = Flow.apply(convertToScalaNodesMap(javaNodesMap), convertToScalaEdgesMap(javaEdgesMap));
-        List<DataFrame> simpleDfs = dc.execute(flow);
+        List<DataFrame> simpleDfs = new ArrayList<>(dc.execute(flow).map().values());
         System.out.println("--------------打印自定义filter算子操作后的数据帧--------------");
         for (DataFrame df : simpleDfs) {
             df.limit(3).foreach(row ->
@@ -319,7 +319,7 @@ public class JClientDemo {
             put("A", Arrays.asList("C"));
             put("B", Arrays.asList("C"));
         }}));
-        List<DataFrame> mergeDfs = dc.execute(transformerMergeDAG);
+        List<DataFrame> mergeDfs = new ArrayList<>(dc.execute(transformerMergeDAG).map().values());
         System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
         for (DataFrame df : mergeDfs) {
             df.limit(3).foreach(row ->
@@ -342,7 +342,7 @@ public class JClientDemo {
                 new HashMap<String, List<String>>() {{
                     put("A", Arrays.asList("B","C"));
                 }}));
-        List<DataFrame> forkDfs = dc.execute(transformerForkDAG);
+        List<DataFrame> forkDfs = new ArrayList<>(dc.execute(transformerForkDAG).map().values());
         System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
         for (DataFrame df : forkDfs) {
             df.limit(3).foreach(row ->
@@ -367,7 +367,7 @@ public class JClientDemo {
                     put("A", Arrays.asList("C","D"));
                     put("B", Arrays.asList("C","D"));
                 }}));
-        List<DataFrame> complexDfs = dc.execute(transformerComplexDAG);
+        List<DataFrame> complexDfs = new ArrayList<>(dc.execute(transformerComplexDAG).map().values());
         System.out.println("--------------打印执行自定义DAG后的数据帧--------------");
         for (DataFrame df : complexDfs) {
             df.limit(3).foreach(row ->

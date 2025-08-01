@@ -14,12 +14,9 @@ trait Transformer11 extends FlowNode with Serializable {
   def transform(dataFrame: DataFrame): DataFrame
 }
 
-case class JavaCodeNode(
-                   clazz: Map[String,Array[Byte]]
-                   ) extends FlowNode
-
 case class RepositoryNode(
                     functionId: String,
+                    args: Map[String, String] = Map.empty
                   ) extends FlowNode
 
 
@@ -31,16 +28,16 @@ object FlowNode {
     SourceNode(dataFrameName)
   }
 
-  def fromJavaClass(clazz: Map[String,Array[Byte]]): JavaCodeNode = {
-    JavaCodeNode(clazz)
+  def ofTransfomer(transformer11: Transformer11): Transformer11 = {
+    transformer11
   }
 
-  def fromJavaClass(func: DataFrame => DataFrame): Transformer11 = {
+  def ofScalaFunction(func: DataFrame => DataFrame): Transformer11 = {
     (dataFrame: DataFrame) => func(dataFrame)
   }
 
-  def stocked(functionId: String): RepositoryNode = {
-    RepositoryNode(functionId)
+  def stocked(functionId: String, args: Map[String, String] = Map.empty): RepositoryNode = {
+    RepositoryNode(functionId, args)
   }
 
 }

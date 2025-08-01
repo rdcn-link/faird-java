@@ -27,19 +27,19 @@ import scala.io.Source
 object DataFrameOperationTest {
   val udfB = (num: Int) => new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
-      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + num, row.get(1)))
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0) + num, row.get(1)))
     }
   }
 
   val udfC = (num: Int) => new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
-      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get, row.get(1), num))
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0), row.get(1), num))
     }
   }
 
   val udfD = new Transformer11 {
     override def transform(dataFrame: DataFrame): DataFrame = {
-      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get * 2, row.get(1)))
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0) * 2, row.get(1)))
     }
   }
 
@@ -139,7 +139,7 @@ class DataFrameOperationTest extends TestProvider {
     val df = dc.get("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
-    val rowFilter: Row => Boolean = (row: Row) => row.getAs[Long](0).getOrElse(-1L) == id
+    val rowFilter: Row => Boolean = (row: Row) => row.getAs[Long](0) == id
 
     //匿名函数
     df.filter(rowFilter).foreach { row =>
@@ -165,7 +165,7 @@ class DataFrameOperationTest extends TestProvider {
     val df = dc.get("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
-    val rowMapper: Row => Row = row => Row(row.getAs[Long](0).getOrElse(-1L) + num, row.get(1))
+    val rowMapper: Row => Row = row => Row(row.getAs[Long](0) + num, row.get(1))
 
     try {
       df.map(rowMapper).foreach { row =>
@@ -258,8 +258,8 @@ class DataFrameOperationTest extends TestProvider {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map { case (_, df)  =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -269,7 +269,7 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutput, actualOutputs(0))
+    assertEquals(expectedOutput, actualOutputs.head)
   }
 
   //A --filter--> B
@@ -281,7 +281,7 @@ class DataFrameOperationTest extends TestProvider {
 
     val udf = new Transformer11 {
       override def transform(dataFrame: DataFrame): DataFrame = {
-        dataFrame.filter(row => row.getAs[Long](0).get <= num)
+        dataFrame.filter(row => row.getAs[Long](0) <= num)
       }
     }
 
@@ -294,8 +294,8 @@ class DataFrameOperationTest extends TestProvider {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -305,7 +305,7 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutput, actualOutputs(0))
+    assertEquals(expectedOutput, actualOutputs.head)
   }
 
   //A --map--> B
@@ -324,8 +324,8 @@ class DataFrameOperationTest extends TestProvider {
         "A" -> Seq("B")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -335,7 +335,7 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutput, actualOutputs(0))
+    assertEquals(expectedOutput, actualOutputs.head)
   }
 
   //A --> B --> C
@@ -357,8 +357,8 @@ class DataFrameOperationTest extends TestProvider {
         "B" -> Seq("C")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -368,7 +368,7 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutput, actualOutputs(0))
+    assertEquals(expectedOutput, actualOutputs.head)
   }
 
   //    A
@@ -391,8 +391,8 @@ class DataFrameOperationTest extends TestProvider {
         "A" -> Seq("B","C"),
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -402,8 +402,9 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutputAB, actualOutputs(0))
-    assertEquals(expectedOutputAC, actualOutputs(1))
+    val listActualOutput = actualOutputs.toList
+    assertEquals(expectedOutputAB, listActualOutput(0))
+    assertEquals(expectedOutputAC, listActualOutput(1))
   }
 
 
@@ -429,8 +430,8 @@ class DataFrameOperationTest extends TestProvider {
         "B" -> Seq("C")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -440,8 +441,9 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutputAC, actualOutputs(0))
-    assertEquals(expectedOutputBC, actualOutputs(1))
+    val listActualOutput = actualOutputs.toList
+    assertEquals(expectedOutputAC, listActualOutput(0))
+    assertEquals(expectedOutputBC, listActualOutput(1))
   }
 
 
@@ -473,8 +475,8 @@ class DataFrameOperationTest extends TestProvider {
         "D" -> Seq("E")
       )
     )
-    val dfs: Seq[DataFrame] = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map { df =>
+    val dfs: ExecutionResult = dc.execute(transformerDAG)
+    val actualOutputs = dfs.map().map {case(_,df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -484,8 +486,9 @@ class DataFrameOperationTest extends TestProvider {
       printWriter.flush()
       stringWriter.toString
     }
-    assertEquals(expectedOutputABDE, actualOutputs(0))
-    assertEquals(expectedOutputACDE, actualOutputs(1))
+    val listActualOutput = actualOutputs.toList
+    assertEquals(expectedOutputABDE, listActualOutput(0))
+    assertEquals(expectedOutputACDE, listActualOutput(1))
   }
 
   @ParameterizedTest

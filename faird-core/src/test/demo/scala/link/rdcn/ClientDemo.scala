@@ -3,7 +3,7 @@ package link.rdcn
 import link.rdcn.client.dag.{Flow, FlowNode}
 import link.rdcn.client.{Blob, FairdClient, RemoteDataFrame}
 import link.rdcn.provider.DataFrameDocument
-import link.rdcn.struct.{DataFrame, Row}
+import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.Model
@@ -105,7 +105,7 @@ object ClientDemo {
       //通过下标访问
       val blob: Blob = row.get(6).asInstanceOf[Blob]
       //通过getAs方法获取列值，该方法返回Option类型，如果找不到对应的列则返回None
-      val byteSize: Option[Long] = row.getAs[Long](3)
+      val byteSize: Long = row.getAs[Long](3)
       //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
       //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
       val path: Path = Paths.get("faird-core","src", "test", "demo", "data", "output", name)
@@ -158,11 +158,11 @@ object ClientDemo {
 
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1
-    val udfMap: FlowNode = FlowNode.fromJavaClass(dataFrame =>
-      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0).get + 1, row.get(1))))
+    val udfMap: FlowNode = FlowNode.ofScalaFunction(dataFrame =>
+      dataFrame.map(row => Row.fromTuple(row.getAs[Long](0) + 1, row.get(1))))
 
     //自定义一个filter算子 比如只保留小于等于3的行
-    val udfFilter: FlowNode = FlowNode.fromJavaClass(dataFrame =>
+    val udfFilter: FlowNode = FlowNode.ofScalaFunction(dataFrame =>
       dataFrame.filter((row: Row) => {
         val value: Long = row._1.asInstanceOf[Long]
         value <= 3L
@@ -171,15 +171,20 @@ object ClientDemo {
     //对于线性依赖可以通过pipe直接构造DAG
     //至少一个节点
     val transformerDAGMin: Flow = Flow.pipe(sourceNodeA)
-    val minDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGMin)
+    val minDAGDfs: ExecutionResult = dc.execute(transformerDAGMin)
     println("--------------打印最小DAG直接获取的数据帧--------------")
-    minDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+    //当结果只有一个数据帧获得唯一结果
+    minDAGDfs.single().limit(3).foreach(row => println(row))
+    //通过名字获得指定数据帧结果
+    minDAGDfs.get("1").limit(3).foreach(row => println(row))
+    //获得处理结果的Map，name是数据帧名称，df是对应的数据帧
+    minDAGDfs.map().foreach { case (name, df) => df.limit(3).foreach(row => println(name,row))}
 
     //可以多个节点
     val transformerDAGPipe: Flow = Flow.pipe(sourceNodeA, udfFilter, udfMap)
-    val pipeDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGPipe)
+    val pipeDAGDfs: ExecutionResult = dc.execute(transformerDAGPipe)
     println("--------------打印执行链式DAG的数据帧--------------")
-    pipeDAGDfs.foreach(df => df.foreach(row => println(row)))
+    pipeDAGDfs.map().foreach { case (_, df) => df.foreach(row => println(row))}
 
     //也可以通过构建边Map和节点Map构建DAG执行图
     //构建DAG执行图A -> B ，A是数据源节点B是自定义filter算子
@@ -194,9 +199,9 @@ object ClientDemo {
     //通过边和节点Map构建DAG执行图
     val transformerDAG: Flow = Flow(nodesMap, edgesMap)
     //执行DAG图，返回一个数据帧列表
-    val simpleDfs: Seq[DataFrame] = dc.execute(transformerDAG)
+    val simpleDfs: ExecutionResult = dc.execute(transformerDAG)
     println("--------------打印自定义filter算子操作后的数据帧--------------")
-    simpleDfs.foreach(df => df.foreach(row => println(row)))
+    simpleDfs.map().foreach { case (_, df) => df.foreach(row => println(row))}
 
     //可以构建更复杂的多数据源节点和操作的DAG
     //   A  B
@@ -210,9 +215,9 @@ object ClientDemo {
       Map("A" -> Seq("C", "D"),
         "B" -> Seq("C", "D"))
     )
-    val complexDfs: Seq[DataFrame] = dc.execute(transformerComplexDAG)
+    val complexDfs: ExecutionResult = dc.execute(transformerComplexDAG)
     println("--------------打印执行自定义DAG后的数据帧--------------")
-    complexDfs.foreach(df => df.limit(3).foreach(row => println(row)))
+    complexDfs.map().foreach { case (_, df) => df.limit(3).foreach(row => println(row))}
 
   }
 }

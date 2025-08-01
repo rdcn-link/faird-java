@@ -1,26 +1,25 @@
 package link.rdcn.util
 
 import link.rdcn.Logging
-
-import scala.collection.mutable
 import link.rdcn.struct.ValueType._
-import link.rdcn.struct.{Column, LocalDataFrame, Row, StructType, ValueType}
+import link.rdcn.struct._
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
+import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
-import org.apache.arrow.vector.{IntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot, VectorUnloader}
+import org.apache.arrow.vector._
 import org.apache.poi.ss.usermodel.{Cell, CellType, DateUtil}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.json.JSONObject
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileInputStream, IOException}
+import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.Collections
-import scala.collection.JavaConverters.{asJavaIteratorConverter, asScalaIteratorConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.{asScalaIteratorConverter, seqAsJavaListConverter}
+import scala.collection.mutable
 import scala.io.Source
 
 /**
@@ -96,7 +95,7 @@ object DataUtils extends Logging{
 
   def convertStringRowToTypedRow(row: Row, schema: StructType): Row = {
     val typedValues = schema.columns.zipWithIndex.map { case (field, i) =>
-      val rawValue = row.getAs[String](i).getOrElse(null) // 原始 String 值
+      val rawValue = row.getAs[String](i) // 原始 String 值
       if (rawValue == null) {
         null
       } else field.colType match {
@@ -150,12 +149,12 @@ object DataUtils extends Logging{
   }
 
   def getDataFrameByStream(stream: Iterator[Row]): LocalDataFrame = {
-    if(stream.isEmpty) return LocalDataFrame(StructType.empty, AutoClosingIterator(Iterator.empty)(()=>()))
+    if(stream.isEmpty) return LocalDataFrame(StructType.empty, ClosableIterator(Iterator.empty)(()=>()))
     val row = stream.next()
     val structType = inferSchemaFromRow(row)
     stream match {
-      case iter: AutoClosingIterator[Row] => LocalDataFrame(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(iter.close))
-      case _ => LocalDataFrame(structType, AutoClosingIterator(Seq(row).iterator ++ stream)(()=>()))
+      case iter: ClosableIterator[Row] => LocalDataFrame(structType, ClosableIterator(Seq(row).iterator ++ stream)(iter.close))
+      case _ => LocalDataFrame(structType, ClosableIterator(Seq(row).iterator ++ stream)(()=>()))
     }
   }
 
@@ -325,9 +324,9 @@ object DataUtils extends Logging{
     source.getLines()
   }
 
-  def getFileLines(file: File): AutoClosingIterator[String] = {
+  def getFileLines(file: File): ClosableIterator[String] = {
     val source = Source.fromFile(file)
-    AutoClosingIterator(source.getLines())(source.close())
+    ClosableIterator(source.getLines())(source.close())
   }
 
   def closeFileSource(filePath: String): Unit = {

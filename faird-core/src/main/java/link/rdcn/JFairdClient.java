@@ -11,6 +11,8 @@ package link.rdcn;
 import link.rdcn.client.FairdClient;
 import link.rdcn.client.RemoteDataFrame;
 import link.rdcn.client.dag.Flow;
+import link.rdcn.struct.DataFrame;
+import link.rdcn.struct.ExecutionResult;
 import link.rdcn.user.Credentials;
 import org.apache.jena.rdf.model.Model;
 import scala.collection.JavaConverters;
@@ -54,8 +56,26 @@ public class JFairdClient {
         fairdClient.close();
     }
 
-    public List<link.rdcn.struct.DataFrame> execute(Flow flow) {
-        return convertToJavaList(fairdClient.execute(flow));
+    public JExecutionResult execute(Flow flow) {
+        ExecutionResult executionResult =  fairdClient.execute(flow);
+        return
+        new JExecutionResult(){
+
+            @Override
+            public DataFrame single() {
+                return executionResult.single();
+            }
+
+            @Override
+            public DataFrame get(String name) {
+                return executionResult.get(name);
+            }
+
+            @Override
+            public Map<String, DataFrame> map() {
+                return convertToJavaMap(executionResult.map());
+            }
+        };
     }
 
 
@@ -71,4 +91,15 @@ public class JFairdClient {
         return JavaConverters.seqAsJavaListConverter(scalaSeq).asJava();
     }
 
+    public static <K,V> java.util.Map<K,V> convertToJavaMap(scala.collection.Map<K,V> scalaMap) {
+        return JavaConverters.mapAsJavaMap(scalaMap);
+    }
+
+
+}
+
+interface JExecutionResult {
+    DataFrame single();
+    DataFrame get(String name);
+    Map<String, DataFrame> map();
 }

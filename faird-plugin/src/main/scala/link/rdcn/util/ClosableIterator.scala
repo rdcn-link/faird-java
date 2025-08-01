@@ -7,7 +7,7 @@ package link.rdcn.util
  * @Data 2025/7/21 17:20
  * @Modified By:
  */
-case class AutoClosingIterator[T](
+case class ClosableIterator[T](
                               underlying: Iterator[T],
                               val onClose: () => Unit,
                               val isFileList: Boolean = false
@@ -42,13 +42,13 @@ case class AutoClosingIterator[T](
       closed = true
       try onClose()
       catch {
-        case ex: Throwable => throw new Exception(s"[AutoClosingIterator] Error during close: ${ex.getMessage}")
+        case ex: Throwable => throw new Exception(s"[ClosableIterator] Error during close: ${ex.getMessage}")
       }
     }
   }
 }
 
-object AutoClosingIterator {
-  def apply[T](underlying: Iterator[T])(onClose: => Unit): AutoClosingIterator[T] =
-    new AutoClosingIterator[T](underlying, () => onClose)
+object ClosableIterator {
+  def apply[T](underlying: Iterator[T])(onClose: => Unit): ClosableIterator[T] =
+    new ClosableIterator[T](underlying, () => onClose)
 }
