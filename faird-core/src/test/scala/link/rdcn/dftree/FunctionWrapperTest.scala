@@ -89,7 +89,8 @@ class FunctionWrapperTest {
     ConfigLoader.init(getResourcePath(""))
     val jo = new JSONObject()
     jo.put("type", LangType.JAVA_JAR.name)
-    jo.put("functionID", "my-java-app-2")
+    jo.put("functionID", "aaa.bbb.id2")
+    jo.put("fileName","faird-plugin-impl-1.0-20250707.jar")
     val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
     val rows = Seq(Row.fromSeq(Seq(1,2))).iterator
     val dataFrame = LocalDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), AutoClosingIterator(rows)())

@@ -22,11 +22,11 @@ object ClientDemo {
 
   def main(args: Array[String]): Unit = {
     // 通过用户名密码非加密连接FairdClient
-    // FairdClient dc = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
+    //     val dc: FairdClient = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
     // 通过用户名密码tls加密连接FairdClient
     val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
     // 匿名连接FairdClient
-    // FairdClient dcAnonymous = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
+//    val dcAnonymous: FairdClient = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 
     //获得所有的数据集名称
     println("--------------打印数据集列表--------------")
@@ -214,6 +214,5 @@ object ClientDemo {
     println("--------------打印执行自定义DAG后的数据帧--------------")
     complexDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
-    System.exit(0)
   }
 }

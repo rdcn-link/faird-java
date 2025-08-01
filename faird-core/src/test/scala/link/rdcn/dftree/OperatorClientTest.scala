@@ -6,7 +6,6 @@
  */
 package link.rdcn.dftree
 
-import akka.actor.ActorSystem
 import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
 import link.rdcn.dftree.OperatorClientTest.{operatorClient, operatorDir}
@@ -19,13 +18,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 object OperatorClientTest {
-  implicit val system: ActorSystem = ActorSystem("HttpClient")
-  val operatorClient = new OperatorClient("10.0.89.38", 8088, system)
+//  implicit val system: ActorSystem = ActorSystem("HttpClient")
+  val operatorClient = new OperatorClient("10.0.89.38", 8088)
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
 
   @AfterAll
   def close(): Unit = {
-    Await.result(system.terminate(), 10.seconds)
+//    Await.result(system.terminate(), 10.seconds)
   }
 }
 

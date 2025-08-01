@@ -65,14 +65,12 @@ object ClientMultiLanguageCodeDemo {
 
     // 使用算子库指定id的算子对数据帧进行操作
     ConfigLoader.init(getResourcePath(""))
-    val repositoryOperator = FlowNode.fromRepository("aaa.bbb.id1")
+    val repositoryOperator = FlowNode.stocked("aaa.bbb.id2")
     val transformerDAGRepositoryOperator: Flow = Flow.pipe(sourceNode, repositoryOperator)
     val RepositoryOperatorDAGDfs: Seq[DataFrame] = dc.execute(transformerDAGRepositoryOperator)
     println("--------------打印通过算子库指定id的算子操作的数据帧--------------")
     RepositoryOperatorDAGDfs.foreach(df => df.limit(3).foreach(row => println(row)))
 
-
-    System.exit(0)
   }
 
 }

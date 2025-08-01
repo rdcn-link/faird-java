@@ -1,12 +1,11 @@
 package link.rdcn.dftree
 
-import akka.actor.ActorSystem
 import jep.Jep
-import link.rdcn.{ConfigLoader, SimpleSerializer}
 import link.rdcn.client.GenericFunctionCall
 import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import link.rdcn.util.{AutoClosingIterator, ByteArrayClassLoader, DataUtils}
+import link.rdcn.{ConfigLoader, SimpleSerializer}
 import org.json.JSONObject
 
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
@@ -34,13 +33,7 @@ sealed trait FunctionWrapper {
 
 object FunctionWrapper {
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
-  implicit val system: ActorSystem = ActorSystem("SharedHttpClient")
-  Runtime.getRuntime.addShutdownHook(new Thread {
-    override def run(): Unit = {
-      system.terminate()
-    }
-  })
-  val operatorClient = new OperatorClient("10.0.89.38",8088,system = system)
+  val operatorClient = new OperatorClient("10.0.89.38",8088)
 
   case class PythonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
     override def toJson: JSONObject = {
@@ -187,18 +180,18 @@ object FunctionWrapper {
     }
   }
 
-  case class JavaJar(functionID: String) extends FunctionWrapper {
+  case class JavaJar(functionID: String, fileName: String) extends FunctionWrapper {
     override def toJson: JSONObject = {
       val jo = new JSONObject()
       jo.put("type", LangType.JAVA_JAR.name)
       jo.put("functionID", functionID)
+      jo.put("fileName", fileName)
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
       val downloadFuture = operatorClient.downloadPackage(functionID, operatorDir)
       Await.result(downloadFuture, 30.seconds)
-//      val jarPath = Paths.get(operatorDir, functionID + ".jar").toString()
-      val jarPath = Paths.get("C:\\Users\\Yomi\\PycharmProjects\\Faird\\Faird\\faird-core\\target\\test-classes\\lib\\java\\"+ "faird-plugin-1.0-20250707.jar").toString()
+      val jarPath = Paths.get(operatorDir, fileName).toString()
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
       val parentLoader = getClass.getClassLoader
@@ -272,7 +265,7 @@ object FunctionWrapper {
       case LangType.JAVA_BIN.name => JavaBin(jsonObj.getString("serializedBase64"))
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionID"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("clazz"))
-      case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"))
+      case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"),jsonObj.getString("fileName"))
       case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"))
       case LangType.REPOSITORY_OPERATOR.name => RepositoryOperator(jsonObj.getString("functionID"))
     }

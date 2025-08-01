@@ -39,7 +39,7 @@ object FlowNode {
     (dataFrame: DataFrame) => func(dataFrame)
   }
 
-  def fromRepository(functionId: String): RepositoryNode = {
+  def stocked(functionId: String): RepositoryNode = {
     RepositoryNode(functionId)
   }
 

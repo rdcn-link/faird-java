@@ -22,17 +22,18 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val system: ActorSystem = ActorSystem("HttpClient")) {
+class OperatorClient(host: String = "localhost", port: Int = 8088) {
   val baseUrl = s"http://$host:$port"
 
   def getOperatorInfo(functionId: String): Future[JSONObject] = {
+    implicit val system: ActorSystem = ActorSystem("HttpClient")
     val downloadUrl = s"$baseUrl/fileInfo?id=$functionId"
     val request = HttpRequest(
       method = HttpMethods.GET,
       uri = downloadUrl
     )
 
-    Http().singleRequest(request).flatMap { response =>
+    val resultFuture: Future[JSONObject] = Http().singleRequest(request).flatMap { response =>
       if (response.status.isSuccess()) {
 
         response.entity.toStrict(5.seconds).map(_.data.utf8String).flatMap { jsonString =>
@@ -41,7 +42,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
             Future.successful(jsonObject)
           } catch {
             case ex: Exception =>
-              Future.failed(new RuntimeException(s"JSON parsing faild: ${ex.getMessage}. 原始响应体: $jsonString", ex))
+              Future.failed(new RuntimeException(s"JSON parsing faild: ${ex.getMessage}. body: $jsonString", ex))
           }
         }
       } else {
@@ -52,10 +53,15 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
         }
       }
     }
+    resultFuture.andThen {
+      case _ =>
+        system.terminate()
+    }
   }
 
 
   def uploadPackage(filePath: String, functionId: String, fileType: String, desc: String, functionName: String): Future[String] = {
+    implicit val system: ActorSystem = ActorSystem("HttpClient")
     val file = new File(filePath)
 
     if (!file.exists()) {
@@ -104,7 +110,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
       uri = s"$baseUrl/uploadPackage",
       entity = formData.toEntity()
     )
-    Http().singleRequest(request).flatMap { response =>
+    val resultFuture: Future[String] = Http().singleRequest(request).flatMap { response =>
       if (response.status.isSuccess()) {
         response.entity.toStrict(5.seconds).map(_.data.utf8String)
         Future.successful("success")
@@ -116,16 +122,20 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
         }
       }
     }
+    resultFuture.andThen {
+      case _ =>
+        system.terminate()
+    }
   }
 
 
   def downloadPackage(functionId: String, targetPath: String = ""): Future[Unit] = {
-    implicit val system: ActorSystem = ActorSystem("HttpDownloadClient")
+    implicit val system: ActorSystem = ActorSystem("HttpClient")
     val infoFuture = operatorClient.getOperatorInfo(functionId)
     val info = Await.result(infoFuture, 30.seconds)
 
     val downloadUrl = s"$baseUrl/downloadPackage?id=$functionId"
-    val outputFilePath = Paths.get(targetPath,info.get("desc").asInstanceOf[String]).toString // 下载文件保存路径
+    val outputFilePath = Paths.get(targetPath,info.get("fileName").asInstanceOf[String]).toString // 下载文件保存路径
 
     // 创建 HTTP GET 请求
     val request = HttpRequest(
@@ -134,7 +144,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
     )
 
     // 发送请求并处理响应
-    Http().singleRequest(request).flatMap { response =>
+    val resultFuture: Future[Unit] = Http().singleRequest(request).flatMap { response =>
       if (response.status.isSuccess()) {
         val outputFile = new File(outputFilePath)
         val fileSink = FileIO.toPath(outputFile.toPath)
@@ -152,6 +162,10 @@ class OperatorClient(host: String = "localhost", port: Int = 8088, implicit val 
           case ex: Exception => Future.failed(new RuntimeException(s"Download failed，Status: ${response.status}, cannot get body: ${ex.getMessage}", ex))
         }
       }
+    }
+    resultFuture.andThen {
+      case _ =>
+        system.terminate()
     }
   }
 

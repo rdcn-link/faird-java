@@ -56,8 +56,8 @@ class FlowNodeTest {
   }
 
   @Test
-  def FromRepository(): Unit = {
-    assertEquals(RepositoryNode("my-java-app-2"), FlowNode.fromRepository("my-java-app-2"))
+  def testStocked(): Unit = {
+    assertEquals(RepositoryNode("my-java-app-2"), FlowNode.stocked("my-java-app-2"))
   }
 
 
