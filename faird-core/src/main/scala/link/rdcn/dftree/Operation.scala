@@ -147,12 +147,14 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
       case repositoryOperator: RepositoryOperator =>
         val in = input.execute(dataFrame)
         val id = repositoryOperator.functionID
+        val downloadFuture = operatorClient.downloadPackage(repositoryOperator.functionID, operatorDir)
+        Await.result(downloadFuture, 30.seconds)
         val infoFuture = operatorClient.getOperatorInfo(id)
         val info = Await.result(infoFuture, 30.seconds)
         val fileName = info.get("fileName").toString
         info.get("type") match {
           case LangType.CPP_BIN.name =>
-            CppBin(id).applyToInput(in).asInstanceOf[DataFrame]
+            CppBin(id,fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.JAVA_JAR.name =>
             JavaJar(id,fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.PYTHON_BIN.name =>

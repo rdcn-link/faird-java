@@ -46,6 +46,7 @@ case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
           case v: Long => vec.asInstanceOf[BigIntVector].setSafe(i, v)
           case v: Double => vec.asInstanceOf[Float8Vector].setSafe(i, v)
           case v: Float => vec.asInstanceOf[Float4Vector].setSafe(i, v)
+          case v: java.math.BigDecimal => vec.asInstanceOf[VarCharVector].setSafe(i, v.toString.getBytes("UTF-8"))
           case v: String =>
             val bytes = v.getBytes("UTF-8")
             vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
