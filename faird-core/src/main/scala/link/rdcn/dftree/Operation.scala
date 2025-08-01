@@ -162,8 +162,8 @@ case class TransformerNode(functionWrapper: FunctionWrapper, input: Operation) e
             val jo = new JSONObject()
             Await.result(Future {
             jo.put("type", LangType.PYTHON_BIN.name)
-            jo.put("functionID", "id1")
-            jo.put("functionName", "normalize")
+            jo.put("functionID", id)
+            jo.put("functionName", info.get("functionName"))
             jo.put("whlPath", whlPath)
               TransformerNode(FunctionWrapper(jo).asInstanceOf[PythonBin], input).execute(dataFrame)
             }(singleThreadEc), Duration.Inf)
