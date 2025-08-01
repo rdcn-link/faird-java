@@ -90,12 +90,13 @@ object JepInterpreterManager extends Logging{
     val pathSeparator = sys.props("path.separator")
     val pathDirs = (env.split(pathSeparator) ++ condaPrefixPath).distinct // 合并并去重
 
-    // 4. 尝试在这些目录中查找 python.exe 或 python3.exe
     val commonPythonExecutables = Seq("python.exe", "python3.exe") // Windows 可执行文件名
-    if (sys.props("os.name").toLowerCase.contains("linux") || sys.props("os.name").toLowerCase.contains("mac")) {
+    val executables = if (sys.props("os.name").toLowerCase.contains("linux") || sys.props("os.name").toLowerCase.contains("mac")) {
       // Unix-like 系统上的可执行文件名通常没有 .exe 后缀
       // 这里的 .reverse.foreach 和 .filter(Files.exists) 保证了查找的健壮性
       commonPythonExecutables.map(_.stripSuffix(".exe")) // 移除 .exe 后缀
+    }else{
+      commonPythonExecutables
     }
 
 
