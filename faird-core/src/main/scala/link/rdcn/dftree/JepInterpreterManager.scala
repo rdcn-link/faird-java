@@ -108,7 +108,7 @@ object JepInterpreterManager extends Logging{
       commonPythonExecutables
     }
 
-    
+
     for (dir <- pathDirs) {
       val dirPath = Paths.get(dir)
       if (Files.exists(dirPath)) { // 确保目录存在

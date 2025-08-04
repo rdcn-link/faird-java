@@ -8,13 +8,14 @@ import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_LOGGED_IN}
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.{DataProvider, DataStreamSource}
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
+import link.rdcn.server.handle_upload.FileStorageReceiver
 import link.rdcn.struct.{DataFrame, LocalDataFrame, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, DataOperationType, UsernamePassword}
 import link.rdcn.util.DataUtils
 import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import org.apache.arrow.flight._
-import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
+import org.apache.arrow.memory.{ArrowBuf, BufferAllocator, RootAllocator}
 import org.apache.arrow.vector._
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
@@ -46,7 +47,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
   private def buildServer(): Unit = {
     // 初始化配置
     ConfigLoader.init(fairdHome)
-    print(ConfigLoader.fairdConfig.useTLS)
+    println("是否采用TLS："+ConfigLoader.fairdConfig.useTLS)
     val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort
@@ -129,6 +130,58 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
   private val requestMap = new ConcurrentHashMap[String, (String, Operation)]()
   private val authenticatedUserMap = new ConcurrentHashMap[String, AuthenticatedUser]()
   private val batchLen = 100
+
+  override def acceptPut(
+                          context: FlightProducer.CallContext,
+                          flightStream: FlightStream,
+                          ackStream: FlightProducer.StreamListener[PutResult]
+                        ): Runnable = {
+    new Runnable {
+      override def run(): Unit = {
+        val descriptor = flightStream.getDescriptor
+        val targetDfName = descriptor.getPath.get(0)
+
+//        val uploadFilePath = ConfigLoader.fairdConfig.uploadFilePath
+        val uploadFilePath = System.getProperty("user.dir")+"/faird-core/src/main/resources/upload_data"
+        val outputFile = new File(s"$uploadFilePath/$targetDfName.bin")
+
+        val receiver = new FileStorageReceiver(outputFile)
+        var buf: ArrowBuf = null
+        try {
+          // 初始化 receiver
+          receiver.start(flightStream.getSchema)
+          var rowCount: Long = 0
+
+          while (flightStream.next()) {
+            receiver.receiveRow(flightStream.getRoot)
+            rowCount += flightStream.getRoot.getRowCount
+          }
+
+          receiver.finish()
+
+          // 成功 ACK
+          val msg = s"UPLOAD_SUCCESS:$targetDfName rows=$rowCount"
+          val metadataBytes = msg.getBytes(StandardCharsets.UTF_8)
+          buf = allocator.buffer(metadataBytes.length)
+          buf.writeBytes(metadataBytes)
+          ackStream.onNext(PutResult.metadata(buf))
+          ackStream.onCompleted()
+
+          println(s"[FlightServer] Upload $targetDfName completed, rows=$rowCount")
+        } catch {
+          case e: Throwable =>
+            println(s"[FlightServer] Upload failed: ${e.getMessage}")
+            e.printStackTrace()
+            ackStream.onError(e)
+        } finally {
+          if (buf != null) buf.close()
+          receiver.close()
+        }
+      }
+    }
+  }
+
+
 
   override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
     val body = action.getBody
