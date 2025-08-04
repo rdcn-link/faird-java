@@ -46,6 +46,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
   private def buildServer(): Unit = {
     // 初始化配置
     ConfigLoader.init(fairdHome)
+    print(ConfigLoader.fairdConfig.useTLS)
     val location = if(ConfigLoader.fairdConfig.useTLS) Location.forGrpcTls(
       ConfigLoader.fairdConfig.hostPosition,
       ConfigLoader.fairdConfig.hostPort
@@ -233,7 +234,9 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
 
         val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
         val inDataFrame = LocalDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+
         val outDataFrame: DataFrame  = request._2.execute(inDataFrame)
+
         val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
 
         //能否支持并发

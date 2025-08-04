@@ -17,6 +17,7 @@ object ServerDemo {
     val provider = new TestDemoProvider
     //根据fairdHome自动读取配置文件
     val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(getResourcePath("tls")).toString())
+//    val server = new FairdServer(provider.dataProvider, provider.authProvider, Paths.get(getResourcePath("")).toString())
     server.start()
   }
 }

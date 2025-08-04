@@ -37,7 +37,8 @@ object Operation {
     else {
       val input: Operation = fromJsonString(parsed.getJSONObject("input").toString)
       opType match {
-        case "TransformerNode" => TransformerNode(FunctionWrapper(parsed.getJSONObject("function")), input)
+        case "TransformerNode" =>
+          TransformerNode(FunctionWrapper(parsed.getJSONObject("function")), input)
         case "Map" => MapOp(FunctionWrapper(parsed.getJSONObject("function")), input)
         case "Filter" => FilterOp(FunctionWrapper(parsed.getJSONObject("function")), input)
         case "Limit" => LimitOp(parsed.getJSONArray("args").getInt(0), input)
@@ -67,7 +68,12 @@ case class MapOp(functionWrapper: FunctionWrapper, input: Operation) extends Ope
   override def execute(dataFrame: DataFrame): DataFrame = {
     val jep = JepInterpreterManager.getInterpreter
     val in = input.execute(dataFrame)
-    in.map(functionWrapper.applyToInput(_, Some(jep)).asInstanceOf[Row])
+//    in.map(functionWrapper.applyToInput(_, Some(jep)).asInstanceOf[Row])
+    in.map { x =>
+      val javaList = functionWrapper.applyToInput(x, Some(jep)).asInstanceOf[java.util.List[Any]]
+      val scalaList = javaList.asScala.toList
+      Row.fromSeq(scalaList)
+    }
   }
 }
 

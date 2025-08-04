@@ -43,7 +43,7 @@
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-http_2.12</artifactId> <!-- 更改为 _2.12 -->
-            <version>${akka.http.version}</version>
+            <version>10.1.14</version>
         </dependency>
 
         <!-- Akka Stream -->
