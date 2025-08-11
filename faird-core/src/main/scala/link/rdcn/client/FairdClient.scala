@@ -69,6 +69,9 @@ class FairdClient private(
   def getServerResourceInfo: Map[String, String] =
     protocolClient.getServerResourceInfo
 
+  def uploadDataFrame(dataFrameUploadSource: DataFrameUploadSource): Unit =
+    protocolClient.uploadDataFrame(dataFrameUploadSource)
+
   def close(): Unit = protocolClient.close()
 
   def execute(transformerDAG: Flow): ExecutionResult = {

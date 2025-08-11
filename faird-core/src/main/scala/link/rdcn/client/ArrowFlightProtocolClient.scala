@@ -46,6 +46,8 @@ trait ProtocolClient {
   def getHostInfo: Map[String, String]
 
   def getServerResourceInfo: Map[String, String]
+
+  def uploadDataFrame(dataFrameUploadSource: DataFrameUploadSource): Unit
 }
 
 class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false) extends ProtocolClient {
@@ -357,6 +359,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
     } else null
   }
 
+  override def uploadDataFrame(dataFrameUploadSource: DataFrameUploadSource): Unit = ???
 }
 
 // 表示完整的二进制文件
