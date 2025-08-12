@@ -12,7 +12,7 @@ import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
 import link.rdcn.struct._
 import link.rdcn.user._
-import link.rdcn.util.DataUtils._
+import link.rdcn.util.DataUtils.listFiles
 
 import java.io.File
 import java.nio.file.Paths

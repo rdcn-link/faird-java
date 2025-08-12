@@ -6,9 +6,9 @@
  */
 package link.rdcn
 
-import link.rdcn.ConfigKeys._
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_FOUND, USER_NOT_LOGGED_IN}
 import link.rdcn.TestBase._
+import link.rdcn.ConfigKeys._
 import link.rdcn.client.FairdClient
 import link.rdcn.server.FairdServer
 import link.rdcn.server.exception.AuthorizationException

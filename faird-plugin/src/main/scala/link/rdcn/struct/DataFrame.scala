@@ -30,3 +30,9 @@ trait DataFrame {
 
   def collect(): List[Row]
 }
+
+object DataFrame {
+  def create(dataStreamSource: DataStreamSource): DataFrame = {
+    DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+  }
+}

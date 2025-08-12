@@ -1,11 +1,7 @@
 package link.rdcn
 
-import link.rdcn.ConfigKeys._
-import link.rdcn.ErrorCode._
 import link.rdcn.provider._
-import link.rdcn.server.exception._
-import link.rdcn.struct.{Row, StructType}
-import link.rdcn.user._
+import link.rdcn.struct.{Row, StructType, DataStreamSource, DataStreamSourceFactory}
 import link.rdcn.util.ClosableIterator
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.vocabulary.RDF

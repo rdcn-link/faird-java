@@ -4,9 +4,9 @@ package link.rdcn.client
 import io.circe.{DecodingFailure, parser}
 import link.rdcn.SimpleSerializer
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
-import link.rdcn.struct.Row
+import link.rdcn.struct.{Row, DataFrame}
 import link.rdcn.user.{AnonymousCredentials, Credentials, UsernamePassword}
-import link.rdcn.util.{ClosableIterator, DataUtils}
+import link.rdcn.util.{ClosableIterator, DataUtils, ServerUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
@@ -47,7 +47,7 @@ trait ProtocolClient {
 
   def getServerResourceInfo: Map[String, String]
 
-  def uploadDataFrame(dataFrameUploadSource: DataFrameUploadSource): Unit
+  def put(dataFrame: DataFrame): Unit
 }
 
 class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false) extends ProtocolClient {
@@ -92,7 +92,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
        |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
     credentialsVector.set(0, credentialsJsonString.getBytes("UTF-8"))
     vectorSchemaRoot.setRowCount(1)
-    val body = DataUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
+    val body = ServerUtils.getBytesFromVectorSchemaRoot(vectorSchemaRoot)
     val result = flightClient.doAction(new Action(s"login.${userToken.orNull}", body)).asScala
     result.hasNext
   }
@@ -301,7 +301,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   private def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {
     if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val rowCount = vectorSchemaRootReceived.getRowCount
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       Seq.range(0, rowCount).map(index => {
@@ -316,7 +316,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   private def getSingleStringByResult(resultIterator: Iterator[Result]): String = {
     if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
     } else null
@@ -325,7 +325,7 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   private def getSingleLongByResult(resultIterator: Iterator[Result]): Long = {
     if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
     } else 0L
@@ -353,13 +353,13 @@ class ArrowFlightProtocolClient(url: String, port: Int, useTLS: Boolean = false)
   private def getArrayBytesResult(resultIterator: Iterator[Result]): Array[Byte] = {
     if (resultIterator.hasNext) {
       val result = resultIterator.next
-      val vectorSchemaRootReceived = DataUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[VarBinaryVector].getObject(0)
     } else null
   }
 
-  override def uploadDataFrame(dataFrameUploadSource: DataFrameUploadSource): Unit = ???
+  override def put(dataFrame: DataFrame): Unit = ???
 }
 
 // 表示完整的二进制文件

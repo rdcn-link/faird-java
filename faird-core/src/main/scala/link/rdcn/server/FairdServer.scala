@@ -3,16 +3,16 @@ package link.rdcn.server
 import com.sun.management.OperatingSystemMXBean
 import io.circe.generic.auto._
 import io.circe.parser._
-import link.rdcn.ConfigKeys._
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_LOGGED_IN}
 import link.rdcn.dftree.Operation
-import link.rdcn.provider.{DataProvider, DataStreamSource}
+import link.rdcn.provider.DataProvider
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
-import link.rdcn.struct.{DataFrame, LocalDataFrame, StructType, ValueType}
+import link.rdcn.struct.{DataFrame, DataStreamSource, DefaultDataFrame, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, DataOperationType, UsernamePassword}
-import link.rdcn.util.DataUtils
-import link.rdcn.util.DataUtils.convertStructTypeToArrowSchema
+import link.rdcn.util.{DataUtils, ServerUtils}
+import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
+import link.rdcn.ConfigKeys._
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.apache.arrow.vector._
@@ -197,7 +197,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       }
       case actionType if actionType.startsWith("login") =>
           val childAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
-          val root = DataUtils.getVectorSchemaRootFromBytes(body,childAllocator)
+          val root = ServerUtils.getVectorSchemaRootFromBytes(body,childAllocator)
           val credentialsJsonString: String = root.getFieldVectors.get(0).asInstanceOf[VarCharVector].getObject(0).toString
           val credentials = decode[UsernamePassword](credentialsJsonString)
           credentials match {
@@ -232,7 +232,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         val request = requestMap.get(userToken)
 
         val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(request._1)
-        val inDataFrame = LocalDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+        val inDataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
         val outDataFrame: DataFrame  = request._2.execute(inDataFrame)
         val schema = convertStructTypeToArrowSchema(outDataFrame.schema)
 
@@ -343,7 +343,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       rootAndAllocator._1.allocateNew()
       nameVector.setSafe(0, long)
       rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
       listener.onCompleted()
     } finally {
       rootAndAllocator._1.close()
@@ -362,7 +362,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
         index += 1
       })
       rootAndAllocator._1.setRowCount(index)
-      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
       listener.onCompleted()
     } finally {
       rootAndAllocator._1.close()
@@ -377,7 +377,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       rootAndAllocator._1.allocateNew()
       nameVector.setSafe(0, str.getBytes("UTF-8"))
       rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
       listener.onCompleted()
     } finally {
       rootAndAllocator._1.close()
@@ -392,7 +392,7 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       rootAndAllocator._1.allocateNew()
       nameVector.setSafe(0, bytes)
       rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(DataUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
       listener.onCompleted()
     } finally {
       rootAndAllocator._1.close()

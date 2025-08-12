@@ -1,4 +1,4 @@
-package link.rdcn.provider
+package link.rdcn.struct
 
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.util.{ClosableIterator, DataUtils, JdbcUtils}

@@ -33,11 +33,6 @@
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-            <version>5.4.1</version>
-        </dependency>
 
         <!-- Akka HTTP -->
         <dependency>
@@ -115,11 +110,6 @@
             <version>3.17.0</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.20.0</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -133,12 +123,6 @@
             <groupId>com.beachape</groupId>
             <artifactId>enumeratum_2.12</artifactId>
             <version>1.9.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.20.0</version>
         </dependency>
 
         <dependency>
@@ -177,6 +161,11 @@
             <groupId>black.ninia</groupId>
             <artifactId>jep</artifactId>
             <version>4.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.serceman</groupId>
+            <artifactId>jnr-fuse</artifactId>
+            <version>0.5.5</version>
         </dependency>
     </dependencies>
     <build>

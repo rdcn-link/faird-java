@@ -6,9 +6,9 @@
  */
 package link.rdcn
 import link.rdcn.TestBase.{getOutputDir, getResourcePath}
-import link.rdcn.provider.DataStreamSource
 import link.rdcn.server.FlightProducerImpl
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
+import link.rdcn.struct.DataStreamSource
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 

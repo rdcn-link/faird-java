@@ -1,5 +1,6 @@
 package link.rdcn.provider
 
+import link.rdcn.struct.DataStreamSource
 import org.apache.jena.rdf.model.Model
 
 import java.util.{List => JList}
