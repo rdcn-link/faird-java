@@ -1,7 +1,9 @@
 package link.rdcn.util
 
-import link.rdcn.struct.StructType
+import com.sun.management.OperatingSystemMXBean
+import link.rdcn.struct.{StructType, ValueType}
 import link.rdcn.struct.ValueType.{BinaryType, BooleanType, DoubleType, FloatType, IntType, LongType, StringType}
+import org.apache.arrow.flight.{FlightProducer, Result}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
@@ -10,6 +12,7 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector._
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.lang.management.ManagementFactory
 import java.util.Collections
 import scala.collection.JavaConverters.{asScalaIteratorConverter, seqAsJavaListConverter}
 
@@ -120,4 +123,116 @@ object ServerUtils {
     val unloader = new VectorUnloader(arrowRoot)
     unloader.getRecordBatch
   }
+
+  def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("rowCount", ValueType.LongType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("rowCount").asInstanceOf[BigIntVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, long)
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  def getListStringStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+      rootAndAllocator._1.allocateNew()
+      var index = 0
+      seq.foreach(d => {
+        nameVector.setSafe(index, d.getBytes("UTF-8"))
+        index += 1
+      })
+      rootAndAllocator._1.setRowCount(index)
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  def getSingleStringStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, str.getBytes("UTF-8"))
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  def getArrayBytesStream(bytes: Array[Byte], listener: FlightProducer.StreamListener[Result]): Unit = {
+    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.BinaryType))
+    try {
+      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarBinaryVector]
+      rootAndAllocator._1.allocateNew()
+      nameVector.setSafe(0, bytes)
+      rootAndAllocator._1.setRowCount(1)
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+      listener.onCompleted()
+    } finally {
+      rootAndAllocator._1.close()
+      rootAndAllocator._2.close()
+    }
+  }
+
+  def getRootByStructType(structType: StructType): (VectorSchemaRoot, BufferAllocator) = {
+    val schema = convertStructTypeToArrowSchema(structType)
+    val childAllocator: BufferAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
+    val root = VectorSchemaRoot.create(schema, childAllocator)
+    (root, childAllocator)
+  }
+
+  def getResourceStatusString(): String = {
+    val osBean = ManagementFactory.getOperatingSystemMXBean
+      .asInstanceOf[OperatingSystemMXBean]
+    val runtime = Runtime.getRuntime
+
+    val cpuLoadPercent = (osBean.getSystemCpuLoad * 100).formatted("%.2f")
+    val availableProcessors = osBean.getAvailableProcessors
+
+    val totalMemory = runtime.totalMemory() / 1024 / 1024 // MB
+    val freeMemory = runtime.freeMemory() / 1024 / 1024   // MB
+    val maxMemory = runtime.maxMemory() / 1024 / 1024     // MB
+    val usedMemory = totalMemory - freeMemory
+
+    val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
+    val systemMemoryFree = osBean.getFreePhysicalMemorySize / 1024 / 1024   // MB
+    val systemMemoryUsed = systemMemoryTotal - systemMemoryFree
+
+    s"""
+       |   {
+       |    "cpu.cores"        : "$availableProcessors",
+       |    "cpu.usage.percent" : "$cpuLoadPercent%",
+       |
+       |    "jvm.memory.max.mb" : "$maxMemory MB",
+       |    "jvm.memory.total.mb" : "$totalMemory MB",
+       |    "jvm.memory.used.mb" : "$usedMemory MB",
+       |    "jvm.memory.free.mb" : "$freeMemory MB",
+       |
+       |    "system.memory.total.mb" : "$systemMemoryTotal MB",
+       |    "system.memory.used.mb" : "$systemMemoryUsed MB",
+       |    "system.memory.free.mb" : "$systemMemoryFree MB"
+       |
+       |}
+       |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
+  }
+
+  def init(allocatorServer: BufferAllocator): Unit = {
+    allocator = allocatorServer
+  }
+
+  private var allocator: BufferAllocator = _
 }

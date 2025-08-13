@@ -13,7 +13,7 @@ import link.rdcn.util.{ClosableIterator, ResourceUtils}
  * @Modified By:
  */
 
-case class RemoteDataFrame(dataFrameName: String, client: ArrowFlightProtocolClient, operation: Operation = SourceOp()) extends DataFrame with Logging {
+case class RemoteDataFrameProxy(dataFrameName: String, client: ArrowFlightProtocolClient, operation: Operation = SourceOp()) extends DataFrame with Logging {
   val schema: StructType = StructType.fromString(getSchema)
 
   override def filter(f: Row => Boolean): DataFrame = {
@@ -57,8 +57,8 @@ case class RemoteDataFrame(dataFrameName: String, client: ArrowFlightProtocolCli
   override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)){f(_)}
 }
 
-case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrame) {
-  def max(column: String): RemoteDataFrame = ???
+case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameProxy) {
+  def max(column: String): RemoteDataFrameProxy = ???
   //可自定义聚合函数
 }
 

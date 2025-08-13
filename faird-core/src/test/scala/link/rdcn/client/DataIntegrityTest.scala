@@ -4,7 +4,7 @@ import link.rdcn.TestEmptyProvider.outputDir
 import link.rdcn.TestProvider
 import link.rdcn.TestProvider.{baseDir, binDir, dc}
 import link.rdcn.client.DataIntegrityTest.isFolderContentsMatch
-import link.rdcn.struct.Row
+import link.rdcn.struct.{Row, Blob}
 import link.rdcn.util.DataUtils
 import org.apache.commons.io.IOUtils
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}

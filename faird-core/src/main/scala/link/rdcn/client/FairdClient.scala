@@ -8,8 +8,6 @@ import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.Model
 import org.json.JSONObject
 
-import scala.collection.JavaConverters._
-
 /**
  * @Author renhao
  * @Description:
@@ -48,8 +46,8 @@ class FairdClient private(
   private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
   protocolClient.login(credentials)
 
-  def get(dataFrameName: String): RemoteDataFrame =
-    RemoteDataFrame(dataFrameName, protocolClient)
+  def get(dataFrameName: String): RemoteDataFrameProxy =
+    RemoteDataFrameProxy(dataFrameName, protocolClient)
 
   def listDataSetNames(): Seq[String] =
     protocolClient.listDataSetNames()
@@ -108,7 +106,7 @@ class FairdClient private(
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
     })
-    RemoteDataFrame(dataFrameName, protocolClient, operation)
+    RemoteDataFrameProxy(dataFrameName, protocolClient, operation)
   }
 
 }

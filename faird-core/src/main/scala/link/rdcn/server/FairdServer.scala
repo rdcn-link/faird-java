@@ -1,6 +1,5 @@
 package link.rdcn.server
 
-import com.sun.management.OperatingSystemMXBean
 import io.circe.generic.auto._
 import io.circe.parser._
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_LOGGED_IN}
@@ -10,6 +9,7 @@ import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDenied
 import link.rdcn.struct.{DataFrame, DataStreamSource, DefaultDataFrame, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, DataOperationType, UsernamePassword}
 import link.rdcn.util.{DataUtils, ServerUtils}
+import link.rdcn.util.ServerUtils._
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
 import link.rdcn.ConfigKeys._
@@ -20,7 +20,6 @@ import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
 import java.io.{File, StringWriter}
-import java.lang.management.ManagementFactory
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -54,6 +53,7 @@ class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdH
       ConfigLoader.fairdConfig.hostPort
     )
     allocator = new RootAllocator()
+    ServerUtils.init(allocator)
     producer = new FlightProducerImpl(allocator, location, dataProvider, authProvider)
     if(ConfigLoader.fairdConfig.useTLS){
       flightServer = FlightServer.builder(allocator, location, producer)
@@ -292,111 +292,5 @@ class FlightProducerImpl(allocator: BufferAllocator, location: Location, dataPro
       (k, v) => listener.onNext(getFlightInfo(null, FlightDescriptor.path(k)))
     }
     listener.onCompleted()
-  }
-
-  private def getResourceStatusString(): String = {
-    val osBean = ManagementFactory.getOperatingSystemMXBean
-      .asInstanceOf[OperatingSystemMXBean]
-    val runtime = Runtime.getRuntime
-
-    val cpuLoadPercent = (osBean.getSystemCpuLoad * 100).formatted("%.2f")
-    val availableProcessors = osBean.getAvailableProcessors
-
-    val totalMemory = runtime.totalMemory() / 1024 / 1024 // MB
-    val freeMemory = runtime.freeMemory() / 1024 / 1024   // MB
-    val maxMemory = runtime.maxMemory() / 1024 / 1024     // MB
-    val usedMemory = totalMemory - freeMemory
-
-    val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
-    val systemMemoryFree = osBean.getFreePhysicalMemorySize / 1024 / 1024   // MB
-    val systemMemoryUsed = systemMemoryTotal - systemMemoryFree
-
-    s"""
-       |   {
-       |    "cpu.cores"        : "$availableProcessors",
-       |    "cpu.usage.percent" : "$cpuLoadPercent%",
-       |
-       |    "jvm.memory.max.mb" : "$maxMemory MB",
-       |    "jvm.memory.total.mb" : "$totalMemory MB",
-       |    "jvm.memory.used.mb" : "$usedMemory MB",
-       |    "jvm.memory.free.mb" : "$freeMemory MB",
-       |
-       |    "system.memory.total.mb" : "$systemMemoryTotal MB",
-       |    "system.memory.used.mb" : "$systemMemoryUsed MB",
-       |    "system.memory.free.mb" : "$systemMemoryFree MB"
-       |
-       |}
-       |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
-  }
-
-  private def getRootByStructType(structType: StructType): (VectorSchemaRoot, BufferAllocator) = {
-    val schema = convertStructTypeToArrowSchema(structType)
-    val childAllocator: BufferAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
-    val root = VectorSchemaRoot.create(schema, childAllocator)
-    (root, childAllocator)
-  }
-
-  private def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("rowCount", ValueType.LongType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("rowCount").asInstanceOf[BigIntVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, long)
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
-  private def getListStringStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      var index = 0
-      seq.foreach(d => {
-        nameVector.setSafe(index, d.getBytes("UTF-8"))
-        index += 1
-      })
-      rootAndAllocator._1.setRowCount(index)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
-  private def getSingleStringStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, str.getBytes("UTF-8"))
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-
-  private def getArrayBytesStream(bytes: Array[Byte], listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.BinaryType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarBinaryVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, bytes)
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
   }
 }

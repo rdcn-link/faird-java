@@ -3,6 +3,7 @@ package link.rdcn.client
 import link.rdcn.TestProvider
 import link.rdcn.TestProvider.{csvDfInfos, dc}
 import link.rdcn.struct.StructType.binaryStructType
+import link.rdcn.struct.Blob
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import org.junit.jupiter.api.Assertions.{assertEquals, assertNotNull, assertTrue}
 import org.junit.jupiter.api.Test

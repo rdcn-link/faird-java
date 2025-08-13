@@ -1,7 +1,7 @@
 package link.rdcn;
 
 import link.rdcn.client.Blob;
-import link.rdcn.client.RemoteDataFrame;
+import link.rdcn.client.RemoteDataFrameProxy;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.FlowNode;

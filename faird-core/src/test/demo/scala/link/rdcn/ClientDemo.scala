@@ -1,7 +1,7 @@
 package link.rdcn
 
 import link.rdcn.client.dag.{Flow, FlowNode}
-import link.rdcn.client.{Blob, FairdClient, RemoteDataFrame}
+import link.rdcn.client.{Blob, FairdClient, RemoteDataFrameProxy}
 import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword
@@ -77,7 +77,7 @@ object ClientDemo {
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
     println("--------------打印数据帧Document--------------")
-    val dataFrameDocument: DataFrameDocument = dfBin.asInstanceOf[RemoteDataFrame].getDocument
+    val dataFrameDocument: DataFrameDocument = dfBin.asInstanceOf[RemoteDataFrameProxy].getDocument
     val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
     val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
     val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
@@ -90,7 +90,7 @@ object ClientDemo {
 
     //获得数据帧大小
     println("--------------打印数据帧行数和大小--------------")
-    val df = dfBin.asInstanceOf[RemoteDataFrame]
+    val df = dfBin.asInstanceOf[RemoteDataFrameProxy]
     val dataFrameRowCount: Long = df.getStatistics.rowCount
     val dataFrameSize: Long = df.getStatistics.byteSize
     println(dataFrameRowCount)

@@ -9,7 +9,7 @@ package link.rdcn;
 
 
 import link.rdcn.client.FairdClient;
-import link.rdcn.client.RemoteDataFrame;
+import link.rdcn.client.RemoteDataFrameProxy;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.ExecutionResult;
@@ -28,7 +28,7 @@ public class JFairdClient {
         this.fairdClient = fairdClient;
     }
 
-    public RemoteDataFrame get(String dataFrameName) {
+    public RemoteDataFrameProxy get(String dataFrameName) {
         return fairdClient.get(dataFrameName);
     }
 
