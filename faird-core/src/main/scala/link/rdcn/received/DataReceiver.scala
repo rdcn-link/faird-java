@@ -2,7 +2,7 @@ package link.rdcn.received
 
 import link.rdcn.struct.DataFrame
 
-trait Receiver extends AutoCloseable {
+trait DataReceiver extends AutoCloseable {
   /** Called once before receiving any rows */
   def start(): Unit
 

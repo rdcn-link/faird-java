@@ -5,6 +5,7 @@ import io.circe.parser._
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_LOGGED_IN}
 import link.rdcn.dftree.Operation
 import link.rdcn.provider.DataProvider
+import link.rdcn.received.DataReceiver
 import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException, DataFrameNotFoundException}
 import link.rdcn.struct.{DataFrame, DataStreamSource, DefaultDataFrame, StructType, ValueType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, DataOperationType, UsernamePassword}
@@ -33,7 +34,7 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
  * @Modified By:
  */
 
-class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, fairdHome: String) {
+class FairdServer(dataProvider: DataProvider, authProvider: AuthProvider, dataReceiver: DataReceiver, fairdHome: String) {
 
   // 状态管理
   @volatile private var allocator: BufferAllocator = _

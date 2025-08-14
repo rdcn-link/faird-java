@@ -16,15 +16,17 @@ import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilder
 
 object ConfigLoader {
 
-  private var props: Properties = _
   var fairdConfig: FairdConfig = _
 
   def init(fairdHome: String): Unit = synchronized {
-    props = loadProperties(s"$fairdHome"+File.separator+ "conf" +File.separator+ "faird.conf")
+    val props = loadProperties(s"$fairdHome"+File.separator+ "conf" +File.separator+ "faird.conf")
     props.setProperty(ConfigKeys.FAIRD_HOME, fairdHome)
     fairdConfig = FairdConfig.load(props)
-    initLog4j(props)
+    initLog4j(fairdConfig)
   }
+
+  def init(config: FairdConfig): Unit =
+    if(config != null) fairdConfig = config else fairdConfig = new FairdConfig
 
   private def loadProperties(path: String): Properties = {
     val props = new Properties()
@@ -33,16 +35,16 @@ object ConfigLoader {
     props
   }
 
-  private def initLog4j(props: Properties): Unit = {
+  private def initLog4j(config: FairdConfig): Unit = {
     val builder: ConfigurationBuilder[BuiltConfiguration] = ConfigurationBuilderFactory.newConfigurationBuilder()
 
     builder.setStatusLevel(Level.WARN)
     builder.setConfigurationName("FairdLogConfig")
 
-    val logFile = props.getProperty("logging.file.name", "./default.log")
-    val level = Level.toLevel(props.getProperty("logging.level.root", "INFO"))
-    val consolePattern = props.getProperty("logging.pattern.console", "%d{HH:mm:ss} %-5level %logger{36} - %msg%n")
-    val filePattern = props.getProperty("logging.pattern.file", "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger - %msg%n")
+    val logFile = config.loggingFileName
+    val level = Level.toLevel(config.loggingLevelRoot)
+    val consolePattern = config.loggingPatternConsole
+    val filePattern = config.loggingPatternFile
 
     val console = builder.newAppender("Console", "CONSOLE")
       .add(builder.newLayout("PatternLayout").addAttribute("pattern", consolePattern))
