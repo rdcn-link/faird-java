@@ -5,6 +5,7 @@ import org.apache.arrow.flight.Result
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.ArrowStreamWriter
 import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
+import org.apache.jena.rdf.model.Model
 
 import java.io.ByteArrayOutputStream
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
@@ -80,6 +81,22 @@ object ClientUtils {
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[VarBinaryVector].getObject(0)
     } else null
+  }
+
+  def modelToMap(model: Model): Map[String, Map[String, List[String]]] = {
+    val stmts = model.listStatements().asScala.toList
+
+    stmts
+      .groupBy(_.getSubject.toString) // 按 subject 分组
+      .map { case (subject, statements) =>
+        val predObjMap = statements
+          .groupBy(_.getPredicate.toString) // 按 predicate 分组
+          .map { case (predicate, stmtsForPred) =>
+            val objs = stmtsForPred.map(_.getObject.toString)
+            predicate -> objs
+          }
+        subject -> predObjMap
+      }
   }
 
   def init(allocatorServer: BufferAllocator): Unit = {

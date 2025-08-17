@@ -58,6 +58,10 @@ object DataUtils extends Logging{
     }
   }
 
+  def getStructTypeFromMap(row: Map[String, Any]): StructType = {
+    StructType(row.map(row => Column(row._1, inferValueType(row._2))).toSeq)
+  }
+
   def getStructTypeStreamFromJson(iter: Iterator[String]): (Iterator[Row], StructType) = {
     if(iter.hasNext){
       val firstLine = iter.next()

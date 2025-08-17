@@ -1,7 +1,7 @@
 package link.rdcn.util
 
 import com.sun.management.OperatingSystemMXBean
-import link.rdcn.struct.{StructType, ValueType}
+import link.rdcn.struct.{StructType, ValueType, DataFrame}
 import link.rdcn.struct.ValueType.{BinaryType, BooleanType, DoubleType, FloatType, IntType, LongType, StringType}
 import org.apache.arrow.flight.{FlightProducer, Result}
 import org.apache.arrow.memory.BufferAllocator
@@ -155,6 +155,53 @@ object ServerUtils {
     } finally {
       rootAndAllocator._1.close()
       rootAndAllocator._2.close()
+    }
+  }
+  def sendDataFrame(df: DataFrame, listener: FlightProducer.StreamListener[Result]): Unit = {
+    // 1. 根据 DataFrame 的 schema 构建 Arrow VectorSchemaRoot
+    val structType = df.schema
+    val rootAndAllocator = getRootByStructType(structType)  // 返回 (VectorSchemaRoot, BufferAllocator)
+    val root = rootAndAllocator._1
+    val allocator = rootAndAllocator._2
+
+    try {
+      root.allocateNew() // 分配内存
+
+      var rowIndex = 0
+      df.mapIterator(stream => {
+        stream.foreach { row =>
+          structType.columns.zipWithIndex.foreach { case (col, colIndex) =>
+            val vector = root.getVector(col.name)
+            col.colType match {
+              case ValueType.StringType =>
+                vector.asInstanceOf[VarCharVector].setSafe(rowIndex, row.get(colIndex).toString.getBytes("UTF-8"))
+              case ValueType.IntType =>
+                vector.asInstanceOf[IntVector].setSafe(rowIndex, row.get(colIndex).asInstanceOf[Int])
+              case ValueType.LongType =>
+                vector.asInstanceOf[BigIntVector].setSafe(rowIndex, row.get(colIndex).asInstanceOf[Long])
+              case ValueType.FloatType =>
+                vector.asInstanceOf[Float4Vector].setSafe(rowIndex, row.get(colIndex).asInstanceOf[Float])
+              case ValueType.DoubleType =>
+                vector.asInstanceOf[Float8Vector].setSafe(rowIndex, row.get(colIndex).asInstanceOf[Double])
+              case ValueType.BooleanType =>
+                vector.asInstanceOf[BitVector].setSafe(rowIndex, if (row.get(colIndex).asInstanceOf[Boolean]) 1 else 0)
+              case ValueType.BinaryType =>
+                vector.asInstanceOf[VarBinaryVector].setSafe(rowIndex, row.get(colIndex).asInstanceOf[Array[Byte]])
+              case _ =>
+                throw new UnsupportedOperationException(s"Unsupported type: ${col.colType}")
+            }
+          }
+          rowIndex += 1
+        }
+      })
+      root.setRowCount(rowIndex)
+
+      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(root)))
+      listener.onCompleted()
+
+    } finally {
+      root.close()
+      allocator.close()
     }
   }
 

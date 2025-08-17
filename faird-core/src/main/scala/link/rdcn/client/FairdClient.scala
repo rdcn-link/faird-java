@@ -14,29 +14,6 @@ import org.json.JSONObject
  * @Data 2025/6/16 14:49
  * @Modified By:
  */
-private case class DacpUri(host: String, port: Int)
-
-private object DacpUriParser {
-  private val DacpPattern = "^dacp://([^:/]+):(\\d+)$".r
-
-  def parse(uri: String): Either[String, DacpUri] = {
-    uri match {
-      case DacpPattern(host, portStr) =>
-        try {
-          val port = portStr.toInt
-          if (port < 0 || port > 65535)
-            Left(s"Invalid port number: $port")
-          else
-            Right(DacpUri(host, port))
-        } catch {
-          case _: NumberFormatException => Left(s"Invalid port format: $portStr")
-        }
-
-      case _ => Left(s"Invalid dacp URI format: $uri")
-    }
-  }
-}
-
 class FairdClient private(
                            url: String,
                            port: Int,
@@ -111,13 +88,12 @@ class FairdClient private(
 
 }
 
-
 object FairdClient {
 
   def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
-    DacpUriParser.parse(url) match {
+    DacpUrlValidator.validate(url) match {
       case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port, credentials)
+        new FairdClient(parsed._1, parsed._2.getOrElse(3101), credentials)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
@@ -125,9 +101,9 @@ object FairdClient {
 
 
   def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
-    DacpUriParser.parse(url) match {
+    DacpUrlValidator.validate(url) match {
       case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port, credentials, true)
+        new FairdClient(parsed._1, parsed._2.getOrElse(3101), credentials, true)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
