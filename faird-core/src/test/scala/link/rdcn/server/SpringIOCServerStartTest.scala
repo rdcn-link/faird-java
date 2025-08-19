@@ -1,12 +1,14 @@
 package link.rdcn.server
 
-import link.rdcn.client.FairdClient
+import link.rdcn.{ConfigLoader, FairdConfig}
+import link.rdcn.client.dacp.{DacpClient, FairdClient}
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics, DataProvider}
 import link.rdcn.struct.ValueType.{LongType, StringType}
 import link.rdcn.struct.{DataFrame, DataStreamSource, Row, StructType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.ClosableIterator
 import link.rdcn.received.DataReceiver
+import link.rdcn.server.dacp.DacpServer
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.xml.XmlBeanFactory
@@ -24,12 +26,33 @@ class SpringIOCServerStartTest {
     val authProvider = f.getBean("authProvider").asInstanceOf[AuthProvider]
     val fairdHome = getClass.getClassLoader.getResource("").getPath
 
-    val server: FairdServer = new FairdServer(dataProvider, authProvider, dataReceiver, fairdHome)
-    server.start()
+    val server: DacpServer = new DacpServer(dataProvider, dataReceiver)
+    server.addAuthHandler(authProvider)
+    ConfigLoader.init(fairdHome)
+    server.start(ConfigLoader.fairdConfig)
     val client = FairdClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
     assert(client.listDataSetNames().head == "dataSet1")
     assert(client.listDataFrameNames("dataSet1").head == "dataFrame1")
   }
+  @Test
+  def serverDstpTest(): Unit = {
+    val dacpServer = new DacpServer(new DataProviderTest, new DataReceiverTest)
+    dacpServer.addAuthHandler(new AuthorProviderTest)
+    dacpServer.start(new FairdConfig)
+
+    val dacpClient = DacpClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
+    val dfDataSets = dacpClient.get("dacp://0.0.0.0:3101/listDataSetNames")
+    println("#########DataSet List")
+    dfDataSets.foreach(println)
+    val dfNames = dacpClient.get("dacp://0.0.0.0:3101/listDataFrameNames/dataSet1")
+    println("#########DataFrame List")
+    dfNames.foreach(println)
+    val df = dacpClient.get("dacp://0.0.0.0:3101/get/dataFrame1")
+    println("###########println DataFrame")
+    df.foreach(println)
+
+  }
+
 }
 
 class DataReceiverTest extends DataReceiver {
@@ -82,8 +105,8 @@ override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.a
     override def schema: StructType = StructType.empty.add("col1", StringType)
 
     override def iterator: ClosableIterator[Row] = {
-      val row = Row.fromSeq(Seq("name"))
-      ClosableIterator(Seq(row).toIterator)()
+      val rows =Seq.range(0, 10).map(index => Row.fromSeq(Seq("id"+index))).toIterator
+      ClosableIterator(rows)()
     }
   }
 
@@ -110,7 +133,14 @@ class AuthorProviderTest extends AuthProvider {
    *
    * @throws AuthorizationException
    */
-  override def authenticate(credentials: Credentials): AuthenticatedUser = new AuthenticatedUser{}
+  override def authenticate(credentials: Credentials): AuthenticatedUser = new AuthenticatedUser{
+    override def token: String = {
+      credentials match {
+        case UsernamePassword(username, password) => "1"
+        case _ => "2"
+      }
+    }
+  }
 
   /**
    * 判断用户是否具有某项权限
@@ -120,5 +150,7 @@ class AuthorProviderTest extends AuthProvider {
    * @param opList        操作类型列表（Java List）
    * @return 是否有权限
    */
-  override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: util.List[DataOperationType]): Boolean = true
+  override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: util.List[DataOperationType]): Boolean = {
+    if(user.token == "2") true else false
+  }
 }

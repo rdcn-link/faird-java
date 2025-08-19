@@ -1,4 +1,4 @@
-package link.rdcn.client
+package link.rdcn.client.dacp
 
 /**
  * @Author renhao
@@ -7,7 +7,6 @@ package link.rdcn.client
  * @Modified By:
  */
 object DacpUrlValidator {
-  // Basic DFTP URL pattern: dftp://host:port/path
   private val DftpUrlPattern = "^dacp://([^:/]+)(?::(\\d+))?(/.*)?$".r
 
   def validate(url: String): Either[String, (String, Option[Int], String)] = {

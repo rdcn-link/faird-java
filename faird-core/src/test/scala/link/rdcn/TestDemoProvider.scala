@@ -43,6 +43,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
 
+    override def token: String = ???
   }
 
 

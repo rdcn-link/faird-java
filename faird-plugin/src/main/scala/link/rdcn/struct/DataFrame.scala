@@ -45,4 +45,8 @@ object DataFrame {
     val stream =  ClosableIterator(maps.map(m => Row.fromSeq(m.values.toSeq)).toIterator)(()=>{})
     DefaultDataFrame(DataUtils.getStructTypeFromMap(maps.head), stream)
   }
+
+  def empty(): DataFrame = {
+    DefaultDataFrame(StructType.empty, ClosableIterator(Iterator.empty)())
+  }
 }

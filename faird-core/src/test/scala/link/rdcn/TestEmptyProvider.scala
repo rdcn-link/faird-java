@@ -6,9 +6,9 @@
  */
 package link.rdcn
 import link.rdcn.TestBase.{getOutputDir, getResourcePath}
-import link.rdcn.server.FlightProducerImpl
+import link.rdcn.received.DataReceiver
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
-import link.rdcn.struct.DataStreamSource
+import link.rdcn.struct.{DataFrame, DataStreamSource}
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 
@@ -46,11 +46,23 @@ object TestEmptyProvider {
     override def getDataStreamSource(dataFrameName: String): DataStreamSource = ???
   }
 
-  val producer = new FlightProducerImpl(allocator, location, emptyDataProvider, emptyAuthProvider)
+  val emptyDataReceiver: DataReceiver = new DataReceiver {
+    /** Called once before receiving any rows */
+    override def start(): Unit = ???
+
+    /** Called for each received batch of rows */
+    override def receiveRow(dataFrame: DataFrame): Unit = ???
+
+    /** Called after all batches are received successfully */
+    override def finish(): Unit = ???
+  }
+
   val configCache = ConfigLoader.fairdConfig
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
+
+    override def token: String = ???
   }
 
 

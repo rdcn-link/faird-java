@@ -1,7 +1,7 @@
 package link.rdcn.util
 
 import com.sun.management.OperatingSystemMXBean
-import link.rdcn.struct.{StructType, ValueType, DataFrame}
+import link.rdcn.struct.{DataFrame, StructType, ValueType}
 import link.rdcn.struct.ValueType.{BinaryType, BooleanType, DoubleType, FloatType, IntType, LongType, StringType}
 import org.apache.arrow.flight.{FlightProducer, Result}
 import org.apache.arrow.memory.BufferAllocator
@@ -10,6 +10,7 @@ import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
 import org.apache.arrow.vector.types.FloatingPointPrecision
 import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector._
+import org.apache.jena.rdf.model.Model
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.lang.management.ManagementFactory
@@ -242,7 +243,7 @@ object ServerUtils {
     (root, childAllocator)
   }
 
-  def getResourceStatusString(): String = {
+  def getResourceStatusString(): Map[String, String] = {
     val osBean = ManagementFactory.getOperatingSystemMXBean
       .asInstanceOf[OperatingSystemMXBean]
     val runtime = Runtime.getRuntime
@@ -258,23 +259,33 @@ object ServerUtils {
     val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
     val systemMemoryFree = osBean.getFreePhysicalMemorySize / 1024 / 1024   // MB
     val systemMemoryUsed = systemMemoryTotal - systemMemoryFree
+    Map(
+      "cpu.cores" -> s"$availableProcessors",
+      "cpu.usage.percent" -> s"$cpuLoadPercent%",
+      "jvm.memory.max.mb" -> s"$maxMemory MB",
+      "jvm.memory.total.mb" -> s"$totalMemory MB",
+      "jvm.memory.used.mb" -> s"$usedMemory MB",
+      "jvm.memory.free.mb" -> s"$freeMemory MB",
+      "system.memory.total.mb" -> s"$systemMemoryTotal MB",
+      "system.memory.used.mb" -> s"$systemMemoryUsed MB",
+      "system.memory.free.mb" -> s"$systemMemoryFree MB"
+    )
+  }
 
-    s"""
-       |   {
-       |    "cpu.cores"        : "$availableProcessors",
-       |    "cpu.usage.percent" : "$cpuLoadPercent%",
-       |
-       |    "jvm.memory.max.mb" : "$maxMemory MB",
-       |    "jvm.memory.total.mb" : "$totalMemory MB",
-       |    "jvm.memory.used.mb" : "$usedMemory MB",
-       |    "jvm.memory.free.mb" : "$freeMemory MB",
-       |
-       |    "system.memory.total.mb" : "$systemMemoryTotal MB",
-       |    "system.memory.used.mb" : "$systemMemoryUsed MB",
-       |    "system.memory.free.mb" : "$systemMemoryFree MB"
-       |
-       |}
-       |""".stripMargin.stripMargin.replaceAll("\n", "").replaceAll("\\s+", " ")
+  def modelToMap(model: Model): Map[String, Map[String, List[String]]] = {
+    val stmts = model.listStatements().asScala.toList
+
+    stmts
+      .groupBy(_.getSubject.toString) // 按 subject 分组
+      .map { case (subject, statements) =>
+        val predObjMap = statements
+          .groupBy(_.getPredicate.toString) // 按 predicate 分组
+          .map { case (predicate, stmtsForPred) =>
+            val objs = stmtsForPred.map(_.getObject.toString)
+            predicate -> objs
+          }
+        subject -> predObjMap
+      }
   }
 
   def init(allocatorServer: BufferAllocator): Unit = {

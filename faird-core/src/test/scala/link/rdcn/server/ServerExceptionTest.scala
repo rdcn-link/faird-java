@@ -3,7 +3,8 @@ package link.rdcn.server
 import link.rdcn.ErrorCode
 import link.rdcn.TestBase.{adminPassword, adminUsername}
 import link.rdcn.TestEmptyProvider._
-import link.rdcn.client.FairdClient
+import link.rdcn.server.dacp.DacpServer
+import link.rdcn.client.dacp.FairdClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer}
@@ -29,12 +30,12 @@ class ServerExceptionTest {
   //端口被占用
   @Test()
   def testAddressAlreadyInUse(): Unit = {
-    val flightServer1 = FlightServer.builder(allocator, location, producer).build()
-    flightServer1.start()
-    val flightServer2 = FlightServer.builder(allocator, location, producer).build()
+    val flightServer1 = new DacpServer(emptyDataProvider, emptyDataReceiver)
+    flightServer1.start(configCache)
+    val flightServer2 = new DacpServer(emptyDataProvider, emptyDataReceiver)
     val ServerException = assertThrows(
       classOf[IOException],
-      () => flightServer2.start()
+      () => flightServer2.start(configCache)
     )
     flightServer1.close()
     assertEquals(ErrorCode.SERVER_ADDRESS_ALREADY_IN_USE, ExceptionHandler.getErrorCode(ServerException))
@@ -43,11 +44,11 @@ class ServerExceptionTest {
   //服务重复启动
   @Test()
   def testServerAlreadyStarted(): Unit = {
-    val flightServer: FlightServer = FlightServer.builder(allocator, location, producer).build()
-    flightServer.start()
+    val flightServer = new DacpServer(emptyDataProvider, emptyDataReceiver)
+    flightServer.start(configCache)
     val ServerException = assertThrows(
       classOf[IllegalStateException],
-      () => flightServer.start()
+      () => flightServer.start(configCache)
     )
     flightServer.close()
     assertEquals(ErrorCode.SERVER_ALREADY_STARTED, ExceptionHandler.getErrorCode(ServerException))

@@ -1,18 +1,20 @@
 package link.rdcn.server
 
-import link.rdcn.{ConfigLoader, Logging, SimpleSerializer}
-import link.rdcn.struct.{DataFrame, DataStreamSource, DefaultDataFrame, StructType}
+import link.rdcn.ErrorCode.USER_NOT_LOGGED_IN
+import link.rdcn.dftree.Operation
+import link.rdcn.server.exception.{AuthorizationException, DataFrameAccessDeniedException}
+import link.rdcn.Logging
+import link.rdcn.user.DataOperationType
 import link.rdcn.util.ServerUtils
-import link.rdcn.util.ServerUtils.{convertStructTypeToArrowSchema, getArrayBytesStream, getListStringStream, getResourceStatusString, getSingleLongBytesStream, getSingleStringStream}
+import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import org.apache.arrow.flight.{Action, Criteria, FlightDescriptor, FlightEndpoint, FlightInfo, FlightProducer, Location, NoOpFlightProducer, Result, Ticket}
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.{VarCharVector, VectorLoader, VectorSchemaRoot}
+import org.apache.arrow.vector.{VectorLoader, VectorSchemaRoot}
 import org.apache.arrow.vector.types.pojo.Schema
 
-import java.io.StringWriter
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.locks.LockSupport
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 /**
  * @Author renhao
@@ -25,17 +27,34 @@ class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpSer
   private val batchLen = 100
 
   override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val request = DftpRequest(action.getType, ActionType.GET, action.getBody)
-    val response = DftpResponse(200)
-    dftpServer.doGet(request,response)
-    val dataFrame = response.dataFrame
-    if(dataFrame.nonEmpty) ServerUtils.sendDataFrame(dataFrame.get, listener) else listener.onCompleted()
+    //dftp 处理 df.map.filter ……
+    if(action.getType.startsWith("/putRequest")){
+      val userToken: String = context.peerIdentity()
+
+      val dfName =  action.getType.split(":")(1)
+      val requestDataFrameKey = action.getType.split(":")(2)
+      val authenticatedUser = Option(dftpServer.authenticatedUserMap.get(userToken))
+      if(authenticatedUser.isEmpty){
+        throw new AuthorizationException(USER_NOT_LOGGED_IN)
+      }
+      if(! dftpServer.authProvider.checkPermission(authenticatedUser.get, dfName, List.empty[DataOperationType].asJava.asInstanceOf[java.util.List[DataOperationType]] ))
+        throw new DataFrameAccessDeniedException(dfName)
+      val operationNode: Operation = Operation.fromJsonString(new String(action.getBody, StandardCharsets.UTF_8))
+      dftpServer.requestMap.put(requestDataFrameKey, (dfName, operationNode))
+      listener.onCompleted()
+    }else{
+      val request = DftpRequest(action.getType, ActionType.GET, action.getBody)
+      val response = DftpResponse(200)
+      dftpServer.doGet(request,response)
+      val dataFrame = response.dataFrame
+      if(dataFrame.nonEmpty) ServerUtils.sendDataFrame(dataFrame.get, listener) else listener.onCompleted()
+    }
   }
 
   override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-    val userToken = new String(ticket.getBytes, StandardCharsets.UTF_8)
+    val dataFrameRequestKey = new String(ticket.getBytes, StandardCharsets.UTF_8)
 
-    val request = DftpRequest(userToken, ActionType.GET)
+    val request = DftpRequest("/get/"+dataFrameRequestKey, ActionType.GET)
     val response = DftpResponse(200)
     dftpServer.doGet(request, response)
     val outDataFrame = response.dataFrame
@@ -69,8 +88,9 @@ class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpSer
           if (root != null) root.close()
           if (childAllocator != null) childAllocator.close()
         }
-      case None => listener.error(new IllegalStateException(
-        s"Request ${request.path} returned ${response.code}, message=${response.message.getOrElse("")}"
+      case None =>
+        response.send(500)
+        listener.error(new IllegalStateException(s"Request ${request.path} returned ${response.code}, message=${response.message.getOrElse("")}"
       ))
     }
   }

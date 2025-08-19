@@ -9,9 +9,9 @@ package link.rdcn
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_FOUND, USER_NOT_LOGGED_IN}
 import link.rdcn.TestBase._
 import link.rdcn.ConfigKeys._
-import link.rdcn.client.FairdClient
+import link.rdcn.client.dacp.FairdClient
 import link.rdcn.received.DataReceiver
-import link.rdcn.server.FairdServer
+import link.rdcn.server.dacp.DacpServer
 import link.rdcn.server.exception.AuthorizationException
 import link.rdcn.struct.{DataFrame, StructType}
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
@@ -49,6 +49,7 @@ object TestProvider {
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
 
+    override def token: String = ???
   }
 
   val authprovider = new AuthProvider {
@@ -107,7 +108,7 @@ object TestProvider {
     override def finish(): Unit = ???
   }
 
-  private var fairdServer: Option[FairdServer] = None
+  private var fairdServer: Option[DacpServer] = None
   var dc: FairdClient = _
   val configCache = ConfigLoader.fairdConfig
   var expectedHostInfo: Map[String, String] = _
@@ -127,11 +128,12 @@ object TestProvider {
     TestDataGenerator.cleanupTestData(baseDir)
   }
 
-  def getServer: FairdServer = synchronized {
+  def getServer: DacpServer = synchronized {
     if (fairdServer.isEmpty) {
-      val s = new FairdServer(dataProvider, authprovider, dataReceiver, Paths.get(getResourcePath("")).toString())
-
-      s.start()
+      val s = new DacpServer(dataProvider,  dataReceiver)
+      s.addAuthHandler(authprovider)
+      ConfigLoader.init(Paths.get(getResourcePath("")).toString)
+      s.start(ConfigLoader.fairdConfig)
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)
       expectedHostInfo =

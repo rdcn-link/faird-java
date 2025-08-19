@@ -2,7 +2,6 @@ package link.rdcn.client
 
 import link.rdcn.Logging
 import link.rdcn.dftree._
-import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DataFrame, Row, StructType}
 import link.rdcn.util.{ClosableIterator, ResourceUtils}
 
@@ -13,8 +12,9 @@ import link.rdcn.util.{ClosableIterator, ResourceUtils}
  * @Modified By:
  */
 
-case class RemoteDataFrameProxy(dataFrameName: String, client: ArrowFlightProtocolClient, operation: Operation = SourceOp()) extends DataFrame with Logging {
-  val schema: StructType = StructType.fromString(getSchema)
+case class RemoteDataFrameProxy(dataFrameName: String, client: DftpClient, operation: Operation = SourceOp()) extends DataFrame with Logging {
+
+  override val schema: StructType = client.getRows(dataFrameName, operation.toJsonString)._1
 
   override def filter(f: Row => Boolean): DataFrame = {
     val genericFunctionCall = SingleRowCall(new SerializableFunction[Row, Boolean] {
@@ -46,15 +46,9 @@ case class RemoteDataFrameProxy(dataFrameName: String, client: ArrowFlightProtoc
 
   override def collect(): List[Row] = records.toList
 
-  def getDocument: DataFrameDocument = client.getDocument(dataFrameName)
+  private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)._2
 
-  def getStatistics: DataFrameStatistics = client.getStatistics(dataFrameName)
-
-  private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)
-
-  private def getSchema: String = client.getSchema(dataFrameName)
-
-  override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)){f(_)}
+  override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)._2){f(_)}
 }
 
 case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameProxy) {

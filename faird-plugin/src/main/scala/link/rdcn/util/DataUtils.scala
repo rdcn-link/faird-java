@@ -8,6 +8,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.json.JSONObject
 
 import java.io._
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
@@ -398,5 +399,34 @@ object DataUtils extends Logging{
       case ValueType.BooleanType => cell.getBooleanCellValue
       case _                     => cell.toString.trim
     }
+  }
+
+  def codeUserPassword(user:String, password: String): Array[Byte] = {
+    val userBytes = user.getBytes(StandardCharsets.UTF_8)
+    val passwordBytes = password.getBytes(StandardCharsets.UTF_8)
+
+    val buffer: ByteBuffer = ByteBuffer.allocate(4 + userBytes.length + 4 + passwordBytes.length)
+    buffer.putInt(userBytes.length)
+    buffer.put(userBytes)
+    buffer.putInt(passwordBytes.length)
+    buffer.put(passwordBytes)
+
+    buffer.array()
+  }
+
+  def decodeUserPassword(bytes: Array[Byte]): (String, String) = {
+    val buffer = ByteBuffer.wrap(bytes)
+
+    val userLen = buffer.getInt()
+    val userBytes = new Array[Byte](userLen)
+    buffer.get(userBytes)
+    val user = new String(userBytes, StandardCharsets.UTF_8)
+
+    val passwordLen = buffer.getInt()
+    val passwordBytes = new Array[Byte](passwordLen)
+    buffer.get(passwordBytes)
+    val password = new String(passwordBytes, StandardCharsets.UTF_8)
+
+    (user, password)
   }
 }

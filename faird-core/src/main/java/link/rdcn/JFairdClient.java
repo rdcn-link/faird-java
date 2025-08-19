@@ -8,7 +8,7 @@ package link.rdcn;
  */
 
 
-import link.rdcn.client.FairdClient;
+import link.rdcn.client.dacp.FairdClient;
 import link.rdcn.client.RemoteDataFrameProxy;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.struct.DataFrame;

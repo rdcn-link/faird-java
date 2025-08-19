@@ -9,7 +9,7 @@ import link.rdcn.struct.ValueType._
  */
 case class Column(name: String, colType: ValueType,  nullable: Boolean = true)
 
-case class StructType(columns: Seq[Column]) {
+case class StructType(val columns: Seq[Column]) {
 
   private val nameToIndex: Map[String, Int] = {
     val pairs = columns.zipWithIndex.map { case (col, idx) => col.name -> idx }

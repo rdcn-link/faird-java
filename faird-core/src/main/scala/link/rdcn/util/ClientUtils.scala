@@ -1,16 +1,70 @@
 package link.rdcn.util
 
+import link.rdcn.struct.{Column, DataFrame, DefaultDataFrame, Row, StructType, ValueType}
 import io.circe.{DecodingFailure, parser}
+import org.apache.arrow.vector.types.Types
 import org.apache.arrow.flight.Result
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.ArrowStreamWriter
-import org.apache.arrow.vector.{BigIntVector, VarBinaryVector, VarCharVector, VectorSchemaRoot}
+import org.apache.arrow.vector._
 import org.apache.jena.rdf.model.Model
 
 import java.io.ByteArrayOutputStream
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 
 object ClientUtils {
+
+  def parseFlightActionResults(resultIterator: java.util.Iterator[Result]): DataFrame = {
+    val allRows = scala.collection.mutable.ArrayBuffer[Row]()
+    var schema: StructType = StructType.empty
+    while (resultIterator.hasNext) {
+      val result = resultIterator.next()
+      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
+      schema = arrowSchemaToStructType(vectorSchemaRootReceived.getSchema)
+      val rowCount = vectorSchemaRootReceived.getRowCount
+      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
+
+      Seq.range(0, rowCount).foreach { rowIndex =>
+        val rowValues = fieldVectors.map { vector =>
+          if (vector.isNull(rowIndex)) {
+            null
+          } else {
+            vector match {
+              case v: VarCharVector   => v.getObject(rowIndex).toString
+              case v: IntVector      => v.get(rowIndex)
+              case v: BigIntVector    => v.get(rowIndex)
+              case v: Float4Vector    => v.get(rowIndex)
+              case v: Float8Vector    => v.get(rowIndex)
+              case v: BitVector       => v.get(rowIndex) != 0
+              case v: VarBinaryVector => v.get(rowIndex)
+              case _ => throw new UnsupportedOperationException(
+                s"Unsupported type: ${vector.getClass}"
+              )
+            }
+          }
+        }
+        allRows += Row.fromSeq(rowValues)
+      }
+    }
+    DefaultDataFrame(schema, ClosableIterator(allRows.toIterator)())
+  }
+
+  def arrowSchemaToStructType(schema: org.apache.arrow.vector.types.pojo.Schema): StructType = {
+    val columns = schema.getFields.asScala.map { field =>
+      val colType = field.getType match {
+        case t if t == Types.MinorType.INT.getType  => ValueType.IntType
+        case t if t == Types.MinorType.BIGINT.getType => ValueType.LongType
+        case t if t == Types.MinorType.FLOAT4.getType => ValueType.FloatType
+        case t if t == Types.MinorType.FLOAT8.getType => ValueType.DoubleType
+        case t if t == Types.MinorType.VARCHAR.getType => ValueType.StringType
+        case t if t == Types.MinorType.BIT.getType => ValueType.BooleanType
+        case t if t == Types.MinorType.VARBINARY.getType => ValueType.BinaryType
+        case _ => throw new UnsupportedOperationException(s"Unsupported Arrow type: ${field.getType}")
+      }
+      Column(field.getName, colType)
+    }
+    StructType(columns.toList)
+  }
 
   def getBytesFromVectorSchemaRoot(root: VectorSchemaRoot): Array[Byte] = {
     val outputStream = new ByteArrayOutputStream()
@@ -27,6 +81,7 @@ object ClientUtils {
       val result = resultIterator.next
       val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
       val rowCount = vectorSchemaRootReceived.getRowCount
+      val schema = vectorSchemaRootReceived.getSchema
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       Seq.range(0, rowCount).map(index => {
         val rowMap = fieldVectors.map(vec => {
@@ -81,22 +136,6 @@ object ClientUtils {
       val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
       fieldVectors.head.asInstanceOf[VarBinaryVector].getObject(0)
     } else null
-  }
-
-  def modelToMap(model: Model): Map[String, Map[String, List[String]]] = {
-    val stmts = model.listStatements().asScala.toList
-
-    stmts
-      .groupBy(_.getSubject.toString) // 按 subject 分组
-      .map { case (subject, statements) =>
-        val predObjMap = statements
-          .groupBy(_.getPredicate.toString) // 按 predicate 分组
-          .map { case (predicate, stmtsForPred) =>
-            val objs = stmtsForPred.map(_.getObject.toString)
-            predicate -> objs
-          }
-        subject -> predObjMap
-      }
   }
 
   def init(allocatorServer: BufferAllocator): Unit = {
