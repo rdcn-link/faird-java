@@ -12,6 +12,8 @@ import link.rdcn.struct.{DataFrame, DataStreamSource}
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 
+import java.util
+
 trait TestEmptyProvider{
 
 }
@@ -34,7 +36,7 @@ object TestEmptyProvider {
     /**
      * 判断用户是否具有某项权限
      */
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = ???
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = true
   }
 
   val emptyDataProvider: DataProviderImpl = new DataProviderImpl() {

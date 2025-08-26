@@ -30,9 +30,9 @@ class ServerExceptionTest {
   //端口被占用
   @Test()
   def testAddressAlreadyInUse(): Unit = {
-    val flightServer1 = new DacpServer(emptyDataProvider, emptyDataReceiver)
+    val flightServer1 = new DacpServer(emptyDataProvider, emptyDataReceiver, emptyAuthProvider)
     flightServer1.start(configCache)
-    val flightServer2 = new DacpServer(emptyDataProvider, emptyDataReceiver)
+    val flightServer2 = new DacpServer(emptyDataProvider, emptyDataReceiver, emptyAuthProvider)
     val ServerException = assertThrows(
       classOf[IOException],
       () => flightServer2.start(configCache)
@@ -44,7 +44,7 @@ class ServerExceptionTest {
   //服务重复启动
   @Test()
   def testServerAlreadyStarted(): Unit = {
-    val flightServer = new DacpServer(emptyDataProvider, emptyDataReceiver)
+    val flightServer = new DacpServer(emptyDataProvider, emptyDataReceiver, emptyAuthProvider)
     flightServer.start(configCache)
     val ServerException = assertThrows(
       classOf[IllegalStateException],

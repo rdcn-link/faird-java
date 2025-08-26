@@ -237,8 +237,7 @@ public class JProviderTest {
 
         //设置一个路径存放faird相关外部文件，其中faird.conf 存放到 $fairdHome/conf 路径下
         String fairdHome = "/Users/renhao/IdeaProjects/faird-java/target/test-classes/";
-        DacpServer fairdServer = new DacpServer(dataProvider, dataReceiver);
-        fairdServer.addAuthHandler(authProvider);
+        DacpServer fairdServer = new DacpServer(dataProvider, dataReceiver, authProvider);
         ConfigLoader.init(fairdHome);
         //启动faird服务
         fairdServer.start(ConfigLoader.fairdConfig());

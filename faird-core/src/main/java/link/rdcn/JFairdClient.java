@@ -28,7 +28,7 @@ public class JFairdClient {
         this.fairdClient = fairdClient;
     }
 
-    public RemoteDataFrameProxy get(String dataFrameName) {
+    public DataFrame get(String dataFrameName) {
         return fairdClient.get(dataFrameName);
     }
 

@@ -1,9 +1,9 @@
 package link.rdcn.util
 
 import com.sun.management.OperatingSystemMXBean
-import link.rdcn.struct.{DataFrame, StructType, ValueType}
-import link.rdcn.struct.ValueType.{BinaryType, BooleanType, DoubleType, FloatType, IntType, LongType, StringType}
-import org.apache.arrow.flight.{FlightProducer, Result}
+import link.rdcn.struct.{Row, DataFrame, StructType, ValueType}
+import link.rdcn.struct.ValueType.{BinaryType, BlobType, BooleanType, DoubleType, FloatType, IntType, LongType, RefType, StringType}
+import org.apache.arrow.flight.{FlightProducer, Result, FlightStream}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
@@ -15,7 +15,7 @@ import org.apache.jena.rdf.model.Model
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.lang.management.ManagementFactory
 import java.util.Collections
-import scala.collection.JavaConverters.{asScalaIteratorConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters._
 
 /**
  * @Author renhao
@@ -59,6 +59,14 @@ object ServerUtils {
           new FieldType(column.nullable, ArrowType.Bool.INSTANCE, null)
         case BinaryType =>
           new FieldType(column.nullable, new ArrowType.Binary(), null)
+        case RefType =>
+          val metadata = new java.util.HashMap[String, String]()
+          metadata.put("logicalType", "Url")
+          new FieldType(column.nullable, ArrowType.Utf8.INSTANCE, null, metadata)
+        case BlobType =>
+          val metadata = new java.util.HashMap[String, String]()
+          metadata.put("logicalType", "blob")
+          new FieldType(column.nullable, new ArrowType.Binary(), null, metadata)
         case _ =>
           throw new UnsupportedOperationException(s"Unsupported type: ${column.colType}")
       }
@@ -286,6 +294,39 @@ object ServerUtils {
           }
         subject -> predObjMap
       }
+  }
+
+  def flightStreamToRowIterator(flightStream: FlightStream): Iterator[Row] = new Iterator[Row] {
+    private var currentRoot: VectorSchemaRoot = _
+    private var rowIndex = 0
+    private var totalRowsInRoot = 0
+
+    private def loadNextBatch(): Boolean = {
+      if (flightStream.next()) {
+        currentRoot = flightStream.getRoot
+        rowIndex = 0
+        totalRowsInRoot = currentRoot.getRowCount
+        true
+      } else false
+    }
+
+    override def hasNext: Boolean = {
+      (currentRoot != null && rowIndex < totalRowsInRoot) || loadNextBatch()
+    }
+
+    override def next(): Row = {
+      if (!hasNext) throw new NoSuchElementException
+      val row = Row(
+        currentRoot.getFieldVectors.asScala.map { vector =>
+          vector.getObject(rowIndex) match {
+            case t: org.apache.arrow.vector.util.Text => t.toString
+            case other => other
+          }
+        }
+      )
+      rowIndex += 1
+      row
+    }
   }
 
   def init(allocatorServer: BufferAllocator): Unit = {

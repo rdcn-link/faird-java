@@ -1,6 +1,6 @@
 package link.rdcn.received
 
-import link.rdcn.struct.DataFrame
+import link.rdcn.struct.{DataFrame, StructType}
 
 trait DataReceiver extends AutoCloseable {
   /** Called once before receiving any rows */

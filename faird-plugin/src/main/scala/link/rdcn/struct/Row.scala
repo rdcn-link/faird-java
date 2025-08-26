@@ -39,6 +39,18 @@ class Row (val values: Seq[Any]) {
     jo.toString
   }
 
+  def toJsonObject(structType: StructType): JSONObject = {
+    val jo = new JSONObject()
+    structType.columns.map(_.name).zip(values).foreach(kv => jo.put(kv._1, kv._2))
+    jo
+  }
+
+  /** 在开头插入一个值，返回新的 Row */
+  def prepend(value: Any): Row = new Row(value +: values)
+
+  /** 在末尾追加一个值，返回新的 Row */
+  def append(value: Any): Row = new Row(values :+ value)
+
   override def toString: String = {
     val elems = values.map {
       case null    => ("null")

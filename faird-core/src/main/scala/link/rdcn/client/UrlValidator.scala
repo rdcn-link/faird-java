@@ -1,4 +1,4 @@
-package link.rdcn.client.dacp
+package link.rdcn.client
 
 /**
  * @Author renhao
@@ -6,8 +6,8 @@ package link.rdcn.client.dacp
  * @Date 2025/8/14 15:34
  * @Modified By:
  */
-object DacpUrlValidator {
-  private val DftpUrlPattern = "^dacp://([^:/]+)(?::(\\d+))?(/.*)?$".r
+case class UrlValidator(protocolPrefix: String) {
+  private val DftpUrlPattern = s"^${protocolPrefix}://([^:/]+)(?::(\\d+))?(/.*)?$$".r
 
   def validate(url: String): Either[String, (String, Option[Int], String)] = {
     url match {
@@ -28,7 +28,7 @@ object DacpUrlValidator {
         Right((host, port, normalizedPath))
 
       case _ =>
-        Left(s"Invalid dacp URL format: $url. Expected format: dacp://host[:port][/path]")
+        Left(s"Invalid $protocolPrefix URL format: $url. Expected format: $protocolPrefix://host[:port][/path]")
     }
   }
 
@@ -37,7 +37,7 @@ object DacpUrlValidator {
       if (path.startsWith(requiredPrefix)) {
         Right((host, port, path))
       } else {
-        Left(s"DACP URL path must start with '$requiredPrefix'. Actual path: $path")
+        Left(s"$protocolPrefix URL path must start with '$requiredPrefix'. Actual path: $path")
       }
     }
   }
@@ -63,5 +63,42 @@ object DacpUrlValidator {
    */
   def extractPath(url: String): Either[String, String] = {
     validate(url).map { case (_, _, path) => path }
+  }
+}
+
+object UrlValidator{
+  private val UrlPattern = "^([a-zA-Z][a-zA-Z0-9]*)://([^:/]+)(?::(\\d+))?(/.*)?$".r
+  def extractBase(url: String): Option[(String, String, Int)] = {
+    url match {
+      case UrlPattern(protocol, host, port, _) =>
+        val base = if (port != null) s"$protocol://$host:$port" else s"$protocol://$host:3101"
+        Some((base, host, port.toInt))
+      case _ => None
+    }
+  }
+
+  def validate(url: String): Either[String, (String, String, Option[Int], String)] = {
+    url match {
+      case UrlPattern(prefixSchema, host, portStr, path) =>
+        val port = Option(portStr).map { p =>
+          try {
+            val portNum = p.toInt
+            if (portNum < 0 || portNum > 65535) {
+              return Left(s"Invalid port number: $portNum")
+            }
+            portNum
+          } catch {
+            case _: NumberFormatException => return Left(s"Invalid port format: $p")
+          }
+        }
+        val normalizedPath = Option(path).getOrElse("/")
+        Right((prefixSchema, host, port, normalizedPath))
+
+      case _ =>
+        Left(s"Invalid URL format: $url. Expected format: protocolSchema://host[:port][/path]")
+    }
+  }
+  def extractPath(url: String): Either[String, String] = {
+    validate(url).map { case (_, _, _, path) => path }
   }
 }

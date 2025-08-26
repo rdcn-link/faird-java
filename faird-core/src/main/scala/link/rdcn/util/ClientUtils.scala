@@ -1,6 +1,6 @@
 package link.rdcn.util
 
-import link.rdcn.struct.{Column, DataFrame, DefaultDataFrame, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, DataFrame, DefaultDataFrame, DFRef, Row, StructType, ValueType}
 import io.circe.{DecodingFailure, parser}
 import org.apache.arrow.vector.types.Types
 import org.apache.arrow.flight.Result
@@ -30,7 +30,9 @@ object ClientUtils {
             null
           } else {
             vector match {
-              case v: VarCharVector   => v.getObject(rowIndex).toString
+              case v: VarCharVector   =>
+                val strValue = v.getObject(rowIndex).toString
+                if(v.getField.getMetadata.isEmpty) strValue else DFRef(strValue)
               case v: IntVector      => v.get(rowIndex)
               case v: BigIntVector    => v.get(rowIndex)
               case v: Float4Vector    => v.get(rowIndex)
@@ -58,7 +60,8 @@ object ClientUtils {
         case t if t == Types.MinorType.FLOAT8.getType => ValueType.DoubleType
         case t if t == Types.MinorType.VARCHAR.getType => ValueType.StringType
         case t if t == Types.MinorType.BIT.getType => ValueType.BooleanType
-        case t if t == Types.MinorType.VARBINARY.getType => ValueType.BinaryType
+        case t if t == Types.MinorType.VARBINARY.getType => if(field.getMetadata.isEmpty)
+          ValueType.BinaryType else ValueType.RefType
         case _ => throw new UnsupportedOperationException(s"Unsupported Arrow type: ${field.getType}")
       }
       Column(field.getName, colType)

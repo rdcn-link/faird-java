@@ -1,5 +1,7 @@
 package link.rdcn.struct
 
+import link.rdcn.struct.ValueType.RefType
+
 /**
  * @Author renhao
  * @Description:
@@ -12,6 +14,20 @@ sealed trait ValueType {
   override def toString: String = name
 }
 
+trait FairdValue {
+  def value: Any
+  def valueType: ValueType
+}
+
+case class DFRef(url: String) extends FairdValue {
+
+  override def value: Any = url
+
+  override def valueType: ValueType = RefType
+
+}
+
+
 object ValueType {
   case object IntType     extends ValueType { val name = "Int" }
   case object LongType    extends ValueType { val name = "Long" }
@@ -20,6 +36,8 @@ object ValueType {
   case object StringType  extends ValueType { val name = "String" }
   case object BooleanType extends ValueType { val name = "Boolean" }
   case object BinaryType  extends ValueType { val name = "Binary" } // 字节数组
+  case object RefType     extends ValueType { val name = "REF" }
+  case object BlobType    extends ValueType { val name = "Blob"}
   case object NullType    extends ValueType { val name = "Null" }
 
   val values: Seq[ValueType] = Seq(
