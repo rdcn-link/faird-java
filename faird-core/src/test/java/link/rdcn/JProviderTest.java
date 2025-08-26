@@ -1,10 +1,10 @@
 package link.rdcn;
 
 import link.rdcn.provider.*;
-import link.rdcn.server.FairdServer;
+import link.rdcn.received.DataReceiver;
+import link.rdcn.server.dacp.DacpServer;
 import link.rdcn.server.exception.AuthorizationException;
-import link.rdcn.struct.StructType;
-import link.rdcn.struct.ValueTypeHelper;
+import link.rdcn.struct.*;
 import link.rdcn.user.AuthProvider;
 import link.rdcn.user.AuthenticatedUser;
 import link.rdcn.user.Credentials;
@@ -51,6 +51,11 @@ public class JProviderTest {
              */
             TestAuthenticatedUser(String token) {
                 this.token = token;
+            }
+
+            @Override
+            public String token() {
+                return token;
             }
         }
 
@@ -208,12 +213,35 @@ public class JProviderTest {
             }
         };
 
+        DataReceiver dataReceiver = new DataReceiver() {
+            @Override
+            public void start() {
+
+            }
+
+            @Override
+            public void receiveRow(DataFrame dataFrame) {
+
+            }
+
+            @Override
+            public void finish() {
+
+            }
+
+            @Override
+            public void close() {
+                DataReceiver.super.close();
+            }
+        };
+
         //设置一个路径存放faird相关外部文件，其中faird.conf 存放到 $fairdHome/conf 路径下
         String fairdHome = "/Users/renhao/IdeaProjects/faird-java/target/test-classes/";
-        FairdServer fairdServer = new FairdServer(dataProvider, authProvider, fairdHome);
-
+        DacpServer fairdServer = new DacpServer(dataProvider, dataReceiver);
+        fairdServer.addAuthHandler(authProvider);
+        ConfigLoader.init(fairdHome);
         //启动faird服务
-        fairdServer.start();
+        fairdServer.start(ConfigLoader.fairdConfig());
         //关闭faird服务
         fairdServer.close();
     }

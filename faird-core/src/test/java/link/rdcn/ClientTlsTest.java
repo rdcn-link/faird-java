@@ -1,7 +1,7 @@
 package link.rdcn;
 
 
-import link.rdcn.client.FairdClient;
+import link.rdcn.client.dacp.FairdClient;
 import link.rdcn.user.Credentials;
 import scala.collection.Iterator;
 import scala.collection.Seq;

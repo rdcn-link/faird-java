@@ -9,7 +9,7 @@ import link.rdcn.util.{ClosableIterator, DataUtils, ResourceUtils}
  * @Modified By:
  */
 
-case class LocalDataFrame(
+case class DefaultDataFrame(
                       schema: StructType,
                       stream: ClosableIterator[Row]
                     ) extends DataFrame {
@@ -35,11 +35,11 @@ case class LocalDataFrame(
       }
       Row.fromSeq(selectedValues)
     }
-    LocalDataFrame(selectedSchema, ClosableIterator(selectedStream)(stream.onClose))
+    DefaultDataFrame(selectedSchema, ClosableIterator(selectedStream)(stream.onClose))
   }
 
   override def limit(n: Int): DataFrame = {
-    LocalDataFrame(schema, ClosableIterator(stream.take(n))(stream.onClose))
+    DefaultDataFrame(schema, ClosableIterator(stream.take(n))(stream.onClose))
   }
 
   override def reduce(f: ((Row, Row)) => Row): DataFrame = ???

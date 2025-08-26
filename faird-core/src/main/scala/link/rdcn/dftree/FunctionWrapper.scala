@@ -3,7 +3,7 @@ package link.rdcn.dftree
 import jep.Jep
 import link.rdcn.SimpleSerializer
 import link.rdcn.client.GenericFunctionCall
-import link.rdcn.struct.{DataFrame, LocalDataFrame, Row}
+import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import link.rdcn.util.{ByteArrayClassLoader, ClosableIterator, DataUtils}
 import org.json.JSONObject
@@ -240,7 +240,7 @@ object FunctionWrapper {
           reader.close()
           process.destroy()
         })
-        LocalDataFrame(r._2, autoClosingIterator)
+        DefaultDataFrame(r._2, autoClosingIterator)
       })
     }
   }

@@ -1,10 +1,10 @@
 package link.rdcn.client
 
-import link.rdcn.ConfigKeys._
 import link.rdcn.ResourceKeys._
 import link.rdcn.TestBase.genModel
 import link.rdcn.TestProvider
 import link.rdcn.TestProvider._
+import link.rdcn.ConfigKeys._
 import org.apache.jena.rdf.model.Model
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.Test

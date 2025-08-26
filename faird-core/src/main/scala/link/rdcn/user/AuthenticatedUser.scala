@@ -6,4 +6,6 @@ package link.rdcn.user
  * @Data 2025/7/9 17:06
  * @Modified By:
  */
-trait AuthenticatedUser
+trait AuthenticatedUser{
+  def token:String
+}

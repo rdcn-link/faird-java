@@ -1,7 +1,7 @@
 package link.rdcn;
 
 import link.rdcn.client.Blob;
-import link.rdcn.client.RemoteDataFrame;
+import link.rdcn.client.RemoteDataFrameProxy;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.FlowNode;
@@ -9,7 +9,7 @@ import link.rdcn.client.dag.SourceNode;
 import link.rdcn.client.dag.Transformer11;
 import link.rdcn.provider.DataFrameDocument;
 import link.rdcn.struct.DataFrame;
-import link.rdcn.struct.LocalDataFrame;
+import link.rdcn.struct.DefaultDataFrame;
 import link.rdcn.struct.Row;
 import link.rdcn.user.UsernamePassword;
 import link.rdcn.util.DataUtils;

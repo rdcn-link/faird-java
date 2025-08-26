@@ -1,7 +1,7 @@
 package link.rdcn.server
 
 import link.rdcn.TestBase.{adminPassword, adminUsername}
-import link.rdcn.client.FairdClient
+import link.rdcn.client.dacp.FairdClient
 import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.{ErrorCode, TestProvider}

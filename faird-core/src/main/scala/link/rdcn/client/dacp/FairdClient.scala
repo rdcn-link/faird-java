@@ -1,14 +1,15 @@
-package link.rdcn.client
+package link.rdcn.client.dacp
 
 import link.rdcn.client.dag._
+import link.rdcn.client.{DataFrameCall, RemoteDataFrameProxy, SerializableFunction}
 import link.rdcn.dftree.FunctionWrapper.RepositoryOperator
 import link.rdcn.dftree._
 import link.rdcn.struct.{DataFrame, ExecutionResult}
 import link.rdcn.user.Credentials
-import org.apache.jena.rdf.model.Model
+import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.json.JSONObject
 
-import scala.collection.JavaConverters._
+import java.io.StringReader
 
 /**
  * @Author renhao
@@ -16,60 +17,56 @@ import scala.collection.JavaConverters._
  * @Data 2025/6/16 14:49
  * @Modified By:
  */
-private case class DacpUri(host: String, port: Int)
-
-private object DacpUriParser {
-  private val DacpPattern = "^dacp://([^:/]+):(\\d+)$".r
-
-  def parse(uri: String): Either[String, DacpUri] = {
-    uri match {
-      case DacpPattern(host, portStr) =>
-        try {
-          val port = portStr.toInt
-          if (port < 0 || port > 65535)
-            Left(s"Invalid port number: $port")
-          else
-            Right(DacpUri(host, port))
-        } catch {
-          case _: NumberFormatException => Left(s"Invalid port format: $portStr")
-        }
-
-      case _ => Left(s"Invalid dacp URI format: $uri")
-    }
-  }
-}
-
 class FairdClient private(
                            url: String,
                            port: Int,
                            credentials: Credentials = Credentials.ANONYMOUS,
                            useTLS: Boolean = false
                          ) {
-  private val protocolClient = new ArrowFlightProtocolClient(url, port, useTLS)
-  protocolClient.login(credentials)
+  private val dacpClient = new DacpClient(url, port, useTLS)
+  dacpClient.login(credentials)
+  private val dacpUrlPrefix: String = s"dacp://$url:$port"
 
-  def get(dataFrameName: String): RemoteDataFrame =
-    RemoteDataFrame(dataFrameName, protocolClient)
+  def get(dataFrameName: String): RemoteDataFrameProxy =
+    RemoteDataFrameProxy(dataFrameName, dacpClient)
 
   def listDataSetNames(): Seq[String] =
-    protocolClient.listDataSetNames()
+    dacpClient.get(dacpUrlPrefix + "/listDataSetNames").mapIterator[Seq[String]](iter =>{
+      iter.map(row => row.getAs[String](0)).toSeq
+    })
 
   def listDataFrameNames(dsName: String): Seq[String] =
-    protocolClient.listDataFrameNames(dsName)
+    dacpClient.get(dacpUrlPrefix + s"/listDataFrameNames/$dsName").mapIterator[Seq[String]](iter =>{
+      iter.map(row => row.getAs[String](0)).toSeq
+    })
 
-  def getDataSetMetaData(dsName: String): Model =
-    protocolClient.getDataSetMetaData(dsName)
+  def getDataSetMetaData(dsName: String): Model = {
+    val rdfString = dacpClient.get(dacpUrlPrefix + s"/getDataSetMetaData/$dsName").collect().head.getAs[String](0)
+    val model = ModelFactory.createDefaultModel()
+    val reader = new StringReader(rdfString)
+    model.read(reader, null, "RDF/XML")
+    model
+  }
+
 
   def getDataFrameSize(dataFrameName: String): Long =
-    protocolClient.getDataFrameSize(dataFrameName)
+    dacpClient.get(dacpUrlPrefix + s"/getDataFrameSize/$dataFrameName").collect().head.getAs[Long](0)
 
-  def getHostInfo: Map[String, String] =
-    protocolClient.getHostInfo
+  def getHostInfo: Map[String, String] = {
+    val df = dacpClient.get(dacpUrlPrefix + s"/getHostInfo")
+    val schema = df.schema.columns
+    schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
+  }
 
-  def getServerResourceInfo: Map[String, String] =
-    protocolClient.getServerResourceInfo
+  def getServerResourceInfo: Map[String, String] = {
+    val df = dacpClient.get(dacpUrlPrefix + s"/getServerResourceInfo")
+    val schema = df.schema.columns
+    schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
+  }
 
-  def close(): Unit = protocolClient.close()
+  def put(dataFrame: DataFrame): Unit = dacpClient.put(dataFrame)
+
+  def close(): Unit = dacpClient.close()
 
   def execute(transformerDAG: Flow): ExecutionResult = {
     val executePaths = transformerDAG.getExecutionPaths()
@@ -105,18 +102,17 @@ class FairdClient private(
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
     })
-    RemoteDataFrame(dataFrameName, protocolClient, operation)
+    RemoteDataFrameProxy(dataFrameName, dacpClient, operation)
   }
 
 }
 
-
 object FairdClient {
 
   def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
-    DacpUriParser.parse(url) match {
+    DacpUrlValidator.validate(url) match {
       case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port, credentials)
+        new FairdClient(parsed._1, parsed._2.getOrElse(3101), credentials)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
@@ -124,9 +120,9 @@ object FairdClient {
 
 
   def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
-    DacpUriParser.parse(url) match {
+    DacpUrlValidator.validate(url) match {
       case Right(parsed) =>
-        new FairdClient(parsed.host, parsed.port, credentials, true)
+        new FairdClient(parsed._1, parsed._2.getOrElse(3101), credentials, true)
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }

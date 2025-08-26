@@ -12,7 +12,7 @@ import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
 import link.rdcn.struct._
 import link.rdcn.user._
-import link.rdcn.util.DataUtils._
+import link.rdcn.util.DataUtils.listFiles
 
 import java.io.File
 import java.nio.file.Paths
@@ -43,6 +43,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
 
+    override def token: String = ???
   }
 
 
