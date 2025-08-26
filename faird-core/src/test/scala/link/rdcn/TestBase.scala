@@ -53,6 +53,11 @@ object TestBase {
     outDir.toString
   }
 
+  /**
+   *
+   * @param resourceName
+   * @return test下名为resourceName的文件夹
+   */
   def getResourcePath(resourceName: String): String = {
     val url = Option(getClass.getClassLoader.getResource(resourceName))
       .orElse(Option(getClass.getResource(resourceName))) // 先到test-classes中查找，然后到classes中查找

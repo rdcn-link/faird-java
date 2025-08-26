@@ -1,13 +1,11 @@
 package link.rdcn;
 
-import link.rdcn.client.Blob;
-import link.rdcn.client.RemoteDataFrameProxy;
 import link.rdcn.client.SerializableFunction;
 import link.rdcn.client.dag.Flow;
 import link.rdcn.client.dag.FlowNode;
 import link.rdcn.client.dag.SourceNode;
 import link.rdcn.client.dag.Transformer11;
-import link.rdcn.provider.DataFrameDocument;
+import link.rdcn.struct.Blob;
 import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.DefaultDataFrame;
 import link.rdcn.struct.Row;
@@ -101,23 +99,23 @@ public class JClientDemo {
         //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
         //用户可以控制没有信息时输出的字段
         System.out.println("--------------打印数据帧Document--------------");
-        DataFrameDocument dataFrameDocument = ((RemoteDataFrame) dfBin).getDocument();
-        String schemaURL = convertToJavaOptional(dataFrameDocument.getSchemaURL()).orElse("schemaURL not found");
-        String columnURL = convertToJavaOptional(dataFrameDocument.getColumnURL("file_name")).orElse("columnURL not found");
-        String columnAlias = convertToJavaOptional(dataFrameDocument.getColumnAlias("file_name")).orElse("columnAlias not found");
-        String columnTitle = convertToJavaOptional(dataFrameDocument.getColumnTitle("file_name")).orElse("columnTitle not found");
-        System.out.println(schemaURL);
-        System.out.println(columnURL);
-        System.out.println(columnAlias);
-        System.out.println(columnTitle);
-        System.out.println(dfBin.schema());
+//        DataFrameDocument dataFrameDocument = ((RemoteDataFrameProxy) dfBin).getDocument();
+//        String schemaURL = convertToJavaOptional(dataFrameDocument.getSchemaURL()).orElse("schemaURL not found");
+//        String columnURL = convertToJavaOptional(dataFrameDocument.getColumnURL("file_name")).orElse("columnURL not found");
+//        String columnAlias = convertToJavaOptional(dataFrameDocument.getColumnAlias("file_name")).orElse("columnAlias not found");
+//        String columnTitle = convertToJavaOptional(dataFrameDocument.getColumnTitle("file_name")).orElse("columnTitle not found");
+//        System.out.println(schemaURL);
+//        System.out.println(columnURL);
+//        System.out.println(columnAlias);
+//        System.out.println(columnTitle);
+//        System.out.println(dfBin.schema());
 
         //获得数据帧大小
         System.out.println("--------------打印数据帧大小--------------");
-        Long dataFrameSize = ((RemoteDataFrame) dfBin).getStatistics().byteSize();
-        Long dataFrameRowCount = ((RemoteDataFrame) dfBin).getStatistics().rowCount();
-        System.out.println(dataFrameSize);
-        System.out.println(dataFrameRowCount);
+//        Long dataFrameSize = ((RemoteDataFrameProxy) dfBin).getStatistics().byteSize();
+//        Long dataFrameRowCount = ((RemoteDataFrameProxy) dfBin).getStatistics().rowCount();
+//        System.out.println(dataFrameSize);
+//        System.out.println(dataFrameRowCount);
 
         //可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
         System.out.println("--------------打印非结构化数据文件列表数据帧--------------");
@@ -247,7 +245,7 @@ public class JClientDemo {
         FlowNode udfFilter = new Transformer11() {
             @Override
             public DataFrame transform(DataFrame dataFrame) {
-                scala.collection.Iterator<Row> newRow = ((LocalDataFrame)dataFrame).stream();
+                scala.collection.Iterator<Row> newRow = ((DefaultDataFrame)dataFrame).stream();
 
 
                 return DataUtils.getDataFrameByStream(newRow);

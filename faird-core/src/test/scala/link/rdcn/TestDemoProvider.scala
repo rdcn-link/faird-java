@@ -19,6 +19,7 @@ import java.nio.file.Paths
 
 //用于Demo的Provider
 class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String = "data") {
+  ConfigLoader.init(Paths.get(getResourcePath("tls")).toString)
 
   val baseDir = getOutputDir(baseDirString, subDirString)
   // 生成的临时目录结构

@@ -8,7 +8,7 @@ package link.rdcn
 
 
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.client.FairdClient
+import link.rdcn.client.dacp.{DacpClient, FairdClient}
 import link.rdcn.client.dag._
 import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword

@@ -50,7 +50,6 @@ class FlowNodeTest {
         |""".stripMargin
     val compiler = new SimpleCompiler()
     compiler.cook(javaCode)
-    compiler.cook(javaCode)
     val clazz = compiler.getBytecodes.asScala.toMap
   }
 

@@ -1,9 +1,10 @@
 package link.rdcn
 
+import link.rdcn.client.dacp.{DacpClient, FairdClient}
 import link.rdcn.client.dag.{Flow, FlowNode}
-import link.rdcn.client.{Blob, FairdClient, RemoteDataFrameProxy}
+import link.rdcn.client.RemoteDataFrameProxy
 import link.rdcn.provider.DataFrameDocument
-import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
+import link.rdcn.struct.{Blob, DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.Model
@@ -76,25 +77,25 @@ object ClientDemo {
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
-    println("--------------打印数据帧Document--------------")
-    val dataFrameDocument: DataFrameDocument = dfBin.asInstanceOf[RemoteDataFrameProxy].getDocument
-    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
-    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
-    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
-    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
-    println(schemaURL)
-    println(columnURL)
-    println(columnAlias)
-    println(columnTitle)
-    println(dfBin.schema)
-
-    //获得数据帧大小
-    println("--------------打印数据帧行数和大小--------------")
-    val df = dfBin.asInstanceOf[RemoteDataFrameProxy]
-    val dataFrameRowCount: Long = df.getStatistics.rowCount
-    val dataFrameSize: Long = df.getStatistics.byteSize
-    println(dataFrameRowCount)
-    println(dataFrameSize)
+//    println("--------------打印数据帧Document--------------")
+//    val dataFrameDocument: DataFrameDocument = dfBin.asInstanceOf[RemoteDataFrameProxy].getDocument
+//    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
+//    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
+//    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
+//    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
+//    println(schemaURL)
+//    println(columnURL)
+//    println(columnAlias)
+//    println(columnTitle)
+//    println(dfBin.schema)
+//
+//    //获得数据帧大小
+//    println("--------------打印数据帧行数和大小--------------")
+//    val df = dfBin.asInstanceOf[RemoteDataFrameProxy]
+//    val dataFrameRowCount: Long = df.getStatistics.rowCount
+//    val dataFrameSize: Long = df.getStatistics.byteSize
+//    println(dataFrameRowCount)
+//    println(dataFrameSize)
 
     //client api demo, operation demo, blob demo,dag demo
     //    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值

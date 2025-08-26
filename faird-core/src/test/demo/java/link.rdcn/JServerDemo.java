@@ -6,13 +6,35 @@
  */
 package link.rdcn;
 
-import link.rdcn.server.FairdServer;
+import link.rdcn.received.DataReceiver;
+import link.rdcn.server.dacp.DacpServer;
+import link.rdcn.struct.DataFrame;
 
 public class JServerDemo {
     public static void main(String[] args) {
         TestDemoProvider provider = new TestDemoProvider();
         //根据fairdHome自动读取配置文件
-        FairdServer server = new FairdServer(provider.dataProvider(),provider.authProvider(),TestBase.getResourcePath("tls"));
-        server.start();
+        DacpServer server = new DacpServer(provider.dataProvider(), new DataReceiver() {
+            @Override
+            public void start() {
+
+            }
+
+            @Override
+            public void receiveRow(DataFrame dataFrame) {
+
+            }
+
+            @Override
+            public void finish() {
+
+            }
+
+            @Override
+            public void close() {
+                DataReceiver.super.close();
+            }
+        });
+        server.start(ConfigLoader.fairdConfig());
     }
 }
