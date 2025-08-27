@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @Modified By:
  */
 class DftpServer {
+  private var protocolSchema: String = "dacp"
   val url = s"${protocolSchema}://${ConfigLoader.fairdConfig.hostPosition}:${ConfigLoader.fairdConfig.hostPort}"
   val urlValidator = UrlValidator(protocolSchema)
   def setProtocolSchema(protocolSchema: String): Unit = this.protocolSchema = protocolSchema
@@ -62,7 +63,6 @@ class DftpServer {
 
   }
 
-  private var protocolSchema: String = "dftp"
 
   @volatile private var allocator: BufferAllocator = _
   @volatile private var flightServer: FlightServer = _

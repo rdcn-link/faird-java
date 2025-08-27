@@ -1,10 +1,7 @@
 package link.rdcn;
 
-import link.rdcn.client.SerializableFunction;
-import link.rdcn.client.dag.Flow;
-import link.rdcn.client.dag.FlowNode;
-import link.rdcn.client.dag.SourceNode;
-import link.rdcn.client.dag.Transformer11;
+
+import link.rdcn.client.dag.*;
 import link.rdcn.struct.Blob;
 import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.DefaultDataFrame;
@@ -136,12 +133,8 @@ public class JClientDemo {
                     throw new RuntimeException(e);
                 }
             });
-            //或者直接获取blob的内容，得到byte数组
-            byte[] bytes = blob.toBytes();
             System.out.println(row);
             System.out.println(name);
-            System.out.println(blob.size());
-            System.out.println(bytes.hashCode());
             return null;
         });
 

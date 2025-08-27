@@ -32,7 +32,7 @@ object ServerDemo {
 
       /** Called after all batches are received successfully */
       override def finish(): Unit = ???
-    })
+    }, provider.authProvider)
 
     server.start(ConfigLoader.fairdConfig)
   }

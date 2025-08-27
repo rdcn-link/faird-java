@@ -4,6 +4,8 @@ import link.rdcn.struct.{Blob, DFRef, Row}
 import link.rdcn.util.CodecUtils
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector._
+import org.json.JSONObject
+
 import scala.collection.JavaConverters._
 
 /**
@@ -40,6 +42,9 @@ case class ArrowFlightStreamWriter(stream: Iterator[Row]) {
           case null => vec.setNull(i)
           case v: DFRef =>
             val bytes = v.url.getBytes("UTF-8")
+            vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
+          case v: JSONObject =>
+            val bytes = v.toString().getBytes("UTF-8")
             vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
           case v: Blob =>
             val blobId = BlobRegistry.register(v)

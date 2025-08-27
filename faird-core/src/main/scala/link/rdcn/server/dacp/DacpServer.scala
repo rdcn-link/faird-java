@@ -42,9 +42,9 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
           val inDataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
           val outDataFrame: DataFrame  = operation.execute(inDataFrame)
           response.sendDataFrame(outDataFrame)
-        case "/listDataSetNames/" =>
+        case "/listDataSetNames" =>
           response.sendDataFrame(operation.execute(doListDataSets()))
-        case path if path.startsWith("/listDataFrames/") => {
+        case path if path.startsWith("/listDataFrameNames/") => {
           response.sendDataFrame(operation.execute(doListDataFrames(request.getRequestedUrl())))
         }
         case path if path.startsWith("/listHostInfo/") => {

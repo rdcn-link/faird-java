@@ -43,10 +43,10 @@ class SpringIOCServerStartTest {
     val dfDataSets = dacpClient.get("dacp://0.0.0.0:3101/listDataSetNames")
     println("#########DataSet List")
     dfDataSets.foreach(println)
-    val dfNames = dacpClient.get("dacp://0.0.0.0:3101/listDataFrameNames/dataSet1")
+    val dfNames = dacpClient.get("dacp://0.0.0.0:3101/listDataFrameNames/csv")
     println("#########DataFrame List")
     dfNames.foreach(println)
-    val df = dacpClient.get("dacp://0.0.0.0:3101/get/dataFrame1")
+    val df = dacpClient.get("dacp://0.0.0.0:3101/get/csv")
     println("###########println DataFrame")
     val s: StructType = df.schema
     df.foreach(println)

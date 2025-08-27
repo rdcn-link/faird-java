@@ -1,6 +1,6 @@
 package link.rdcn
 
-import link.rdcn.client.dacp.{DacpClient, FairdClient}
+import link.rdcn.client.dacp.FairdClient
 import link.rdcn.client.dag.{Flow, FlowNode}
 import link.rdcn.client.RemoteDataFrameProxy
 import link.rdcn.provider.DataFrameDocument
@@ -35,9 +35,9 @@ object ClientDemo {
     dataSetNames.foreach(println)
 
     //获得指定数据集的所有的数据帧名称
-    println("--------------打印数据集 csv 所有数据帧名称--------------")
+//    println("--------------打印数据集 csv 所有数据帧名称--------------")
     val frameNames: Seq[String] = dc.listDataFrameNames("csv")
-    frameNames.foreach(println)
+//    frameNames.foreach(println)
 
 //    //获得指定数据集的元数据信息
 //    println("--------------打印数据集 csv 的元数据信息--------------")
@@ -72,7 +72,7 @@ object ClientDemo {
 
 
     //打开非结构化数据的文件列表数据帧
-    val dfBin: DataFrame = dc.get("/bin")
+    val dfBin: DataFrame = dc.get("dacp://0.0.0.0:3101/get/csv/data_1.csv")
 
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息

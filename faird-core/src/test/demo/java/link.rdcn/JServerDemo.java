@@ -34,7 +34,7 @@ public class JServerDemo {
             public void close() {
                 DataReceiver.super.close();
             }
-        });
+        },provider.authProvider());
         server.start(ConfigLoader.fairdConfig());
     }
 }
