@@ -1,7 +1,7 @@
-package link.rdcn.server
+package link.rdcn.server.dftp
 
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, UsernamePassword}
-import link.rdcn.util.DataUtils
+import link.rdcn.util.CodecUtils
 import org.apache.arrow.flight.auth.ServerAuthHandler
 
 import java.nio.charset.StandardCharsets
@@ -20,7 +20,7 @@ class FlightServerAuthHandler(authProvider: AuthProvider, tokenMap: ConcurrentHa
 
   override def authenticate(serverAuthSender: ServerAuthHandler.ServerAuthSender, iterator: util.Iterator[Array[Byte]]): Boolean = {
     try{
-      val cred = DataUtils.decodeUserPassword(iterator.next())
+      val cred = CodecUtils.decodePair(iterator.next())
       val authenticatedUser = authProvider.authenticate(UsernamePassword(cred._1, cred._2))
       val token = UUID.randomUUID().toString()
       tokenMap.put(token, authenticatedUser)

@@ -401,32 +401,26 @@ object DataUtils extends Logging{
     }
   }
 
-  def codeUserPassword(user:String, password: String): Array[Byte] = {
-    val userBytes = user.getBytes(StandardCharsets.UTF_8)
-    val passwordBytes = password.getBytes(StandardCharsets.UTF_8)
+  def chunkedIterator(in: InputStream, chunkSize: Int = 10 * 1024 * 1024): Iterator[Array[Byte]] = new Iterator[Array[Byte]] {
+    private var finished = false
 
-    val buffer: ByteBuffer = ByteBuffer.allocate(4 + userBytes.length + 4 + passwordBytes.length)
-    buffer.putInt(userBytes.length)
-    buffer.put(userBytes)
-    buffer.putInt(passwordBytes.length)
-    buffer.put(passwordBytes)
+    override def hasNext: Boolean = !finished
 
-    buffer.array()
-  }
+    override def next(): Array[Byte] = {
+      if (finished) throw new NoSuchElementException("No more data")
 
-  def decodeUserPassword(bytes: Array[Byte]): (String, String) = {
-    val buffer = ByteBuffer.wrap(bytes)
-
-    val userLen = buffer.getInt()
-    val userBytes = new Array[Byte](userLen)
-    buffer.get(userBytes)
-    val user = new String(userBytes, StandardCharsets.UTF_8)
-
-    val passwordLen = buffer.getInt()
-    val passwordBytes = new Array[Byte](passwordLen)
-    buffer.get(passwordBytes)
-    val password = new String(passwordBytes, StandardCharsets.UTF_8)
-
-    (user, password)
+      val buffer = new Array[Byte](chunkSize)
+      var bytesRead = 0
+      while (bytesRead < chunkSize) {
+        val read = in.read(buffer, bytesRead, chunkSize - bytesRead)
+        if (read == -1) {
+          finished = true
+          // 返回实际读到的长度
+          return if (bytesRead == 0) Iterator.empty.next() else buffer.take(bytesRead)
+        }
+        bytesRead += read
+      }
+      buffer
+    }
   }
 }

@@ -50,3 +50,10 @@ case class DefaultDataFrame(
 
   override def mapIterator[T](f: ClosableIterator[Row] => T): T = f(stream)
 }
+
+object DefaultDataFrame {
+  def apply(schema: StructType,
+            stream: Iterator[Row]): DefaultDataFrame = {
+    DefaultDataFrame(schema, ClosableIterator(stream)())
+  }
+}

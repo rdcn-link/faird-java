@@ -1,11 +1,11 @@
 package link.rdcn.dftree
 
 import jep.Jep
-import link.rdcn.SimpleSerializer
-import link.rdcn.client.GenericFunctionCall
+import link.rdcn.client.dag.GenericFunctionCall
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import link.rdcn.util.{ByteArrayClassLoader, ClosableIterator, DataUtils}
+import link.rdcn.{ConfigLoader, SimpleSerializer}
 import org.json.JSONObject
 
 import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
@@ -14,6 +14,8 @@ import java.nio.file.Paths
 import java.util
 import java.util.{Base64, ServiceLoader}
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
 /**
@@ -187,6 +189,8 @@ object FunctionWrapper {
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
+      val downloadFuture = operatorClient.downloadPackage(functionID, operatorDir)
+      Await.result(downloadFuture, 30.seconds)
       val jarPath = Paths.get(operatorDir, fileName).toString()
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
@@ -202,14 +206,13 @@ object FunctionWrapper {
     }
   }
 
-  case class CppBin(functionID: String, fileName: String) extends FunctionWrapper {
+  case class CppBin(functionID: String) extends FunctionWrapper {
 
     override def toJson: JSONObject = new JSONObject().put("type", LangType.CPP_BIN.name)
       .put("functionID", functionID)
-      .put("fileName", fileName)
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
-      val cppPath = Paths.get(operatorDir,fileName).toString()
+      val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp",functionID).toString()
       val pb = new ProcessBuilder(cppPath)
       val process = pb.start()
       val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
@@ -263,7 +266,7 @@ object FunctionWrapper {
       case LangType.PYTHON_BIN.name => PythonBin(jsonObj.getString("functionID"), jsonObj.getString("functionName"), jsonObj.getString("whlPath"))
       case LangType.JAVA_CODE.name => JavaCode(jsonObj.getString("javaCodeString"))
       case LangType.JAVA_JAR.name => JavaJar(jsonObj.getString("functionID"),jsonObj.getString("fileName"))
-      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"), jsonObj.getString("fileName"))
+      case LangType.CPP_BIN.name => CppBin(jsonObj.getString("functionID"))
       case LangType.REPOSITORY_OPERATOR.name => RepositoryOperator(jsonObj.getString("functionID"))
     }
   }

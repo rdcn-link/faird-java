@@ -1,4 +1,4 @@
-package link.rdcn.client
+package link.rdcn.client.dag
 
 import link.rdcn.struct.{DataFrame, Row}
 

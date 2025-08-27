@@ -56,6 +56,10 @@ case class StructType(val columns: Seq[Column]) {
     StructType.fromSeq(selected)
   }
 
+  def prepend(column: Column): StructType = new StructType(column +: columns)
+
+  def append(column: Column): StructType = new StructType(columns :+ column)
+
   override def toString: String =
       columns.map(c => s"${c.name}: ${c.colType}").mkString("schema(", ", ", ")")
 }

@@ -1,13 +1,10 @@
-package link.rdcn.server
+package link.rdcn.server.dftp
 
-import link.rdcn.struct.ValueType.BinaryType
-import link.rdcn.struct.{DataFrame, Row}
-import link.rdcn.util.DataUtils
+import link.rdcn.struct.{Blob, DFRef, Row}
+import link.rdcn.util.CodecUtils
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector._
-
-import java.io.File
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters._
 
 /**
  * @Author renhao
@@ -15,22 +12,10 @@ import scala.collection.JavaConverters.asScalaBufferConverter
  * @Data 2025/7/8 14:22
  * @Modified By:
  */
-case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
-
-  val schema = dataFrame.schema
+case class ArrowFlightStreamWriter(stream: Iterator[Row]) {
 
   def process(root: VectorSchemaRoot, batchSize: Int): Iterator[ArrowRecordBatch] = {
-    val streamSplitChunk: Iterator[Row] = if(schema.contains(BinaryType)){
-      dataFrame.mapIterator[Iterator[Row]](stream => {
-        stream.flatMap(row => {
-          val file = row.getAs[File](6)
-          DataUtils.readFileInChunks(file).map(bytes => {
-            (row._1, row._2, row._3, row._4, row._5, row._6, bytes)
-          })
-        }).map(Row.fromTuple(_))
-      })
-    }else dataFrame.mapIterator[Iterator[Row]](iter => iter)
-    streamSplitChunk.grouped(batchSize).map(rows => createDummyBatch(root, rows))
+    stream.grouped(batchSize).map(rows => createDummyBatch(root, rows))
   }
 
   private def createDummyBatch(arrowRoot: VectorSchemaRoot, rows: Seq[Row]): ArrowRecordBatch = {
@@ -53,6 +38,13 @@ case class ArrowFlightStreamWriter(dataFrame: DataFrame) {
           case v: Boolean => vec.asInstanceOf[BitVector].setSafe(i, if (v) 1 else 0)
           case v: Array[Byte] => vec.asInstanceOf[VarBinaryVector].setSafe(i, v)
           case null => vec.setNull(i)
+          case v: DFRef =>
+            val bytes = v.url.getBytes("UTF-8")
+            vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
+          case v: Blob =>
+            val blobId = BlobRegistry.register(v)
+            val bytes = CodecUtils.encodeString(blobId)
+            vec.asInstanceOf[VarBinaryVector].setSafe(i, bytes)
           case _ => throw new UnsupportedOperationException("Type not supported")
         }
         j += 1

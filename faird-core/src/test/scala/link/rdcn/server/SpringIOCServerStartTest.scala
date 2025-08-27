@@ -1,7 +1,7 @@
 package link.rdcn.server
 
-import link.rdcn.{ConfigLoader, FairdConfig}
-import link.rdcn.client.dacp.{DacpClient, FairdClient}
+import link.rdcn.{ConfigLoader, FairdConfig, struct}
+import link.rdcn.client.dacp.FairdClient
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics, DataProvider}
 import link.rdcn.struct.ValueType.{LongType, StringType}
 import link.rdcn.struct.{DataFrame, DataStreamSource, Row, StructType}
@@ -26,8 +26,8 @@ class SpringIOCServerStartTest {
     val authProvider = f.getBean("authProvider").asInstanceOf[AuthProvider]
     val fairdHome = getClass.getClassLoader.getResource("").getPath
 
-    val server: DacpServer = new DacpServer(dataProvider, dataReceiver)
-    server.addAuthHandler(authProvider)
+    val server: DacpServer = new DacpServer(dataProvider, dataReceiver, authProvider)
+
     ConfigLoader.init(fairdHome)
     server.start(ConfigLoader.fairdConfig)
     val client = FairdClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
@@ -36,11 +36,10 @@ class SpringIOCServerStartTest {
   }
   @Test
   def serverDstpTest(): Unit = {
-    val dacpServer = new DacpServer(new DataProviderTest, new DataReceiverTest)
-    dacpServer.addAuthHandler(new AuthorProviderTest)
+    val dacpServer = new DacpServer(new DataProviderTest, new DataReceiverTest, new AuthorProviderTest)
     dacpServer.start(new FairdConfig)
 
-    val dacpClient = DacpClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
+    val dacpClient = FairdClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
     val dfDataSets = dacpClient.get("dacp://0.0.0.0:3101/listDataSetNames")
     println("#########DataSet List")
     dfDataSets.foreach(println)
@@ -49,6 +48,7 @@ class SpringIOCServerStartTest {
     dfNames.foreach(println)
     val df = dacpClient.get("dacp://0.0.0.0:3101/get/dataFrame1")
     println("###########println DataFrame")
+    val s: StructType = df.schema
     df.foreach(println)
 
   }
@@ -136,7 +136,7 @@ class AuthorProviderTest extends AuthProvider {
   override def authenticate(credentials: Credentials): AuthenticatedUser = new AuthenticatedUser{
     override def token: String = {
       credentials match {
-        case UsernamePassword(username, password) => "1"
+        case UsernamePassword("Admin", "Ano") => "1"
         case _ => "2"
       }
     }
@@ -151,6 +151,6 @@ class AuthorProviderTest extends AuthProvider {
    * @return 是否有权限
    */
   override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: util.List[DataOperationType]): Boolean = {
-    if(user.token == "2") true else false
+    if(user.token == "1") true else false
   }
 }

@@ -1,6 +1,7 @@
 package link.rdcn.client
 
 import link.rdcn.Logging
+import link.rdcn.client.dag.{SerializableFunction, SingleRowCall}
 import link.rdcn.dftree._
 import link.rdcn.struct.{DataFrame, Row, StructType}
 import link.rdcn.util.{ClosableIterator, ResourceUtils}
@@ -12,9 +13,9 @@ import link.rdcn.util.{ClosableIterator, ResourceUtils}
  * @Modified By:
  */
 
-case class RemoteDataFrameProxy(dataFrameName: String, client: DftpClient, operation: Operation = SourceOp()) extends DataFrame with Logging {
+case class RemoteDataFrameProxy(dataFrameName: String, getRows: (String, String) => (StructType,ClosableIterator[Row]), operation: Operation = SourceOp()) extends DataFrame with Logging {
 
-  override val schema: StructType = client.getRows(dataFrameName, operation.toJsonString)._1
+  override val schema: StructType = getRows(dataFrameName, operation.toJsonString)._1
 
   override def filter(f: Row => Boolean): DataFrame = {
     val genericFunctionCall = SingleRowCall(new SerializableFunction[Row, Boolean] {
@@ -46,9 +47,9 @@ case class RemoteDataFrameProxy(dataFrameName: String, client: DftpClient, opera
 
   override def collect(): List[Row] = records.toList
 
-  private def records(): Iterator[Row] = client.getRows(dataFrameName, operation.toJsonString)._2
+  private def records(): Iterator[Row] = getRows(dataFrameName, operation.toJsonString)._2
 
-  override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(client.getRows(dataFrameName, operation.toJsonString)._2){f(_)}
+  override def mapIterator[T](f: ClosableIterator[Row] => T): T = ResourceUtils.using(getRows(dataFrameName, operation.toJsonString)._2){f(_)}
 }
 
 case class GroupedDataFrame(remoteDataFrameImpl: RemoteDataFrameProxy) {

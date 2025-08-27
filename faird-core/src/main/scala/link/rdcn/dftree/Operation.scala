@@ -1,6 +1,6 @@
 package link.rdcn.dftree
 
-import link.rdcn.client.DataFrameCall
+import link.rdcn.client.dag.DataFrameCall
 import link.rdcn.dftree.FunctionWrapper._
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.ClosableIterator

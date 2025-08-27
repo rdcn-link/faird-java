@@ -32,6 +32,7 @@ trait DataFrame {
 }
 
 object DataFrame {
+
   def create(dataStreamSource: DataStreamSource): DataFrame = {
     DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
   }

@@ -1,10 +1,9 @@
-package link.rdcn.client
+package link.rdcn.client.dftp
 
 import link.rdcn.user.{Credentials, UsernamePassword}
-import link.rdcn.util.DataUtils
+import link.rdcn.util.CodecUtils
 import org.apache.arrow.flight.auth.ClientAuthHandler
 
-import java.nio.charset.StandardCharsets
 import java.util
 
 /**
@@ -19,9 +18,9 @@ class FlightClientAuthHandler(credentials: Credentials) extends ClientAuthHandle
 
   override def authenticate(clientAuthSender: ClientAuthHandler.ClientAuthSender, iterator: util.Iterator[Array[Byte]]): Unit = {
     credentials match {
-      case UsernamePassword(username, password) => clientAuthSender.send(DataUtils.codeUserPassword(username, password))
+      case UsernamePassword(username, password) => clientAuthSender.send(CodecUtils.encodePair(username, password))
       case Credentials.ANONYMOUS =>
-        clientAuthSender.send(DataUtils.codeUserPassword("ANONYMOUS","ANONYMOUS"))
+        clientAuthSender.send(CodecUtils.encodePair("ANONYMOUS","ANONYMOUS"))
       case _ => new IllegalArgumentException(s"$credentials not supported")
     }
     try {
