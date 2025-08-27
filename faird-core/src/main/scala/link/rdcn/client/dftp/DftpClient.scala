@@ -193,7 +193,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
       case s: SourceNode => // 不做处理
       case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
     })
-    RemoteDataFrameProxy(dataFrameName, getRows, operation)
+    RemoteDataFrameProxy(s"dacp://$url:$port"+dataFrameName, getRows, operation)
   }
 }
 

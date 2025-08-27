@@ -72,7 +72,7 @@ object ClientDemo {
 
 
     //打开非结构化数据的文件列表数据帧
-    val dfBin: DataFrame = dc.get("dacp://0.0.0.0:3101/get/csv/data_1.csv")
+//    val dfBin: DataFrame = dc.get("dacp://localhost:3101/get/csv/data_1.csv")
 
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
@@ -129,7 +129,7 @@ object ClientDemo {
     //对数据进行collect操作可以将数据帧的所有行收集到内存中，但是要注意内存溢出的问题
     //limit操作可以限制返回的数据行数，防止内存溢出
     //还可以打开CSV文件数据帧
-    val dfCsv: DataFrame = dc.get("/csv/data_1.csv")
+    val dfCsv: DataFrame = dc.get("/get/csv/data_1.csv")
     val csvRows: Seq[Row] = dfCsv.limit(1).collect()
     println("--------------打印结构化数据 /csv/data_1.csv 数据帧--------------")
     csvRows.foreach(println)
@@ -154,8 +154,8 @@ object ClientDemo {
 
     //自定义算子和DAG执行图对数据帧进行操作
     //构建数据源节点
-    val sourceNodeA: FlowNode = FlowNode.source("/csv/data_1.csv")
-    val sourceNodeB: FlowNode = FlowNode.source("/csv/data_2.csv")
+    val sourceNodeA: FlowNode = FlowNode.source("/get/csv/data_1.csv")
+    val sourceNodeB: FlowNode = FlowNode.source("/get/csv/data_2.csv")
 
     //也可以构建自定义算子节点对象
     //自定义一个map算子 比如对第一列加1

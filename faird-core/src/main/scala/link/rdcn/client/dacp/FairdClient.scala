@@ -2,6 +2,7 @@ package link.rdcn.client.dacp
 
 import link.rdcn.client.UrlValidator
 import link.rdcn.client.dftp.DftpClient
+import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
@@ -14,18 +15,20 @@ import java.io.StringReader
  * @Modified By:
  */
 class FairdClient private(url: String, port: Int, useTLS: Boolean = false) extends DftpClient(url, port, useTLS) {
+
+
   def listDataSetNames(): Seq[String] =
-    get(dacpUrlPrefix + "/listDataSetNames").mapIterator[Seq[String]](iter =>{
+    get("/listDataSetNames").mapIterator[Seq[String]](iter =>{
       iter.map(row => row.getAs[String](0)).toSeq
     })
 
   def listDataFrameNames(dsName: String): Seq[String] =
-    get(dacpUrlPrefix + s"/listDataFrameNames/$dsName").mapIterator[Seq[String]](iter =>{
+    get(s"/listDataFrameNames/$dsName").mapIterator[Seq[String]](iter =>{
       iter.map(row => row.getAs[String](0)).toSeq
     })
 
   def getDataSetMetaData(dsName: String): Model = {
-    val rdfString = get(dacpUrlPrefix + s"/getDataSetMetaData/$dsName").collect().head.getAs[String](0)
+    val rdfString = get(s"/getDataSetMetaData/$dsName").collect().head.getAs[String](0)
     val model = ModelFactory.createDefaultModel()
     val reader = new StringReader(rdfString)
     model.read(reader, null, "RDF/XML")
@@ -33,19 +36,24 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
   }
 
   def getDataFrameSize(dataFrameName: String): Long =
-    get(dacpUrlPrefix + s"/getDataFrameSize/$dataFrameName").collect().head.getAs[Long](0)
+    get(s"/getDataFrameSize/$dataFrameName").collect().head.getAs[Long](0)
 
   def getHostInfo: Map[String, String] = {
-    val df = get(dacpUrlPrefix + s"/getHostInfo")
+    val df = get(s"/getHostInfo")
     val schema = df.schema.columns
     schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
   }
 
   def getServerResourceInfo: Map[String, String] = {
-    val df = get(dacpUrlPrefix + s"/getServerResourceInfo")
+    val df = get(s"/getServerResourceInfo")
     val schema = df.schema.columns
     schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
   }
+
+  override def get(dataFrameName: String): DataFrame = {
+    super.get(dacpUrlPrefix + dataFrameName)
+  }
+
   private val dacpUrlPrefix: String = s"dacp://$url:$port"
 }
 
