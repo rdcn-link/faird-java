@@ -27,7 +27,7 @@ import scala.collection.mutable
  * @Modified By:
  */
 class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
-  ClientUtils.init(allocator)
+  val prefixSchema: String = "dftp"
   def login(credentials: Credentials): Unit = {
     flightClient.authenticate(new FlightClientAuthHandler(credentials))
   }
@@ -35,10 +35,16 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
   def doAction(actionName: String, params: Array[Byte] = Array.emptyByteArray, paramMap: Map[String, Any] = Map.empty): DataFrame = {
     val body = CodecUtils.encodeWithMap(params, paramMap)
     val actionResult =  flightClient.doAction(new Action(actionName, body))
-    ClientUtils.parseFlightActionResults(actionResult)
+    ClientUtils.parseFlightActionResults(actionResult, allocator)
   }
 
-  def get(url: String): DataFrame = RemoteDataFrameProxy(url, getRows)
+  def get(url: String): DataFrame = {
+    val urlValidator = new UrlValidator(prefixSchema)
+    urlValidator.extractPath(url) match {
+      case Right(path) => RemoteDataFrameProxy(path, getRows)
+      case Left(message) => throw new IllegalArgumentException(message)
+    }
+  }
 
   def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
     val arrowSchema = ServerUtils.convertStructTypeToArrowSchema(dataFrame.schema)
@@ -115,7 +121,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
   private val allocator: BufferAllocator = new RootAllocator()
   private val flightClient: FlightClient = FlightClient.builder(allocator, location).build()
   private def getRows(url: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
-    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodePair(url, operationNode)))
+    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM ,url, operationNode)))
     val stream = schemaAndIter._2.map(seq => Row.fromSeq(seq))
     (schemaAndIter._1, ClosableIterator(stream)())
   }
@@ -146,7 +152,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
                   if(v.getField.getMetadata.isEmpty) (vec.getName, v.get(index))
                   else {
                     val blobId = CodecUtils.decodeString(v.get(index))
-                    val blobTicket =  new Ticket(CodecUtils.encodePair("getBlob", blobId))
+                    val blobTicket =  new Ticket(CodecUtils.encodeTicket(CodecUtils.BLOB_STREAM , blobId, ""))
                     val blob = new Blob {
                       val iter = getStream(flightClient, blobTicket)._2
                       val chunkIterator = iter.map(value => {

@@ -9,7 +9,7 @@ import link.rdcn.struct.{DFRef, DataFrame, DataStreamSource, DefaultDataFrame, R
 import link.rdcn.util.DataUtils
 import link.rdcn.util.ServerUtils.getResourceStatusString
 import link.rdcn.{ConfigLoader, FairdConfig}
-import link.rdcn.client.UrlValidator
+import link.rdcn.Logging
 import link.rdcn.user.AuthProvider
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.json.{JSONArray, JSONObject}
@@ -24,33 +24,49 @@ import scala.collection.JavaConverters.asScalaBufferConverter
  * @Modified By:
  */
 
-class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authProvider: AuthProvider){
+class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authProvider: AuthProvider) extends Logging {
 
-  val protocolSchema: String = "dacp"
   val dftpServiceHandler = new DftpServiceHandler {
-    override def doAction(request: ActionRequest, response: ActionResponse): Unit = ???
+    override def doAction(request: ActionRequest, response: ActionResponse): Unit = response.sendError(501, s"${request.getActionName()} Not Implemented")
 
     override def doGet(request: GetRequest, response: GetResponse): Unit = {
-      val path = UrlValidator.extractPath(request.getRequestedUrl()) match {
-        case Right(path) => path
-        case Left(message) => throw new IllegalArgumentException(message)
-      }
-      val operation = request.getTransformer()
-      path match {
-        case path if path.startsWith("/get/") =>
-          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(path.stripPrefix("/get/"))
-          val inDataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
-          val outDataFrame: DataFrame  = operation.execute(inDataFrame)
-          response.sendDataFrame(outDataFrame)
-        case "/listDataSetNames" =>
-          response.sendDataFrame(operation.execute(doListDataSets()))
-        case path if path.startsWith("/listDataFrameNames/") => {
-          response.sendDataFrame(operation.execute(doListDataFrames(request.getRequestedUrl())))
+      request.getRequestedPath() match {
+        case "/listDataSets" =>
+          try {
+            response.sendDataFrame(doListDataSets())
+          }catch {
+            case e: Exception =>
+              logger.error("Error while listDataSets", e)
+              response.sendError(500, e.getMessage)
+          }
+        case path if path.startsWith("/listDataFrames") => {
+          try{
+            response.sendDataFrame(doListDataFrames(request.getRequestedPath()))
+          }catch {
+            case e: Exception =>
+              logger.error("Error while listDataFrames", e)
+              response.sendError(500, e.getMessage)
+          }
         }
-        case path if path.startsWith("/listHostInfo/") => {
-          response.sendDataFrame(operation.execute(doListHostInfo))
+        case path if path.startsWith("/listHostInfo") => {
+          try{
+            response.sendDataFrame(doListHostInfo)
+          }catch {
+            case e: Exception =>
+              logger.error("Error while listHostInfo", e)
+              response.sendError(500, e.getMessage)
+          }
         }
-        case _ => response.sendError(400, s"bad request ${request.getRequestedUrl()}")
+        case otherPath =>
+          try{
+            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(otherPath)
+            val dataFrame: DataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+            response.sendDataFrame(dataFrame)
+          }catch {
+            case e: Exception =>
+              logger.error(s"Error while get resource $otherPath", e)
+              response.sendError(500, e.getMessage)
+          }
       }
     }
 
@@ -65,21 +81,20 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
         case e: Exception => response.sendError(500, e.getMessage)
       }
       val jo = new JSONObject()
-      response.sendJsonString(jo.put("status","success").toString)
+      response.sendMessage(jo.put("status","success").toString)
     }
   }
-  val server = new DftpServer
-  server.setProtocolSchema(protocolSchema)
-  server.setAuthHandler(authProvider)
-  server.setDftpServiceHandler(dftpServiceHandler)
+  val protocolSchema = "dacp"
+  val server = new DftpServer().setProtocolSchema("protocolSchema")
+    .setAuthHandler(authProvider)
+    .setDftpServiceHandler(dftpServiceHandler)
 
   def start(fairdConfig: FairdConfig): Unit = server.start(fairdConfig)
 
   def close(): Unit = server.close()
   /**
    * 输入链接（实现链接）： dacp://0.0.0.0:3101/listDataSets
-   * 返回链接：
-   *             dacp://0.0.0.0:3101/listDataFrames/dataSetName
+   * 返回链接： dacp://0.0.0.0:3101/listDataFrames/dataSetName
    * */
   def doListDataSets(): DataFrame = {
     val stream = dataProvider.listDataSetNames().asScala.map(dsName => {
@@ -89,7 +104,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       model.write(writer, "RDF/XML");
       val dataSetInfo = new JSONObject().put("name", dsName)
       Row.fromTuple((dsName, writer.toString
-        ,dataSetInfo, DFRef(s"${server.url}/listDataFrames/$dsName")))
+        ,dataSetInfo, DFRef(s"${url}/listDataFrames/$dsName")))
     }).toIterator
     val schema = StructType.empty.add("name", StringType)
       .add("meta", StringType).add("DataSetInfo", StringType).add("dataFrames", RefType)
@@ -98,10 +113,10 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
 
   /**
    * 输入链接（实现链接）： dacp://0.0.0.0:3101/listDataFrames/dataSetName
-   * 返回链接： dacp://0.0.0.0:3101/get/dataFrameName
+   * 返回链接： dacp://0.0.0.0:3101/dataFrameName
    * */
   def doListDataFrames(listDataFrameUrl: String): DataFrame = {
-    val dataSetName = listDataFrameUrl.stripPrefix(server.url)
+    val dataSetName = listDataFrameUrl.stripPrefix(url)
     val schema = StructType.empty.add("name", StringType).add("size", LongType)
       .add("document", StringType).add("schema", StringType).add("statistics", StringType)
       .add("dataFrame", RefType)
@@ -109,7 +124,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       .map(dfName => {
         (dfName, dataProvider.getDataStreamSource(dfName).rowCount
           ,getDataFrameDocumentJsonString(dfName) , getDataFrameSchemaString(dfName)
-          ,getDataFrameStatisticsString(dfName), DFRef(s"${server.url}/get/$dfName"))
+          ,getDataFrameStatisticsString(dfName), DFRef(s"${url}/$dfName"))
       })
       .map(Row.fromTuple(_)).toIterator
     DefaultDataFrame(schema, stream)
@@ -125,6 +140,8 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       .map(Row.fromTuple(_)).toIterator
     DefaultDataFrame(schema, stream)
   }
+
+  private val url = s"$protocolSchema://${ConfigLoader.fairdConfig.hostPosition}:${ConfigLoader.fairdConfig.hostPort}"
 
   private def getHostInfoString(): String = {
     val hostInfo = Map(s"$FAIRD_HOST_NAME" -> s"${ConfigLoader.fairdConfig.hostName}",

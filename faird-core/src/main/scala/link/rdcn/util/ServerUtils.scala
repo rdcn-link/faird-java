@@ -133,46 +133,44 @@ object ServerUtils {
     unloader.getRecordBatch
   }
 
-  def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("rowCount", ValueType.LongType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("rowCount").asInstanceOf[BigIntVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, long)
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
+//  def getSingleLongBytesStream(long: Long, listener: FlightProducer.StreamListener[Result]): Unit = {
+//    val rootAndAllocator = getRootByStructType(StructType.empty.add("rowCount", ValueType.LongType))
+//    try {
+//      val nameVector = rootAndAllocator._1.getVector("rowCount").asInstanceOf[BigIntVector]
+//      rootAndAllocator._1.allocateNew()
+//      nameVector.setSafe(0, long)
+//      rootAndAllocator._1.setRowCount(1)
+//      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+//      listener.onCompleted()
+//    } finally {
+//      rootAndAllocator._1.close()
+//      rootAndAllocator._2.close()
+//    }
+//  }
 
-  def getListStringStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      var index = 0
-      seq.foreach(d => {
-        nameVector.setSafe(index, d.getBytes("UTF-8"))
-        index += 1
-      })
-      rootAndAllocator._1.setRowCount(index)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
-  def sendDataFrame(df: DataFrame, listener: FlightProducer.StreamListener[Result]): Unit = {
-    // 1. 根据 DataFrame 的 schema 构建 Arrow VectorSchemaRoot
+//  def getListStringStream(seq: Seq[String], listener: FlightProducer.StreamListener[Result]): Unit = {
+//    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+//    try {
+//      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+//      rootAndAllocator._1.allocateNew()
+//      var index = 0
+//      seq.foreach(d => {
+//        nameVector.setSafe(index, d.getBytes("UTF-8"))
+//        index += 1
+//      })
+//      rootAndAllocator._1.setRowCount(index)
+//      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+//      listener.onCompleted()
+//    } finally {
+//      rootAndAllocator._1.close()
+//      rootAndAllocator._2.close()
+//    }
+//  }
+  def sendDataFrame(df: DataFrame, listener: FlightProducer.StreamListener[Result], allocator: BufferAllocator): Unit = {
     val structType = df.schema
-    val rootAndAllocator = getRootByStructType(structType)  // 返回 (VectorSchemaRoot, BufferAllocator)
-    val root = rootAndAllocator._1
-    val allocator = rootAndAllocator._2
-
+    val schema = convertStructTypeToArrowSchema(structType)
+    val childAllocator: BufferAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
+    val root = VectorSchemaRoot.create(schema, childAllocator)
     try {
       root.allocateNew() // 分配内存
 
@@ -214,37 +212,37 @@ object ServerUtils {
     }
   }
 
-  def getSingleStringStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, str.getBytes("UTF-8"))
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
+//  def getSingleStringStream(str: String, listener: FlightProducer.StreamListener[Result]): Unit = {
+//    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.StringType))
+//    try {
+//      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarCharVector]
+//      rootAndAllocator._1.allocateNew()
+//      nameVector.setSafe(0, str.getBytes("UTF-8"))
+//      rootAndAllocator._1.setRowCount(1)
+//      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+//      listener.onCompleted()
+//    } finally {
+//      rootAndAllocator._1.close()
+//      rootAndAllocator._2.close()
+//    }
+//  }
 
-  def getArrayBytesStream(bytes: Array[Byte], listener: FlightProducer.StreamListener[Result]): Unit = {
-    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.BinaryType))
-    try {
-      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarBinaryVector]
-      rootAndAllocator._1.allocateNew()
-      nameVector.setSafe(0, bytes)
-      rootAndAllocator._1.setRowCount(1)
-      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
-      listener.onCompleted()
-    } finally {
-      rootAndAllocator._1.close()
-      rootAndAllocator._2.close()
-    }
-  }
+//  def getArrayBytesStream(bytes: Array[Byte], listener: FlightProducer.StreamListener[Result]): Unit = {
+//    val rootAndAllocator = getRootByStructType(StructType.empty.add("name", ValueType.BinaryType))
+//    try {
+//      val nameVector = rootAndAllocator._1.getVector("name").asInstanceOf[VarBinaryVector]
+//      rootAndAllocator._1.allocateNew()
+//      nameVector.setSafe(0, bytes)
+//      rootAndAllocator._1.setRowCount(1)
+//      listener.onNext(new Result(ServerUtils.getBytesFromVectorSchemaRoot(rootAndAllocator._1)))
+//      listener.onCompleted()
+//    } finally {
+//      rootAndAllocator._1.close()
+//      rootAndAllocator._2.close()
+//    }
+//  }
 
-  def getRootByStructType(structType: StructType): (VectorSchemaRoot, BufferAllocator) = {
+  private def getRootByStructType(structType: StructType, allocator: BufferAllocator): (VectorSchemaRoot, BufferAllocator) = {
     val schema = convertStructTypeToArrowSchema(structType)
     val childAllocator: BufferAllocator = allocator.newChildAllocator("flight-session", 0, Long.MaxValue)
     val root = VectorSchemaRoot.create(schema, childAllocator)
@@ -329,9 +327,9 @@ object ServerUtils {
     }
   }
 
-  def init(allocatorServer: BufferAllocator): Unit = {
-    allocator = allocatorServer
-  }
-
-  private var allocator: BufferAllocator = _
+//  def init(allocatorServer: BufferAllocator): Unit = {
+//    allocator = allocatorServer
+//  }
+//
+//  private var allocator: BufferAllocator = _
 }

@@ -2,7 +2,6 @@ package link.rdcn.struct
 
 import java.io.InputStream
 import java.io.{File, FileInputStream}
-import java.nio.file.Files
 
 trait Blob extends FairdValue {
 

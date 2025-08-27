@@ -1,12 +1,15 @@
 package link.rdcn.client.dacp
 
 import link.rdcn.client.UrlValidator
+import link.rdcn.client.dag.Flow
 import link.rdcn.client.dftp.DftpClient
-import link.rdcn.struct.DataFrame
+import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
+import link.rdcn.struct.{DFRef, DataFrame, ExecutionResult}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 
 import java.io.StringReader
+import scala.collection.mutable
 
 /**
  * @Author renhao
@@ -16,45 +19,60 @@ import java.io.StringReader
  */
 class FairdClient private(url: String, port: Int, useTLS: Boolean = false) extends DftpClient(url, port, useTLS) {
 
+  override val prefixSchema: String = "dacp"
+  def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
 
-  def listDataSetNames(): Seq[String] =
-    get("/listDataSetNames").mapIterator[Seq[String]](iter =>{
-      iter.map(row => row.getAs[String](0)).toSeq
-    })
-
-  def listDataFrameNames(dsName: String): Seq[String] =
-    get(s"/listDataFrameNames/$dsName").mapIterator[Seq[String]](iter =>{
-      iter.map(row => row.getAs[String](0)).toSeq
-    })
+  def listDataFrameNames(dsName: String): Seq[String] = getDataFrameInfoMap.keys.toSeq
 
   def getDataSetMetaData(dsName: String): Model = {
-    val rdfString = get(s"/getDataSetMetaData/$dsName").collect().head.getAs[String](0)
     val model = ModelFactory.createDefaultModel()
+    val rdfString = getDataSetInfoMap.get(dsName).getOrElse(return model)._1
     val reader = new StringReader(rdfString)
     model.read(reader, null, "RDF/XML")
     model
   }
 
-  def getDataFrameSize(dataFrameName: String): Long =
-    get(s"/getDataFrameSize/$dataFrameName").collect().head.getAs[Long](0)
-
-  def getHostInfo: Map[String, String] = {
-    val df = get(s"/getHostInfo")
-    val schema = df.schema.columns
-    schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
+  override def get(path: String): DataFrame = {
+    super.get(dacpUrlPrefix + path)
   }
 
-  def getServerResourceInfo: Map[String, String] = {
-    val df = get(s"/getServerResourceInfo")
-    val schema = df.schema.columns
-    schema.zip(df.collect().head.toSeq).map(kv => (kv._1.name, kv._2.toString)).toMap
-  }
+  def getDocument(dataFrameName: String): DataFrameDocument = ???
 
-  override def get(dataFrameName: String): DataFrame = {
-    super.get(dacpUrlPrefix + dataFrameName)
-  }
+  def getStatistics(dataFrameName: String): DataFrameStatistics = ???
 
-  private val dacpUrlPrefix: String = s"dacp://$url:$port"
+  def getDataFrameSize(dataFrameName: String): Long = ???
+
+  def getHostInfo: Map[String, String] = ???
+
+  def getServerResourceInfo: Map[String, String] = ???
+
+  private val dacpUrlPrefix: String = s"$prefixSchema://$url:$port"
+
+  //dataSetName -> (metaData, dataSetInfo, dataFrames)
+  private def  getDataSetInfoMap(): Map[String, (String, String, DFRef)] = {
+    val result = mutable.Map[String, (String, String, DFRef)]()
+    get("/listDataSets").mapIterator(rows => rows.foreach(row => {
+      result.put(row.getAs[String](0), (row.getAs[String](1), row.getAs[String](2), row.getAs[DFRef](3)))
+    }))
+    result.toMap
+  }
+  //dataFrameName -> (size,document,schema,statistic,dataFrame)
+  private def getDataFrameInfoMap: Map[String, (Long, String, String, String, DFRef)] = {
+    val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
+    getDataSetInfoMap.keys.map(dsName => get(s"/listDataFrames/$dsName")).foreach(df => {
+      df.mapIterator(iter => iter.foreach(row => {
+        result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
+      }))
+    })
+    result.toMap
+  }
+  private def getHostInfoMap(): Map[String, (String, String)] = {
+    val result = mutable.Map[String, (String, String)]()
+    get("/listHostInfo").mapIterator(iter => iter.foreach(row => {
+      result.put(row.getAs[String](0),(row.getAs[String](1), row.getAs[String](2)))
+    }))
+    result.toMap
+  }
 }
 
 object FairdClient {

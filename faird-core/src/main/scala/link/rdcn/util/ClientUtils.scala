@@ -7,14 +7,13 @@ import org.apache.arrow.flight.Result
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.ArrowStreamWriter
 import org.apache.arrow.vector._
-import org.apache.jena.rdf.model.Model
 
 import java.io.ByteArrayOutputStream
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaIteratorConverter, seqAsJavaListConverter}
 
 object ClientUtils {
 
-  def parseFlightActionResults(resultIterator: java.util.Iterator[Result]): DataFrame = {
+  def parseFlightActionResults(resultIterator: java.util.Iterator[Result], allocator: BufferAllocator): DataFrame = {
     val allRows = scala.collection.mutable.ArrayBuffer[Row]()
     var schema: StructType = StructType.empty
     while (resultIterator.hasNext) {
@@ -79,39 +78,6 @@ object ClientUtils {
     outputStream.toByteArray
   }
 
-  def getListStringByResult(resultIterator: Iterator[Result]): Seq[String] = {
-    if (resultIterator.hasNext) {
-      val result = resultIterator.next
-      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
-      val rowCount = vectorSchemaRootReceived.getRowCount
-      val schema = vectorSchemaRootReceived.getSchema
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      Seq.range(0, rowCount).map(index => {
-        val rowMap = fieldVectors.map(vec => {
-          vec.asInstanceOf[VarCharVector].getObject(index).toString
-        }).head
-        rowMap
-      })
-    } else null
-  }
-
-  def getSingleStringByResult(resultIterator: Iterator[Result]): String = {
-    if (resultIterator.hasNext) {
-      val result = resultIterator.next
-      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      fieldVectors.head.asInstanceOf[VarCharVector].getObject(0).toString
-    } else null
-  }
-
-  def getSingleLongByResult(resultIterator: Iterator[Result]): Long = {
-    if (resultIterator.hasNext) {
-      val result = resultIterator.next
-      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      fieldVectors.head.asInstanceOf[BigIntVector].getObject(0)
-    } else 0L
-  }
 
   def getMapByJsonString(hostInfoString: String): Map[String, String] = {
     val parseResult: Either[io.circe.Error, Map[String, String]] = parser.parse(hostInfoString).flatMap { json =>
@@ -131,19 +97,4 @@ object ClientUtils {
       identity // 如果解析成功，直接返回结果
     )
   }
-
-  def getArrayBytesResult(resultIterator: Iterator[Result]): Array[Byte] = {
-    if (resultIterator.hasNext) {
-      val result = resultIterator.next
-      val vectorSchemaRootReceived = ServerUtils.getVectorSchemaRootFromBytes(result.getBody, allocator)
-      val fieldVectors = vectorSchemaRootReceived.getFieldVectors.asScala
-      fieldVectors.head.asInstanceOf[VarBinaryVector].getObject(0)
-    } else null
-  }
-
-  def init(allocatorServer: BufferAllocator): Unit = {
-    allocator = allocatorServer
-  }
-
-  private var allocator: BufferAllocator = _
 }

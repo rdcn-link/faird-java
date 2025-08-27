@@ -90,4 +90,31 @@ object CodecUtils {
     else new String(bytes, StandardCharsets.UTF_8)
   }
 
+  val BLOB_STREAM: Byte = 1
+  val URL_STREAM: Byte = 2
+
+  def encodeTicket(typeId: Byte, s1: String, s2: String): Array[Byte] = {
+    val b1 = s1.getBytes("UTF-8")
+    val b2 = s2.getBytes("UTF-8")
+    val buffer = java.nio.ByteBuffer.allocate(1 + 4 + b1.length + 4 + b2.length)
+    buffer.put(typeId)
+    buffer.putInt(b1.length)
+    buffer.put(b1)
+    buffer.putInt(b2.length)
+    buffer.put(b2)
+    buffer.array()
+  }
+
+  def decodeTicket(bytes: Array[Byte]): (Byte, String, String) = {
+    val buffer = java.nio.ByteBuffer.wrap(bytes)
+    val typeId = buffer.get()
+    val len1 = buffer.getInt()
+    val b1 = new Array[Byte](len1)
+    buffer.get(b1)
+    val len2 = buffer.getInt()
+    val b2 = new Array[Byte](len2)
+    buffer.get(b2)
+    (typeId, new String(b1, "UTF-8"), new String(b2, "UTF-8"))
+  }
+
 }
