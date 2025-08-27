@@ -5,7 +5,7 @@ import link.rdcn.dftree.Operation
 import link.rdcn.struct.ValueType.StringType
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row, StructType}
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
-import link.rdcn.util.{ClientUtils, CodecUtils, DataUtils, ServerUtils}
+import link.rdcn.util.{ClientUtils, ClosableIterator, CodecUtils, DataUtils, ServerUtils}
 import org.apache.arrow.flight._
 import org.apache.arrow.memory.{ArrowBuf, BufferAllocator}
 import org.apache.arrow.vector.types.pojo.Schema
@@ -21,13 +21,45 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
  * @Date 2025/8/17 14:36
  * @Modified By:
  */
+trait GetRequest {
+  def getRequestedUrl(): String
+  def getTransformer(): Operation
+}
+
+trait GetResponse{
+  def sendDataFrame(dataFrame: DataFrame): Unit
+  def sendError(code: Int, message: String): Unit
+}
+
+trait ActionRequest{
+  def getActionName(): String
+  def getActionParameters(): Array[Byte]
+  def getActionParameterMap(): Map[String, Any]
+}
+
+trait ActionResponse{
+  def sendDataFrame(dataFrame: DataFrame): Unit
+  def sendError(code: Int, message: String): Unit
+}
+
+trait PutRequest{
+  def getDataFrame(): DataFrame
+}
+
+trait PutResponse{
+  def sendBinary(bytes: Array[Byte]): Unit
+  def sendMap(data: Map[String, Any]): Unit
+  def sendJsonString(jsonStr: String): Unit
+  def sendError(code: Int, message: String): Unit
+}
+
 class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpServer: DftpServer) extends NoOpFlightProducer with Logging {
 
   override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
     val actionResponse = new ActionResponse {
       override def sendDataFrame(dataFrame: DataFrame): Unit =  ServerUtils.sendDataFrame(dataFrame, listener)
 
-      override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
+      override def sendError(code: Int, message: String): Unit = listener.onError(new Exception(message))
     }
     val body = CodecUtils.decodeWithMap(action.getBody)
     val actionRequest = new ActionRequest {
@@ -80,7 +112,7 @@ class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpSer
         })
       }
 
-      override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
+      override def sendError(code: Int, message: String): Unit = listener.error(new Exception(message))
     }
     if(ticketStr._1 == "getBlob"){
       val blobId = ticketStr._2
@@ -123,7 +155,7 @@ class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpSer
 
           override def sendJsonString(jsonStr: String): Unit = sendBytes(CodecUtils.encodeString(jsonStr), ackStream)
 
-          override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
+          override def sendError(code: Int, message: String): Unit = ackStream.onError(new Exception(message))
         }
         dftpServer.getDftpServiceHandler().doPut(request, response)
       }
@@ -138,34 +170,6 @@ class DftpFlightProducer(allocator: BufferAllocator, location: Location, dftpSer
 
   override def listFlights(context: FlightProducer.CallContext, criteria: Criteria, listener: FlightProducer.StreamListener[FlightInfo]): Unit = {
     listener.onCompleted()
-  }
-
-  /**
-   * 400 Bad Request → 请求参数非法，对应 INVALID_ARGUMENT
-   * 401 Unauthorized → 未认证，对应 UNAUTHENTICATED
-   * 403 Forbidden → 没有权限，Flight 没有 PERMISSION_DENIED，用 UNAUTHORIZED 替代
-   * 404 Not Found → 资源未找到，对应 NOT_FOUND
-   * 408 Request Timeout → 请求超时，对应 TIMED_OUT
-   * 409 Conflict → 冲突，比如资源已存在，对应 ALREADY_EXISTS
-   * 500 Internal Server Error → 服务端内部错误，对应 INTERNAL
-   * 501 Not Implemented → 未实现的功能，对应 UNIMPLEMENTED
-   * 503 Service Unavailable → 服务不可用（可能是过载或维护），对应 UNAVAILABLE
-   * 其它未知错误 → 映射为 UNKNOWN
-   * */
-  private def sendErrorWithFlightStatus(code: Int, message: String): Unit = {
-    val status = code match {
-      case 400 => CallStatus.INVALID_ARGUMENT
-      case 401 => CallStatus.UNAUTHENTICATED
-      case 403 => CallStatus.UNAUTHORIZED
-      case 404 => CallStatus.NOT_FOUND
-      case 408 => CallStatus.TIMED_OUT
-      case 409 => CallStatus.ALREADY_EXISTS
-      case 500 => CallStatus.INTERNAL
-      case 501 => CallStatus.UNIMPLEMENTED
-      case 503 => CallStatus.UNAVAILABLE
-      case _   => CallStatus.UNKNOWN
-    }
-    throw status.withDescription(message).toRuntimeException
   }
 
   private def sendBytes(bytes: Array[Byte], ackStream: FlightProducer.StreamListener[PutResult]): Unit = {
