@@ -106,26 +106,11 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
       }.toMap
     }
   }
-
-  private val location = {
-    if (useTLS) {
-      val props = new Properties()
-      val confPathURI = this.getClass.getProtectionDomain().getCodeSource().getLocation().toURI
-      val fis = new InputStreamReader(new FileInputStream(Paths.get(confPathURI).resolve("user.conf").toString), "UTF-8")
-      try props.load(fis) finally fis.close()
-      System.setProperty("javax.net.ssl.trustStore", Paths.get(props.getProperty("tls.path")).toString())
-      Location.forGrpcTls(url, port)
-    } else
-      Location.forGrpcInsecure(url, port)
-  }
-  private val allocator: BufferAllocator = new RootAllocator()
-  private val flightClient: FlightClient = FlightClient.builder(allocator, location).build()
-  private def getRows(url: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
-    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM ,url, operationNode)))
+  private def getRows(dataFrameName: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
+    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM ,dataFrameName, operationNode)))
     val stream = schemaAndIter._2.map(seq => Row.fromSeq(seq))
     (schemaAndIter._1, ClosableIterator(stream)())
   }
-
   private def getStream(flightClient: FlightClient, ticket: Ticket): (StructType, Iterator[Seq[Any]]) = {
     val flightStream = flightClient.getStream(ticket)
     val vectorSchemaRootReceived = flightStream.getRoot
@@ -201,6 +186,20 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
     })
     RemoteDataFrameProxy(dataFrameName, getRows, operation)
   }
+
+  private val location = {
+    if (useTLS) {
+      val props = new Properties()
+      val confPathURI = this.getClass.getProtectionDomain().getCodeSource().getLocation().toURI
+      val fis = new InputStreamReader(new FileInputStream(Paths.get(confPathURI).resolve("user.conf").toString), "UTF-8")
+      try props.load(fis) finally fis.close()
+      System.setProperty("javax.net.ssl.trustStore", Paths.get(props.getProperty("tls.path")).toString())
+      Location.forGrpcTls(url, port)
+    } else
+      Location.forGrpcInsecure(url, port)
+  }
+  private val allocator: BufferAllocator = new RootAllocator()
+  private val flightClient: FlightClient = FlightClient.builder(allocator, location).build()
 }
 
 

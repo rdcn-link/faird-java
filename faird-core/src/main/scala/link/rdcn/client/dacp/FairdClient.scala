@@ -32,9 +32,9 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     model
   }
 
-    def getByPath(path: String): DataFrame = {
-      super.get(dacpUrlPrefix + path)
-    }
+  def getByPath(path: String): DataFrame = {
+    super.get(dacpUrlPrefix + path)
+  }
 
   def getDocument(dataFrameName: String): DataFrameDocument = ???
 

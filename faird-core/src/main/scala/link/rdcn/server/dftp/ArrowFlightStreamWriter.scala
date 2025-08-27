@@ -4,7 +4,6 @@ import link.rdcn.struct.{Blob, DFRef, Row}
 import link.rdcn.util.CodecUtils
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector._
-import org.json.JSONObject
 
 import scala.collection.JavaConverters._
 
