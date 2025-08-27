@@ -24,6 +24,11 @@ import java.util.Base64
 class FunctionWrapperTest {
 
   @Test
+  def getJepTest(): Unit = {
+    val jep = JepInterpreterManager.getInterpreter
+  }
+
+  @Test
   def javaCodeTest(): Unit = {
 //    val code =
 //      """
