@@ -43,9 +43,6 @@ case class ArrowFlightStreamWriter(stream: Iterator[Row]) {
           case v: DFRef =>
             val bytes = v.url.getBytes("UTF-8")
             vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
-          case v: JSONObject =>
-            val bytes = v.toString().getBytes("UTF-8")
-            vec.asInstanceOf[VarCharVector].setSafe(i, bytes)
           case v: Blob =>
             val blobId = BlobRegistry.register(v)
             val bytes = CodecUtils.encodeString(blobId)
