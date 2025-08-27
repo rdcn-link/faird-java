@@ -102,7 +102,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       dataProvider.getDataSetMetaData(dsName, model)
       val writer = new StringWriter();
       model.write(writer, "RDF/XML");
-      val dataSetInfo = new JSONObject().put("name", dsName)
+      val dataSetInfo = new JSONObject().put("name", dsName).toString
       Row.fromTuple((dsName, writer.toString
         ,dataSetInfo, DFRef(s"${url}/listDataFrames/$dsName")))
     }).toIterator

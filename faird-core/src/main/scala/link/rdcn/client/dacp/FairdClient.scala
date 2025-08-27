@@ -32,7 +32,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     model
   }
 
-  override def get(path: String): DataFrame = {
+  def getByPath(path: String): DataFrame = {
     super.get(dacpUrlPrefix + path)
   }
 
