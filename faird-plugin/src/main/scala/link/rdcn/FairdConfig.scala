@@ -1,5 +1,7 @@
 package link.rdcn
 
+import link.rdcn.dftp.DftpConfig
+
 import scala.beans.BeanProperty
 
 /**
@@ -8,7 +10,8 @@ import scala.beans.BeanProperty
  * @Data 2025/7/9 17:23
  * @Modified By:
  */
-class FairdConfig() {
+//TODO 修改为scala风格，兼容spring IOC
+class FairdConfig() extends DftpConfig{
   @BeanProperty var fairdHome: String = getClass.getClassLoader.getResource("").getPath
   @BeanProperty var hostName: String = ""
   @BeanProperty var hostTitle: String = ""
@@ -25,6 +28,16 @@ class FairdConfig() {
   @BeanProperty var pythonHome: String = null
 
   override def toString: String = s"FairdConfig($fairdHome, $hostName, $hostTitle, ...)"
+
+  override def host: String = hostPosition
+
+  override def port: Int = hostPort
+
+  override def useTls: Boolean = useTLS
+
+  override def tlsCertFile: String = certPath
+
+  override def tlsKeyFile: String = keyPath
 }
 
 object FairdConfig {
