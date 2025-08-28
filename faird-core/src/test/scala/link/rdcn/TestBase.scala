@@ -30,7 +30,7 @@ object TestBase {
   val adminPassword = "admin001"
   val userUsername = "user"
   val userPassword = "user"
-  val anonymousUsername = "anonymous"
+  val anonymousUsername = "ANONYMOUS"
 
   //生成Token
   val genToken = () => UUID.randomUUID().toString

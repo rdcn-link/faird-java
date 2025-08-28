@@ -34,7 +34,7 @@ class FlowNodeTest {
         |    }
         |    @Override
         |    public link.rdcn.struct.DataFrame transform(final link.rdcn.struct.DataFrame dataFrame) {
-        |            final scala.collection.Iterator<Row> iter = ((LocalDataFrame)dataFrame).stream();
+        |            final scala.collection.Iterator<Row> iter = ((DefaultDataFrame)dataFrame).stream();
         |            final scala.collection.Iterator<Row> rows =  new scala.collection.Iterator<Row>() {
         |            public boolean hasNext() {
         |                return iter.hasNext();

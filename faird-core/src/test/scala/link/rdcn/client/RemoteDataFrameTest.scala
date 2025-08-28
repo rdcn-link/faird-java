@@ -162,7 +162,7 @@ class DataFrameOperationTest extends TestProvider {
         s"$id,${cols.tail.mkString}" // 拼接回剩余列
       }
       .mkString("\n") + "\n"
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     val rowMapper: Row => Row = row => Row(row.getAs[Long](0) + num, row.get(1))
@@ -191,7 +191,7 @@ class DataFrameOperationTest extends TestProvider {
         s"${cols.tail.mkString}" + "\n" // 拼接剩余列
       }
       .mkString("")
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     val rowMapper: Row => Row = row => Row(row.get(1))
@@ -219,7 +219,7 @@ class DataFrameOperationTest extends TestProvider {
         s"${cols.tail.mkString}" // 拼接剩余列
       }
       .mkString("\n") + "\n"
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
 
@@ -566,7 +566,7 @@ class DataFrameOperationTest extends TestProvider {
     val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.mkString("\n") + "\n"
 
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
 
@@ -586,7 +586,7 @@ class DataFrameOperationTest extends TestProvider {
 
   @Test
   def testDataFrameRowIndexOutOfBound(): Unit = {
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val exceptionRowIndexOutOfBound = assertThrows(classOf[java.lang.IndexOutOfBoundsException], () => {
       df.foreach { row: Row =>
         println(row._3)

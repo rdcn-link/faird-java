@@ -128,7 +128,8 @@ object TestDataGenerator {
     val basePath = Paths.get(baseDir)
 
     if (Files.exists(Paths.get(getOutputDir("test_output")))) {
-      FileUtils.deleteDirectory(basePath.toFile)
+      basePath.toFile.deleteOnExit()
+//      FileUtils.deleteDirectory(basePath.toFile)
       println(s"Deleted directory: ${basePath.toAbsolutePath}")
     }
 

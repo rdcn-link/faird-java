@@ -5,7 +5,7 @@ import link.rdcn.client.dacp.FairdClient
 import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.{ErrorCode, TestProvider}
-import org.apache.arrow.flight.FlightRuntimeException
+import org.apache.arrow.flight.{CallStatus, FlightRuntimeException}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
 
@@ -24,12 +24,12 @@ class FlightServerAuthHandlerTest extends TestProvider {
 
   @Test()
   def testInvalidCredentials(): Unit = {
-    val ServerException = assertThrows(
+    val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
     )
 
-    assertEquals(ErrorCode.INVALID_CREDENTIALS, ExceptionHandler.getErrorCode(ServerException))
+    assertEquals(CallStatus.UNAUTHENTICATED.code(), serverException.asInstanceOf[FlightRuntimeException].status().code())
   }
 
   //匿名访问DataFrame失败
@@ -40,7 +40,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
       classOf[FlightRuntimeException],
       () => dc.getByPath("/csv/data_1.csv").foreach(_ => ())
     )
-    assertEquals(ErrorCode.USER_NOT_LOGGED_IN, ExceptionHandler.getErrorCode(serverException))
+    assertEquals(ErrorCode.USER_NOT_LOGGED_IN, serverException.asInstanceOf[FlightRuntimeException].status().code())
   }
 
 }
