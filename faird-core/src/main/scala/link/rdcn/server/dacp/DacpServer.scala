@@ -116,7 +116,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
    * 返回链接： dacp://0.0.0.0:3101/dataFrameName
    * */
   def doListDataFrames(listDataFrameUrl: String): DataFrame = {
-    val dataSetName = listDataFrameUrl.stripPrefix(url)
+    val dataSetName = listDataFrameUrl.stripPrefix("/listDataFrames/")
     val schema = StructType.empty.add("name", StringType).add("size", LongType)
       .add("document", StringType).add("schema", StringType).add("statistics", StringType)
       .add("dataFrame", RefType)

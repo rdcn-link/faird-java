@@ -50,9 +50,9 @@ class FairdClientTest extends TestProvider {
   def testSchema(): Unit = {
     //注入元数据
     dataProvider.getDataSetMetaData("csv", csvModel)
-    assertEquals(csvModel.toString, dc.getDataSetMetaData("csv"), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
+    assertTrue(csvModel.isIsomorphicWith(dc.getDataSetMetaData("csv")), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
     dataProvider.getDataSetMetaData("bin", binModel)
-    assertEquals(binModel.toString, dc.getDataSetMetaData("bin"), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
+    assertTrue(binModel.isIsomorphicWith(dc.getDataSetMetaData("bin")), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
   }
 
   @Test

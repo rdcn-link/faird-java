@@ -29,4 +29,6 @@ object BlobRegistry {
       blob.offerStream(consume)
     }
   }
+
+  def cleanUp():Unit = handlers.clear()
 }

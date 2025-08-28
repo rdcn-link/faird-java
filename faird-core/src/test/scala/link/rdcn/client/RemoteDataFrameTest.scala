@@ -104,7 +104,7 @@ class DataFrameOperationTest extends TestProvider {
   @Test
   def testDataFrameForEach(): Unit = {
     val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.mkString("\n") + "\n"
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     df.foreach { row =>
@@ -120,7 +120,7 @@ class DataFrameOperationTest extends TestProvider {
   @ValueSource(ints = Array(10))
   def testDataFrameLimit(num: Int): Unit = {
     val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.take(num).mkString("\n") + "\n"
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     df.limit(num).foreach { row =>
@@ -136,7 +136,7 @@ class DataFrameOperationTest extends TestProvider {
   @ValueSource(ints = Array(2))
   def testDataFrameFilter(id: Int): Unit = {
     val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq(id) + "\n"
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
     val rowFilter: Row => Boolean = (row: Row) => row.getAs[Long](0) == id

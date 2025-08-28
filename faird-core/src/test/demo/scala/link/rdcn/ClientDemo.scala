@@ -35,44 +35,44 @@ object ClientDemo {
     dataSetNames.foreach(println)
 
     //获得指定数据集的所有的数据帧名称
-//    println("--------------打印数据集 csv 所有数据帧名称--------------")
+    println("--------------打印数据集 csv 所有数据帧名称--------------")
     val frameNames: Seq[String] = dc.listDataFrameNames("csv")
-//    frameNames.foreach(println)
+    frameNames.foreach(println)
 
-//    //获得指定数据集的元数据信息
-//    println("--------------打印数据集 csv 的元数据信息--------------")
-//    val metaData: Model = dc.getDataSetMetaData("csv")
-//    metaData.write(System.out, "TURTLE")
-//
-//    //获得host基本信息
-//    println("--------------打印host基本信息--------------")
-//    val hostInfo: Map[String, String] = dc.getHostInfo
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_NAME))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_TITLE))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_PORT))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_POSITION))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_DOMAIN))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
-//
-//
-//    //获得服务器资源信息
-//    println("--------------打印服务器资源信息--------------")
-//    val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
-//    println(serverResourceInfo(ResourceKeys.CPU_CORES))
-//    println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
-//    println(serverResourceInfo(ResourceKeys.JVM_MAX_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_FREE_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_USED_MB))
+    //获得指定数据集的元数据信息
+    println("--------------打印数据集 csv 的元数据信息--------------")
+    val metaData: Model = dc.getDataSetMetaData("csv")
+    metaData.write(System.out, "TURTLE")
+
+    //获得host基本信息
+    println("--------------打印host基本信息--------------")
+    val hostInfo: Map[String, String] = dc.getHostInfo
+    println(hostInfo(ConfigKeys.FAIRD_HOST_NAME))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_TITLE))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_PORT))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_POSITION))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_DOMAIN))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
+
+
+    //获得服务器资源信息
+    println("--------------打印服务器资源信息--------------")
+    val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
+    println(serverResourceInfo(ResourceKeys.CPU_CORES))
+    println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
+    println(serverResourceInfo(ResourceKeys.JVM_MAX_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_FREE_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_USED_MB))
 
 
     //打开非结构化数据的文件列表数据帧
-//    val dfBin: DataFrame = dc.get("dacp://localhost:3101/get/csv/data_1.csv")
+    val dfBin: DataFrame = dc.get("dacp://localhost:3101/get/csv/data_1.csv")
 
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
@@ -99,30 +99,27 @@ object ClientDemo {
 
     //client api demo, operation demo, blob demo,dag demo
     //    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
-//    println("--------------打印非结构化数据文件列表数据帧--------------")
-//    dfBin.foreach((row: Row) => {
-//      //通过Tuple风格访问
-//      val name: String = row._1.asInstanceOf[String]
-//      //通过下标访问
-//      val blob: Blob = row.get(6).asInstanceOf[Blob]
-//      //通过getAs方法获取列值，该方法返回Option类型，如果找不到对应的列则返回None
-//      val byteSize: Long = row.getAs[Long](3)
-//      //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
-//      //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
-//      val path: Path = Paths.get("faird-core","src", "test", "demo", "data", "output", name)
-//      blob.offerStream(inputStream => {
-//        val outputStream = new FileOutputStream(path.toFile)
-//        IOUtils.copy(inputStream, outputStream)
-//        outputStream.close()
-//      })
-//      //或者直接获取blob的内容，得到byte数组
-//      val bytes: Array[Byte] = blob.toBytes
-//      println(row)
-//      println(name)
-//      println(blob.size)
-//      println(byteSize)
-//      println(bytes.hashCode())
-//    })
+    println("--------------打印非结构化数据文件列表数据帧--------------")
+    dfBin.foreach((row: Row) => {
+      //通过Tuple风格访问
+      val name: String = row._1.asInstanceOf[String]
+      //通过下标访问
+      val blob: Blob = row.get(6).asInstanceOf[Blob]
+      //通过getAs方法获取列值，该方法返回Option类型，如果找不到对应的列则返回None
+      val byteSize: Long = row.getAs[Long](3)
+      //除此之外列值支持的类型还包括：Integer, Long, Float, Double, Boolean, byte[]
+      //offerStream用于接受一个用户编写的处理blob InputStream的函数并确保其关闭
+      val path: Path = Paths.get("faird-core","src", "test", "demo", "data", "output", name)
+      blob.offerStream(inputStream => {
+        val outputStream = new FileOutputStream(path.toFile)
+        IOUtils.copy(inputStream, outputStream)
+        outputStream.close()
+      })
+      //或者直接获取blob的内容，得到byte数组
+      println(row)
+      println(name)
+      println(byteSize)
+    })
 
 
     //获取数据

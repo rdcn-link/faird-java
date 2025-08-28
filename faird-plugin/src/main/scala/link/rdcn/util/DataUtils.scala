@@ -130,6 +130,7 @@ object DataUtils extends Logging{
     case _: Boolean             => BooleanType
     case _: Array[Byte]         => BinaryType
     case _: java.io.File        => BinaryType
+    case _: Blob                => BlobType
     case _                      => StringType
   }
 

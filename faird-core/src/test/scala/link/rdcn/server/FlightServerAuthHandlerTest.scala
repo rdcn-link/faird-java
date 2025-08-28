@@ -38,7 +38,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
     val dc = FairdClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
-      () => dc.get("/csv/data_1.csv").foreach(_ => ())
+      () => dc.getByPath("/csv/data_1.csv").foreach(_ => ())
     )
     assertEquals(ErrorCode.USER_NOT_LOGGED_IN, ExceptionHandler.getErrorCode(serverException))
   }

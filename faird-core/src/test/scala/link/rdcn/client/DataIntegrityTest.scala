@@ -70,7 +70,7 @@ class DataIntegrityTest extends TestProvider {
     val expectedModifiedTime = expectedRow.getAs[Long](4)
     val expectedLastAccessTime = expectedRow.getAs[Long](5)
 
-    val df = dc.get("/bin")
+    val df = dc.getByPath("/bin")
     df.filter(row=>row._1.asInstanceOf[String]==s"binary_data_$num.bin").foreach(
       row => {
         println(row)

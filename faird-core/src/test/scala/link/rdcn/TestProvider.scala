@@ -12,6 +12,7 @@ import link.rdcn.ConfigKeys._
 import link.rdcn.client.dacp.FairdClient
 import link.rdcn.received.DataReceiver
 import link.rdcn.server.dacp.DacpServer
+import link.rdcn.server.dftp.BlobRegistry
 import link.rdcn.server.exception.AuthorizationException
 import link.rdcn.struct.{DataFrame, StructType}
 import link.rdcn.struct.ValueType.{DoubleType, LongType}
@@ -124,14 +125,15 @@ object TestProvider {
   @AfterAll
   def stop(): Unit = {
     stopServer()
+    BlobRegistry.cleanUp()
     DataUtils.closeAllFileSources()
     TestDataGenerator.cleanupTestData(baseDir)
   }
 
   def getServer: DacpServer = synchronized {
     if (fairdServer.isEmpty) {
-      val s = new DacpServer(dataProvider,  dataReceiver, authprovider)
       ConfigLoader.init(Paths.get(getResourcePath("")).toString)
+      val s = new DacpServer(dataProvider,  dataReceiver, authprovider)
       s.start(ConfigLoader.fairdConfig)
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)

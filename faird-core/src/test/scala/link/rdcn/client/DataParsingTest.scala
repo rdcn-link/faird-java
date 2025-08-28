@@ -12,7 +12,7 @@ class DataParsingTest extends TestProvider {
 
   @Test
   def CSVParsingTest(): Unit = {
-    val df = dc.get("/csv/data_1.csv")
+    val df = dc.getByPath("/csv/data_1.csv")
     df.limit(1).foreach(
       row => {
         println(row)
@@ -36,7 +36,7 @@ class DataParsingTest extends TestProvider {
 
   @Test
   def BinaryParsingTest(): Unit = {
-    val df = dc.get("/bin")
+    val df = dc.getByPath("/bin")
     df.limit(1).foreach(
       row => {
         println(row)
@@ -74,7 +74,6 @@ class DataParsingTest extends TestProvider {
         assertTrue(createdTime > 0, "time should be positive")
         assertTrue(modifiedTime > 0, "time should be positive")
         assertTrue(lastAccessTime > 0, "time should be positive")
-
       }
     )
   }

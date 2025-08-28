@@ -1,7 +1,7 @@
 package link.rdcn.server.dftp
 
 import link.rdcn.dftree.Operation
-import link.rdcn.struct.ValueType.StringType
+import link.rdcn.struct.ValueType.{BinaryType, StringType}
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
@@ -233,7 +233,7 @@ class DftpServer {
         else {
           blob.get.offerStream(inputStream => {
             val stream: Iterator[Row] = DataUtils.chunkedIterator(inputStream).map(bytes => Row.fromSeq(Seq(bytes)))
-            val schema = StructType.empty.add("content", StringType)
+            val schema = StructType.empty.add("content", BinaryType)
             response.sendDataFrame(DefaultDataFrame(schema, stream))
           })
         }

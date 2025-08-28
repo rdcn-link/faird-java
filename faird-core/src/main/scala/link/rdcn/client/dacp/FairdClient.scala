@@ -1,5 +1,6 @@
 package link.rdcn.client.dacp
 
+import link.rdcn.ConfigLoader
 import link.rdcn.client.UrlValidator
 import link.rdcn.client.dag.Flow
 import link.rdcn.client.dftp.DftpClient
@@ -7,8 +8,10 @@ import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DFRef, DataFrame, ExecutionResult}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
+import org.json.{JSONArray, JSONObject}
 
 import java.io.StringReader
+import scala.collection.JavaConverters.{asScalaIteratorConverter, iterableAsScalaIterableConverter}
 import scala.collection.mutable
 
 /**
@@ -22,7 +25,11 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
   override val prefixSchema: String = "dacp"
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
 
-  def listDataFrameNames(dsName: String): Seq[String] = getDataFrameInfoMap.keys.toSeq
+  def listDataFrameNames(dsName: String): Seq[String] = {
+    get(dacpUrlPrefix + s"/listDataFrames/$dsName").mapIterator(iter => iter.foreach(row=>{println(row.getAs[String](0))}))
+    val result = get(dacpUrlPrefix + s"/listDataFrames/$dsName").collect()
+    result.toSeq.map(row=>row.getAs[String](0))
+  }
 
   def getDataSetMetaData(dsName: String): Model = {
     val model = ModelFactory.createDefaultModel()
@@ -36,20 +43,51 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     super.get(dacpUrlPrefix + path)
   }
 
-  def getDocument(dataFrameName: String): DataFrameDocument = ???
+  def getDocument(dataFrameName: String): DataFrameDocument = {
+    val jo = new JSONArray(getDataFrameInfoMap.get(dataFrameName).map(_._3).getOrElse(None)).getJSONObject(0)
 
-  def getStatistics(dataFrameName: String): DataFrameStatistics = ???
+    new DataFrameDocument {
+      override def getSchemaURL(): Option[String] = Some("[SchemaURL defined by provider]")
 
-  def getDataFrameSize(dataFrameName: String): Long = ???
+      override def getColumnURL(colName: String): Option[String] = Some(jo.getString("url"))
 
-  def getHostInfo: Map[String, String] = ???
+      override def getColumnAlias(colName: String): Option[String] = Some(jo.getString("alias"))
 
-  def getServerResourceInfo: Map[String, String] = ???
+      override def getColumnTitle(colName: String): Option[String] = Some(jo.getString("title"))
+    }
+
+  }
+
+  def getStatistics(dataFrameName: String): DataFrameStatistics = {
+    val jo = new JSONObject(getDataFrameInfoMap.get(dataFrameName).map(_._4).getOrElse(""))
+    new DataFrameStatistics{
+      override def rowCount: Long = jo.getLong("rowCount")
+      override def byteSize: Long = jo.getLong("byteSize")
+    }
+  }
+
+  def getDataFrameSize(dataFrameName: String): Long = {
+    getDataFrameInfoMap.get(dataFrameName).map(_._1).getOrElse(0L)
+  }
+
+  def getHostInfo: Map[String, String] = {
+    val jo = new JSONObject(getHostInfoMap().head._2._1)
+    jo.keys().asScala.map { key =>
+      key -> jo.getString(key)
+    }.toMap
+  }
+
+  def getServerResourceInfo: Map[String, String] = {
+    val jo = new JSONObject(getHostInfoMap().head._2._2)
+    jo.keys().asScala.map { key =>
+      key -> jo.getString(key)
+    }.toMap
+  }
 
   private val dacpUrlPrefix: String = s"$prefixSchema://$url:$port"
 
   //dataSetName -> (metaData, dataSetInfo, dataFrames)
-  private def  getDataSetInfoMap(): Map[String, (String, String, DFRef)] = {
+  private def  getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
     val result = mutable.Map[String, (String, String, DFRef)]()
     get(dacpUrlPrefix+"/listDataSets").mapIterator(rows => rows.foreach(row => {
       result.put(row.getAs[String](0), (row.getAs[String](1), row.getAs[String](2), row.getAs[DFRef](3)))
@@ -66,6 +104,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     })
     result.toMap
   }
+  //dataFrameName -> (hostInfo, resourceInfo)
   private def getHostInfoMap(): Map[String, (String, String)] = {
     val result = mutable.Map[String, (String, String)]()
     get(dacpUrlPrefix+"/listHostInfo").mapIterator(iter => iter.foreach(row => {

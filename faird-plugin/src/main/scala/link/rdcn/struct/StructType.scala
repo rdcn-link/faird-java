@@ -121,6 +121,6 @@ object StructType {
   def binaryStructType: StructType = {
     StructType.empty.add("name", StringType).add("byteSize", LongType).add("type", StringType)
       .add("creationTime", LongType).add("lastModifiedTime", LongType).add("lastAccessTime", LongType)
-      .add("File",BinaryType)
+      .add("File",BlobType)
   }
 }
