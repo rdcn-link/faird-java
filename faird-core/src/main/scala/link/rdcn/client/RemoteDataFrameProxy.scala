@@ -1,7 +1,6 @@
 package link.rdcn.client
 
 import link.rdcn.Logging
-import link.rdcn.client.dag.{SerializableFunction, SingleRowCall}
 import link.rdcn.dftree._
 import link.rdcn.struct.{DataFrame, Row, StructType}
 import link.rdcn.util.{ClosableIterator, ResourceUtils}

@@ -95,7 +95,7 @@ class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpC
     result.toMap
   }
   //dataFrameName -> (size,document,schema,statistic,dataFrame)
-  private def getDataFrameInfoMap: Map[String, (Long, String, String, String, DFRef)] = {
+  def getDataFrameInfoMap: Map[String, (Long, String, String, String, DFRef)] = {
     val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
     getDataSetInfoMap.values.map(v => get(v._3.url)).foreach(df => {
       df.mapIterator(iter => iter.foreach(row => {
