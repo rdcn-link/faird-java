@@ -3,6 +3,8 @@ package link.rdcn
 import link.rdcn.dftp.DftpConfig
 
 import scala.beans.BeanProperty
+import java.io.File
+import java.nio.file.Paths
 
 /**
  * @Author renhao
@@ -35,9 +37,9 @@ class FairdConfig() extends DftpConfig{
 
   override def useTls: Boolean = useTLS
 
-  override def tlsCertFile: String = certPath
+  override def tlsCertFile: File = Paths.get(fairdHome, certPath).toFile
 
-  override def tlsKeyFile: String = keyPath
+  override def tlsKeyFile: File = Paths.get(fairdHome, keyPath).toFile
 }
 
 object FairdConfig {

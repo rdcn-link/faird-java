@@ -1,5 +1,7 @@
 package link.rdcn.dftp
 
+import java.io.File
+
 /**
  * @Author renhao
  * @Description:
@@ -10,6 +12,6 @@ trait DftpConfig {
   def host: String
   def port: Int
   def useTls: Boolean
-  def tlsCertFile: String
-  def tlsKeyFile: String
+  def tlsCertFile: File
+  def tlsKeyFile: File
 }

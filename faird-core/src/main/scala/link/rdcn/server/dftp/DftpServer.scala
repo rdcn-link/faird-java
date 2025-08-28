@@ -133,7 +133,7 @@ class DftpServer {
 
     if(dftpConfig.useTls){
       flightServer = FlightServer.builder(allocator, location, producer)
-        .useTls(new File(dftpConfig.tlsCertFile), new File(dftpConfig.tlsKeyFile))
+        .useTls(dftpConfig.tlsCertFile, dftpConfig.tlsKeyFile)
         .authHandler(new FlightServerAuthHandler(authProvider, authenticatedUserMap))
         .build()
     }else{
