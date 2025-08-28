@@ -72,7 +72,7 @@ object ClientDemo {
 
 
     //打开非结构化数据的文件列表数据帧
-    val dfBin: DataFrame = dc.get("dacp://localhost:3101/get/csv/data_1.csv")
+    val dfBin: DataFrame = dc.getByPath("/bin")
 
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息

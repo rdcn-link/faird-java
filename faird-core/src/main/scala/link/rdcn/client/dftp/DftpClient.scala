@@ -137,7 +137,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
                   if(v.getField.getMetadata.isEmpty) (vec.getName, v.get(index))
                   else {
                     val blobId = CodecUtils.decodeString(v.get(index))
-                    val blobTicket =  new Ticket(CodecUtils.encodeTicket(CodecUtils.BLOB_STREAM , blobId, new JSONObject().put("type", "SourceOp").toString()))
+                    val blobTicket =  new Ticket(CodecUtils.encodeTicket(CodecUtils.BLOB_STREAM , blobId, SourceOp().toJson.toString()))
                     val blob = new Blob {
                       val iter = getStream(flightClient, blobTicket)._2
                       val chunkIterator = iter.map(value => {
