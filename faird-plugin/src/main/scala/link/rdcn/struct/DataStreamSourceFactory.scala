@@ -2,10 +2,12 @@ package link.rdcn.struct
 
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.util.{ClosableIterator, DataUtils, JdbcUtils}
+import org.json.JSONObject
 
 import java.io.File
 import java.nio.file.attribute.BasicFileAttributes
 import java.sql.{Connection, DriverManager, ResultSet}
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -31,6 +33,42 @@ object DataStreamSourceFactory{
 
     val sampleRows = sampleBuffer.iterator.map(arr => Row.fromSeq(arr.toSeq))
     val remainingRows = iterLines.map(_.split(delimiter, -1)).map(arr => Row.fromSeq(arr.toSeq))
+
+    val iterRows = (sampleRows ++ remainingRows).map(DataUtils.convertStringRowToTypedRow(_, structType))
+    new DataStreamSource {
+      override def rowCount: Long = fileRowCount
+
+      override def schema: StructType = structType
+
+      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(iterLines.onClose)
+    }
+  }
+
+
+  def createJSONDataStreamSource(jsonFile: File, multiline: Boolean = false): DataStreamSource = {
+    val fileRowCount = DataUtils.countLinesFast(jsonFile)
+    val iterLines: ClosableIterator[String] = DataUtils.getFileLines(jsonFile)
+    val sampleBuffer = iterLines.take(sampleSize).toArray
+    val headerArray = new ArrayBuffer[String]()
+    if (sampleBuffer.nonEmpty) {
+      val firstObject = new JSONObject(sampleBuffer.head)
+      firstObject.keys().asScala.foreach(key=> headerArray.append(key))
+    }
+    val sampleObjects = sampleBuffer.map(new JSONObject(_)).iterator.map { jo =>
+      // 根据 headerArray 的顺序提取每个 key 对应的值
+      headerArray.map(jo.get).map(_.toString).toArray
+    }.toArray
+    val structType = DataUtils.inferSchema(sampleObjects, headerArray)
+
+    val sampleRows = sampleBuffer.iterator.map(new JSONObject(_)).map { jo =>
+      val seq = headerArray.map(jo.get).map(_.toString)
+      Row.fromSeq(seq.toSeq)
+    }
+    val remainingRows = iterLines.map { line =>
+      val jo = new JSONObject(line)
+      val seq = headerArray.map(jo.get).map(_.toString)
+      Row.fromSeq(seq.toSeq)
+    }
 
     val iterRows = (sampleRows ++ remainingRows).map(DataUtils.convertStringRowToTypedRow(_, structType))
     new DataStreamSource {
