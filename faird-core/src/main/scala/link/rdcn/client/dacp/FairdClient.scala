@@ -20,15 +20,14 @@ import scala.collection.mutable
  * @Date 2025/8/18 16:30
  * @Modified By:
  */
-class FairdClient private(url: String, port: Int, useTLS: Boolean = false) extends DftpClient(url, port, useTLS) {
+class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpClient(url, port, useTLS) {
 
   override val prefixSchema: String = "dacp"
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
 
   def listDataFrameNames(dsName: String): Seq[String] = {
-    get(dacpUrlPrefix + s"/listDataFrames/$dsName").mapIterator(iter => iter.foreach(row=>{println(row.getAs[String](0))}))
-    val result = get(dacpUrlPrefix + s"/listDataFrames/$dsName").collect()
-    result.toSeq.map(row=>row.getAs[String](0))
+    val url = getDataSetInfoMap.get(dsName).getOrElse(return Seq.empty)._3.url
+    get(url).collect().map(row=>row.getAs[String](0))
   }
 
   def getDataSetMetaData(dsName: String): Model = {
@@ -39,6 +38,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     model
   }
 
+  //TODO: Remove this method and update related test cases accordingly
   def getByPath(path: String): DataFrame = {
     super.get(dacpUrlPrefix + path)
   }
@@ -87,7 +87,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
   private val dacpUrlPrefix: String = s"$prefixSchema://$url:$port"
 
   //dataSetName -> (metaData, dataSetInfo, dataFrames)
-  private def  getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
+  def  getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
     val result = mutable.Map[String, (String, String, DFRef)]()
     get(dacpUrlPrefix+"/listDataSets").mapIterator(rows => rows.foreach(row => {
       result.put(row.getAs[String](0), (row.getAs[String](1), row.getAs[String](2), row.getAs[DFRef](3)))
@@ -97,7 +97,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
   //dataFrameName -> (size,document,schema,statistic,dataFrame)
   private def getDataFrameInfoMap: Map[String, (Long, String, String, String, DFRef)] = {
     val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
-    getDataSetInfoMap.keys.map(dsName => get(dacpUrlPrefix + s"/listDataFrames/$dsName")).foreach(df => {
+    getDataSetInfoMap.values.map(v => get(v._3.url)).foreach(df => {
       df.mapIterator(iter => iter.foreach(row => {
         result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
       }))
@@ -105,7 +105,7 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
     result.toMap
   }
   //dataFrameName -> (hostInfo, resourceInfo)
-  private def getHostInfoMap(): Map[String, (String, String)] = {
+  def getHostInfoMap(): Map[String, (String, String)] = {
     val result = mutable.Map[String, (String, String)]()
     get(dacpUrlPrefix+"/listHostInfo").mapIterator(iter => iter.foreach(row => {
       result.put(row.getAs[String](0),(row.getAs[String](1), row.getAs[String](2)))
