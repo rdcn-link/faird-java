@@ -26,6 +26,8 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))
   val csvDir = getOutputDir(baseDirString, Seq(subDirString, "csv").mkString(File.separator))
   val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
+  val jsonDir = getOutputDir(baseDirString, Seq(subDirString, "json").mkString(File.separator))
+
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir).map(file => {
@@ -36,10 +38,16 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   lazy val excelDfInfos = listFiles(excelDir).map(file => {
     DataFrameInfo(Paths.get("/excel").resolve(file.getName).toString.replace("\\","/"), Paths.get(file.getAbsolutePath).toUri, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
   })
+  lazy val jsonDfInfos = listFiles(jsonDir).map(file => {
+    DataFrameInfo(Paths.get("/json").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, JSONSource(true), StructType.empty.add("id", LongType).add("value", DoubleType))
+  })
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
   val dataSetExcel = DataSet("excel", "3", excelDfInfos.toList)
+  val dataSetJson = DataSet("json", "4", jsonDfInfos.toList)
+
+
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
@@ -85,7 +93,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
     }
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
-    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel)
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel, dataSetJson)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       Paths.get(baseDir,relativePath).toString
     }

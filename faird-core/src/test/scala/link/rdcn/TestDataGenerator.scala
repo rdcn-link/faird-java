@@ -39,7 +39,7 @@ object TestDataGenerator {
       val fileName = s"binary_data_$i.bin"
       val filePath = Paths.get(binDir).resolve(fileName)
       val startTime = System.currentTimeMillis()
-      val size = 1024 * 1024 * 1024 // 1GB
+      val size = 1024 * 1024 * 1024 * 1L// 1GB
       var fos: FileOutputStream = null
       try {
         fos = new FileOutputStream(filePath.toFile)
@@ -64,15 +64,18 @@ object TestDataGenerator {
       val fileName = s"data_$i.csv"
       val filePath = Paths.get(csvDir).resolve(fileName).toFile
       val startTime = System.currentTimeMillis()
-      val rows = 10000 // 1 亿行
+      val rows = 5000000 // 1 亿行
       var writer: BufferedWriter = null // 声明为 var，方便 finally 块中访问
 
       try {
         writer = new BufferedWriter(new FileWriter(filePath), 1024 * 1024) // 1MB 缓冲区
-        writer.write("id,value\n") // 写入表头
+        writer.write("id,value,value_2,value_3,value_\n") // 写入表头
 
         for (row <- 1 to rows) {
-          writer.append(row.toString).append(',').append(math.random.toString).append('\n')
+          writer.append(row.toString).append(',').append(math.random.toString)
+            .append(',').append(math.random.toString)
+            .append(',').append(math.random.toString)
+            .append(',').append(math.random.toString).append('\n')
           if (row % 1000000 == 0) writer.flush() // 每百万行刷一次
         }
 
