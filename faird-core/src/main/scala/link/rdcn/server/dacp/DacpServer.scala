@@ -29,46 +29,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
   val dftpServiceHandler = new DftpServiceHandler {
     override def doAction(request: ActionRequest, response: ActionResponse): Unit = response.sendError(501, s"${request.getActionName()} Not Implemented")
 
-    override def doGet(request: GetRequest, response: GetResponse): Unit = {
-      request.getRequestedPath() match {
-        case "/listDataSets" =>
-          try {
-            response.sendDataFrame(doListDataSets())
-          }catch {
-            case e: Exception =>
-              logger.error("Error while listDataSets", e)
-              response.sendError(500, e.getMessage)
-          }
-        case path if path.startsWith("/listDataFrames") => {
-          try{
-            response.sendDataFrame(doListDataFrames(request.getRequestedPath()))
-          }catch {
-            case e: Exception =>
-              logger.error("Error while listDataFrames", e)
-              response.sendError(500, e.getMessage)
-          }
-        }
-        case path if path.startsWith("/listHostInfo") => {
-          try{
-            response.sendDataFrame(doListHostInfo)
-          }catch {
-            case e: Exception =>
-              logger.error("Error while listHostInfo", e)
-              response.sendError(500, e.getMessage)
-          }
-        }
-        case otherPath =>
-          try{
-            val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(otherPath)
-            val dataFrame: DataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
-            response.sendDataFrame(dataFrame)
-          }catch {
-            case e: Exception =>
-              logger.error(s"Error while get resource $otherPath", e)
-              response.sendError(500, e.getMessage)
-          }
-      }
-    }
+    override def doGet(request: GetRequest, response: GetResponse): Unit = this.doGet(request, response)
 
     override def doPut(request: PutRequest, response: PutResponse): Unit = {
       val dataFrame = request.getDataFrame()
@@ -85,13 +46,58 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     }
   }
   val protocolSchema = "dacp"
-  val server = new DftpServer().setProtocolSchema("protocolSchema")
+  val server = new DftpServer().setProtocolSchema(protocolSchema)
     .setAuthHandler(authProvider)
     .setDftpServiceHandler(dftpServiceHandler)
 
-  def start(fairdConfig: FairdConfig): Unit = server.start(fairdConfig)
-
+  def start(fairdConfig: FairdConfig): Unit = {
+    baseUrl = s"$protocolSchema://${fairdConfig.hostPosition}:${fairdConfig.hostPort}"
+    ConfigLoader.init(fairdConfig)
+    server.start(fairdConfig)
+  }
   def close(): Unit = server.close()
+
+  def doGet(request: GetRequest, response: GetResponse): Unit = {
+    request.getRequestedPath() match {
+      case "/listDataSets" =>
+        try {
+          response.sendDataFrame(doListDataSets())
+        }catch {
+          case e: Exception =>
+            logger.error("Error while listDataSets", e)
+            response.sendError(500, e.getMessage)
+        }
+      case path if path.startsWith("/listDataFrames") => {
+        try{
+          response.sendDataFrame(doListDataFrames(request.getRequestedPath()))
+        }catch {
+          case e: Exception =>
+            logger.error("Error while listDataFrames", e)
+            response.sendError(500, e.getMessage)
+        }
+      }
+      case path if path.startsWith("/listHostInfo") => {
+        try{
+          response.sendDataFrame(doListHostInfo)
+        }catch {
+          case e: Exception =>
+            logger.error("Error while listHostInfo", e)
+            response.sendError(500, e.getMessage)
+        }
+      }
+      case otherPath =>
+        try{
+          val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(otherPath)
+          val dataFrame: DataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
+          response.sendDataFrame(dataFrame)
+        }catch {
+          case e: Exception =>
+            logger.error(s"Error while get resource $otherPath", e)
+            response.sendError(500, e.getMessage)
+        }
+    }
+  }
+
   /**
    * 输入链接（实现链接）： dacp://0.0.0.0:3101/listDataSets
    * 返回链接： dacp://0.0.0.0:3101/listDataFrames/dataSetName
@@ -104,7 +110,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       model.write(writer, "RDF/XML");
       val dataSetInfo = new JSONObject().put("name", dsName).toString
       Row.fromTuple((dsName, writer.toString
-        ,dataSetInfo, DFRef(s"${url}/listDataFrames/$dsName")))
+        ,dataSetInfo, DFRef(s"${baseUrl}/listDataFrames/$dsName")))
     }).toIterator
     val schema = StructType.empty.add("name", StringType)
       .add("meta", StringType).add("DataSetInfo", StringType).add("dataFrames", RefType)
@@ -124,7 +130,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       .map(dfName => {
         (dfName, dataProvider.getDataStreamSource(dfName).rowCount
           ,getDataFrameDocumentJsonString(dfName) , getDataFrameSchemaString(dfName)
-          ,getDataFrameStatisticsString(dfName), DFRef(s"${url}/$dfName"))
+          ,getDataFrameStatisticsString(dfName), DFRef(s"${baseUrl}/$dfName"))
       })
       .map(Row.fromTuple(_)).toIterator
     DefaultDataFrame(schema, stream)
@@ -141,7 +147,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     DefaultDataFrame(schema, stream)
   }
 
-  private val url = s"$protocolSchema://${ConfigLoader.fairdConfig.hostPosition}:${ConfigLoader.fairdConfig.hostPort}"
+  var baseUrl: String = _
 
   private def getHostInfoString(): String = {
     val hostInfo = Map(s"$FAIRD_HOST_NAME" -> s"${ConfigLoader.fairdConfig.hostName}",

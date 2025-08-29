@@ -1,17 +1,15 @@
 package link.rdcn.client.dacp
 
-import link.rdcn.ConfigLoader
 import link.rdcn.client.UrlValidator
-import link.rdcn.client.dag.Flow
 import link.rdcn.client.dftp.DftpClient
 import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
-import link.rdcn.struct.{DFRef, DataFrame, ExecutionResult}
+import link.rdcn.struct.{DFRef, DataFrame}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.json.{JSONArray, JSONObject}
 
 import java.io.StringReader
-import scala.collection.JavaConverters.{asScalaIteratorConverter, iterableAsScalaIterableConverter}
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
 
 /**
@@ -20,7 +18,7 @@ import scala.collection.mutable
  * @Date 2025/8/18 16:30
  * @Modified By:
  */
-class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpClient(url, port, useTLS) {
+class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends DftpClient(host, port, useTLS) {
 
   override val prefixSchema: String = "dacp"
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
@@ -55,7 +53,6 @@ class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpC
 
       override def getColumnTitle(colName: String): Option[String] = Some(jo.getString("title"))
     }
-
   }
 
   def getStatistics(dataFrameName: String): DataFrameStatistics = {
@@ -84,7 +81,7 @@ class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpC
     }.toMap
   }
 
-  private val dacpUrlPrefix: String = s"$prefixSchema://$url:$port"
+  private val dacpUrlPrefix: String = s"$prefixSchema://$host:$port"
 
   //dataSetName -> (metaData, dataSetInfo, dataFrames)
   def  getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
@@ -104,7 +101,7 @@ class FairdClient(url: String, port: Int, useTLS: Boolean = false) extends DftpC
     })
     result.toMap
   }
-  //dataFrameName -> (hostInfo, resourceInfo)
+  //hostName -> (hostInfo, resourceInfo)
   def getHostInfoMap(): Map[String, (String, String)] = {
     val result = mutable.Map[String, (String, String)]()
     get(dacpUrlPrefix+"/listHostInfo").mapIterator(iter => iter.foreach(row => {

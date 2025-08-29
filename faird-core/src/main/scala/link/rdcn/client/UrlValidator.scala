@@ -8,7 +8,8 @@ package link.rdcn.client
  */
 case class UrlValidator(protocolPrefix: String) {
   private val DftpUrlPattern = s"^${protocolPrefix}://([^:/]+)(?::(\\d+))?(/.*)?$$".r
-
+  // 路径规则：必须/开头，且后面至少有一个非/字符（或单独一个/）
+  private val pathPattern = "^/([^/].*)?$".r
   def validate(url: String): Either[String, (String, Option[Int], String)] = {
     url match {
       case DftpUrlPattern(host, portStr, path) =>
@@ -58,6 +59,13 @@ case class UrlValidator(protocolPrefix: String) {
    */
   def isValid(url: String): Boolean = validate(url).isRight
 
+  def isPath(input: String): Boolean = {
+    input match {
+      case pathPattern() => true
+      case _ => false
+    }
+  }
+
   /**
    * Extracts just the path component from a DFTP URL
    */
@@ -66,8 +74,9 @@ case class UrlValidator(protocolPrefix: String) {
   }
 }
 
-object UrlValidator{
+object UrlValidator {
   private val UrlPattern = "^([a-zA-Z][a-zA-Z0-9]*)://([^:/]+)(?::(\\d+))?(/.*)?$".r
+
   def extractBase(url: String): Option[(String, String, Int)] = {
     url match {
       case UrlPattern(protocol, host, port, _) =>
@@ -98,7 +107,12 @@ object UrlValidator{
         Left(s"Invalid URL format: $url. Expected format: protocolSchema://host[:port][/path]")
     }
   }
+
   def extractPath(url: String): Either[String, String] = {
     validate(url).map { case (_, _, _, path) => path }
+  }
+
+  def extractBaseUrlAndPath(url: String): Either[String, (String, String)] = {
+    validate(url).map { case (protocolSchema, host, port, path) => (s"$protocolSchema://$host:${port.getOrElse(3101)}", path) }
   }
 }

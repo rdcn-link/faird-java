@@ -7,6 +7,7 @@ import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperati
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import link.rdcn.util.{ClientUtils, CodecUtils, DataUtils, ServerUtils}
 import link.rdcn.Logging
+import link.rdcn.client.UrlValidator
 import link.rdcn.dftp.DftpConfig
 import org.apache.arrow.flight.auth.ServerAuthHandler
 import org.apache.arrow.flight.{Action, CallStatus, Criteria, FlightDescriptor, FlightEndpoint, FlightInfo, FlightProducer, FlightServer, FlightStream, Location, NoOpFlightProducer, PutResult, Result, Ticket}
@@ -14,7 +15,6 @@ import org.apache.arrow.memory.{ArrowBuf, BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.arrow.vector.{VectorLoader, VectorSchemaRoot}
 
-import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util
 import java.util.{Optional, UUID}
@@ -185,10 +185,15 @@ class DftpServer {
     override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
       val setDataBatchLen = 100
       val ticketInfo = CodecUtils.decodeTicket(ticket.getBytes)
-      val request = new GetRequest {
-        override def getRequestedPath(): String = ticketInfo._2
-      }
       val operation = Operation.fromJsonString(ticketInfo._3)
+      val baseUrlAndPath = UrlValidator.extractBaseUrlAndPath(ticketInfo._2) match {
+        case Right(value) => value
+        case Left(message) => ("", ticketInfo._2)
+      }
+      val request = new GetRequest {
+        override def getRequestedPath(): String = baseUrlAndPath._2
+        override def getRequestedBaseUrl(): String = baseUrlAndPath._1
+      }
       val response = new GetResponse {
         override def sendDataFrame(inDataFrame: DataFrame): Unit = {
           val outDataFrame = operation.execute(inDataFrame)
@@ -235,8 +240,7 @@ class DftpServer {
             response.sendDataFrame(DefaultDataFrame(schema, stream))
           })
         }
-      }
-      dftpServiceHandler.doGet(request, response)
+      }else dftpServiceHandler.doGet(request, response)
     }
 
     override def acceptPut(

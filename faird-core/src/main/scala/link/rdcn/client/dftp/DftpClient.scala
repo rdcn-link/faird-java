@@ -6,9 +6,10 @@ import link.rdcn.dftree.FunctionWrapper.RepositoryOperator
 import link.rdcn.dftree._
 import link.rdcn.server.dftp.ArrowFlightStreamWriter
 import link.rdcn.struct._
-import link.rdcn.user.Credentials
+import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.{ClientUtils, ClosableIterator, CodecUtils, IteratorInputStream, ServerUtils}
-import org.apache.arrow.flight.{Action, PutResult, FlightClient, FlightDescriptor, Location, SyncPutListener, Ticket}
+import org.apache.arrow.flight.auth.ClientAuthHandler
+import org.apache.arrow.flight.{Action, FlightClient, FlightDescriptor, Location, PutResult, SyncPutListener, Ticket}
 import org.apache.arrow.vector.{VectorLoader, VectorSchemaRoot}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.json.JSONObject
@@ -26,7 +27,7 @@ import scala.collection.mutable
  * @Date 2025/8/17 19:47
  * @Modified By:
  */
-class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
+class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
   val prefixSchema: String = "dftp"
   def login(credentials: Credentials): Unit = {
     flightClient.authenticate(new FlightClientAuthHandler(credentials))
@@ -40,9 +41,15 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
 
   def get(url: String): DataFrame = {
     val urlValidator = new UrlValidator(prefixSchema)
-    urlValidator.extractPath(url) match {
-      case Right(path) => RemoteDataFrameProxy(path, getRows)
-      case Left(message) => throw new IllegalArgumentException(message)
+    if(urlValidator.isPath(url)) RemoteDataFrameProxy(url, getRows) else {
+      urlValidator.validate(url) match {
+        case Right((host, port, path)) => {
+          if(host == this.host && port.getOrElse(3101)== this.port)
+            RemoteDataFrameProxy(url, getRows)
+          else throw new IllegalArgumentException(s"Invalid request URL: $url  Expected format: $prefixSchema://${this.host}[:${this.port}]")
+        }
+        case Left(message) => throw new IllegalArgumentException(message)
+      }
     }
   }
 
@@ -95,7 +102,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
   //执行 DAG
   def execute(transformerDAG: Flow): ExecutionResult = {
     val executePaths = transformerDAG.getExecutionPaths()
-    val dfs: Seq[DataFrame] = executePaths.map(path => getRemoteDataFrameByDAGPath(path))
+    val dfs: Seq[DataFrame] = executePaths.map(path =>getRemoteDataFrameByDAGPath(path))
     new ExecutionResult() {
       override def single(): DataFrame = dfs.head
 
@@ -106,7 +113,7 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
       }.toMap
     }
   }
-  private def getRows(dataFrameName: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
+  protected def getRows(dataFrameName: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
     val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM ,dataFrameName, operationNode)))
     val stream = schemaAndIter._2.map(seq => Row.fromSeq(seq))
     (schemaAndIter._1, ClosableIterator(stream)())
@@ -194,12 +201,32 @@ class DftpClient (url: String, port: Int, useTLS: Boolean = false) {
       val fis = new InputStreamReader(new FileInputStream(Paths.get(confPathURI).resolve("user.conf").toString), "UTF-8")
       try props.load(fis) finally fis.close()
       System.setProperty("javax.net.ssl.trustStore", Paths.get(props.getProperty("tls.path")).toString())
-      Location.forGrpcTls(url, port)
+      Location.forGrpcTls(host, port)
     } else
-      Location.forGrpcInsecure(url, port)
+      Location.forGrpcInsecure(host, port)
   }
   private val allocator: BufferAllocator = new RootAllocator()
   private val flightClient: FlightClient = FlightClient.builder(allocator, location).build()
+
+  private class FlightClientAuthHandler(credentials: Credentials) extends ClientAuthHandler  {
+
+    private var callToken: Array[Byte] = _
+
+    override def authenticate(clientAuthSender: ClientAuthHandler.ClientAuthSender, iterator: java.util.Iterator[Array[Byte]]): Unit = {
+      credentials match {
+        case UsernamePassword(username, password) => clientAuthSender.send(CodecUtils.encodePair(username, password))
+        case Credentials.ANONYMOUS =>
+          clientAuthSender.send(CodecUtils.encodePair("ANONYMOUS","ANONYMOUS"))
+        case _ => new IllegalArgumentException(s"$credentials not supported")
+      }
+      try {
+        callToken = iterator.next()
+      }catch {
+        case _: Exception => callToken = null
+      }
+    }
+    override def getCallToken: Array[Byte] = callToken
+  }
 }
 
 

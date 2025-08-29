@@ -11,6 +11,7 @@ import link.rdcn.struct.DataFrame
  */
 trait GetRequest {
   def getRequestedPath(): String
+  def getRequestedBaseUrl(): String
 }
 
 trait GetResponse {
