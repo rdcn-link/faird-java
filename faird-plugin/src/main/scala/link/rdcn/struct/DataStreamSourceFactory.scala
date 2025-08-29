@@ -46,6 +46,7 @@ object DataStreamSourceFactory{
 
 
   def createJSONDataStreamSource(jsonFile: File, multiline: Boolean = false): DataStreamSource = {
+    val sampleSize = 1
     val fileRowCount = DataUtils.countLinesFast(jsonFile)
     val iterLines: ClosableIterator[String] = DataUtils.getFileLines(jsonFile)
     val sampleBuffer = iterLines.take(sampleSize).toArray

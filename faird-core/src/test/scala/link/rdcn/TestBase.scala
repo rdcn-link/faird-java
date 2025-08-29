@@ -98,6 +98,7 @@ abstract class DataProviderImpl extends DataProvider {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.path))
       case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path))
       case _: ExcelSource => DataStreamSourceFactory.createExcelDataStreamSource(Paths.get(dataFrameInfo.path).toString)
+      case jsonSource: JSONSource => DataStreamSourceFactory.createJSONDataStreamSource(new File(dataFrameInfo.path), jsonSource.multiline)
       case _: InputSource => ???
     }
 
