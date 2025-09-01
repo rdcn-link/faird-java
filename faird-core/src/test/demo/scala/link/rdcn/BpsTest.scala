@@ -25,8 +25,8 @@ object BpsTest {
     val jsonPath = "/json/million_lines.json"
     val binPath = "/bin"
     time(testBin,binPath)
-//    time(testJson,jsonPath)
-//    time(testJsonSelect,jsonPath)
+    time(testJson,jsonPath)
+    time(testJsonSelect,jsonPath)
     time(testCsv,csvPath)
   }
 
