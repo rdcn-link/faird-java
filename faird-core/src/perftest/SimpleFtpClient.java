@@ -159,10 +159,7 @@ public class SimpleFtpClient {
                 batch.add(line);
                 try {
                     // 将每行解析为JSON对象
-                    // 将处理后的JSON对象写回新文件
-
                     linesProcessed++;
-
                     if (batch.size() == batchSize) {
                         processAndWriteBatch(batch, op, writer);
                         batch.clear(); // 清空批次列表
