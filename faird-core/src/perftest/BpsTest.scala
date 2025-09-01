@@ -16,8 +16,6 @@ import java.nio.file.{Files, Path, Paths}
 
 object BpsTest {
 
-  // 检查文件是否存在且是一个文
-  //  val prefix = "/home/faird/faird/faird-core/src/test/demo/data"
   //测试数据文件夹
   val prefix = "/home/faird/faird-core/src/test/demo/data/"
   val dc: FairdClient = FairdClient.connect("dacp://10.0.87.114:3101", UsernamePassword("admin@instdb.cn", "admin001"))
@@ -27,14 +25,14 @@ object BpsTest {
     val csvPath = "/csv/data_7.csv"
     val jsonPath = "/json/million_lines.json"
     val binPath = "/bin"
-    //    time(testBin,binPath)
-    //    time(testJson,jsonPath)
-    //    time(testJsonSelect,jsonPath)
-    //    time(testCsv,csvPath)
-    //    testRowJson(jsonPath,step)
-    //    testRowCsv(csvPath,step)
-    testRowSelectCsv(csvPath,step)
-    //    testRowSelectJson(jsonPath,step)
+        time(testBin,binPath)
+        time(testJson,jsonPath)
+        time(testJsonSelect,jsonPath)
+        time(testCsv,csvPath)
+        testRowJson(jsonPath,step)
+        testRowCsv(csvPath,step)
+        testRowSelectCsv(csvPath,step)
+        testRowSelectJson(jsonPath,step)
   }
 
   def testCsv(name: String): Unit = {
