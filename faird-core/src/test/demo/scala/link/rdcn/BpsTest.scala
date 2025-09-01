@@ -16,9 +16,7 @@ import java.nio.file.{Files, Path, Paths}
 
 object BpsTest {
 
-  // 检查文件是否存在且是一个文
-//  val prefix = "/home/faird/faird/faird-core/src/test/demo/data"
-  val prefix = "C:\\Users\\ASUS\\Documents\\Projects\\PycharmProjects\\Faird\\Faird\\faird-core\\src\\test\\demo\\data\\"
+  val prefix = "/home/faird/faird/faird-core/src/test/demo/data"
   val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
 
   def main(args: Array[String]): Unit = {
