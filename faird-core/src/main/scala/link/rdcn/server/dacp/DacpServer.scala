@@ -29,7 +29,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
   val dftpServiceHandler = new DftpServiceHandler {
     override def doAction(request: ActionRequest, response: ActionResponse): Unit = response.sendError(501, s"${request.getActionName()} Not Implemented")
 
-    override def doGet(request: GetRequest, response: GetResponse): Unit = this.doGet(request, response)
+    override def doGet(request: GetRequest, response: GetResponse): Unit = DacpServer.this.doGet(request, response)
 
     override def doPut(request: PutRequest, response: PutResponse): Unit = {
       val dataFrame = request.getDataFrame()

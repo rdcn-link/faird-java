@@ -13,7 +13,7 @@ import link.rdcn.user.Credentials
  * @Date 2025/8/28 09:23
  * @Modified By:
  */
-private class UnionClient(host: String, port: Int, useTLS: Boolean = false) extends FairdClient(host, port, useTLS){
+class UnionClient private(host: String, port: Int, useTLS: Boolean = false) extends FairdClient(host, port, useTLS){
 
   override def get(url: String): DataFrame = {
     val urlValidator = new UrlValidator(prefixSchema)
