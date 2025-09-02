@@ -14,6 +14,10 @@ trait Transformer11 extends FlowNode with Serializable {
   def transform(dataFrame: DataFrame): DataFrame
 }
 
+trait Transformer21 extends FlowNode with Serializable {
+  def transform(leftDataFrame: DataFrame, rightDataFrame: DataFrame)
+}
+
 case class RepositoryNode(
                     functionId: String,
                     args: Map[String, String] = Map.empty

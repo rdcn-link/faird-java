@@ -1,7 +1,6 @@
 package link.rdcn.dftree
 
 import jep.Jep
-import link.rdcn.client.dag.GenericFunctionCall
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row}
 import link.rdcn.util.DataUtils.getDataFrameByStream
 import link.rdcn.util.{ByteArrayClassLoader, ClosableIterator, DataUtils}

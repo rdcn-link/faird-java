@@ -1,6 +1,10 @@
 package link.rdcn
 
+import link.rdcn.dftp.DftpConfig
+
 import scala.beans.BeanProperty
+import java.io.File
+import java.nio.file.Paths
 
 /**
  * @Author renhao
@@ -8,9 +12,10 @@ import scala.beans.BeanProperty
  * @Data 2025/7/9 17:23
  * @Modified By:
  */
-class FairdConfig() {
+//TODO 修改为scala风格，兼容spring IOC
+class FairdConfig() extends DftpConfig{
   @BeanProperty var fairdHome: String = getClass.getClassLoader.getResource("").getPath
-  @BeanProperty var hostName: String = ""
+  @BeanProperty var hostName: String = s"${hostPosition}:${hostPort}"
   @BeanProperty var hostTitle: String = ""
   @BeanProperty var hostPosition: String = "0.0.0.0"
   @BeanProperty var hostDomain: String = ""
@@ -25,6 +30,16 @@ class FairdConfig() {
   @BeanProperty var pythonHome: String = null
 
   override def toString: String = s"FairdConfig($fairdHome, $hostName, $hostTitle, ...)"
+
+  override def host: String = hostPosition
+
+  override def port: Int = hostPort
+
+  override def useTls: Boolean = useTLS
+
+  override def tlsCertFile: File = Paths.get(fairdHome, certPath).toFile
+
+  override def tlsKeyFile: File = Paths.get(fairdHome, keyPath).toFile
 }
 
 object FairdConfig {
@@ -69,7 +84,7 @@ object FairdConfig {
 
     FairdConfig(
       fairdHome = getOrDefault(ConfigKeys.FAIRD_HOME, ""),
-      hostName = getOrDefault(ConfigKeys.FAIRD_HOST_NAME, ""),
+      hostName = getOrDefault(ConfigKeys.FAIRD_HOST_NAME, s"${getOrDefault(ConfigKeys.FAIRD_HOST_POSITION,"0.0.0.0")}:${getOrDefault(ConfigKeys.FAIRD_HOST_PORT,"3101")}"),
       hostTitle = getOrDefault(ConfigKeys.FAIRD_HOST_TITLE, ""),
       hostPosition = getOrDefault(ConfigKeys.FAIRD_HOST_POSITION,"0.0.0.0"),
       hostDomain = getOrDefault(ConfigKeys.FAIRD_HOST_DOMAIN,""),

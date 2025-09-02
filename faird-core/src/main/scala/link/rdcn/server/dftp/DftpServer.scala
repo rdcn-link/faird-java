@@ -6,16 +6,16 @@ import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row, StructType}
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, UsernamePassword}
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import link.rdcn.util.{ClientUtils, CodecUtils, DataUtils, ServerUtils}
-import link.rdcn.{ConfigLoader, FairdConfig, Logging}
+import link.rdcn.Logging
+import link.rdcn.client.UrlValidator
+import link.rdcn.dftp.DftpConfig
 import org.apache.arrow.flight.auth.ServerAuthHandler
 import org.apache.arrow.flight.{Action, CallStatus, Criteria, FlightDescriptor, FlightEndpoint, FlightInfo, FlightProducer, FlightServer, FlightStream, Location, NoOpFlightProducer, PutResult, Result, Ticket}
 import org.apache.arrow.memory.{ArrowBuf, BufferAllocator, RootAllocator}
 import org.apache.arrow.vector.types.pojo.Schema
 import org.apache.arrow.vector.{VectorLoader, VectorSchemaRoot}
 
-import java.io.File
 import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
 import java.util
 import java.util.{Optional, UUID}
 import java.util.concurrent.ConcurrentHashMap
@@ -64,9 +64,9 @@ class DftpServer {
     this.protocolSchema = protocolSchema
     this
   }
-  def start(fairdConfig: FairdConfig): Unit = synchronized {
+  def start(dftpConfig: DftpConfig): Unit = synchronized {
     if (started) return
-    buildServer(fairdConfig)
+    buildServer(dftpConfig)
     serverThread = new Thread(() => {
       try {
         flightServer.start()
@@ -121,21 +121,19 @@ class DftpServer {
   @volatile private var serverThread: Thread = _
   @volatile private var started: Boolean = false
 
-  private def buildServer(fairdConfig: FairdConfig): Unit = {
-    // 初始化配置
-    ConfigLoader.init(fairdConfig)
-    val location = if(ConfigLoader.fairdConfig.useTLS)
-      Location.forGrpcTls(ConfigLoader.fairdConfig.hostPosition, ConfigLoader.fairdConfig.hostPort)
+  private def buildServer(dftpConfig: DftpConfig): Unit = {
+    val location = if(dftpConfig.useTls)
+      Location.forGrpcTls(dftpConfig.host, dftpConfig.port)
     else
-      Location.forGrpcInsecure(ConfigLoader.fairdConfig.hostPosition, ConfigLoader.fairdConfig.hostPort)
+      Location.forGrpcInsecure(dftpConfig.host, dftpConfig.port)
 
     allocator = new RootAllocator()
 
     val producer = new DftpFlightProducer(allocator, location, dftpServiceHandler)
 
-    if(ConfigLoader.fairdConfig.useTLS){
+    if(dftpConfig.useTls){
       flightServer = FlightServer.builder(allocator, location, producer)
-        .useTls(new File(Paths.get(fairdConfig.fairdHome, ConfigLoader.fairdConfig.certPath).toString), new File(Paths.get(fairdConfig.fairdHome, ConfigLoader.fairdConfig.keyPath).toString))
+        .useTls(dftpConfig.tlsCertFile, dftpConfig.tlsKeyFile)
         .authHandler(new FlightServerAuthHandler(authProvider, authenticatedUserMap))
         .build()
     }else{
@@ -187,10 +185,15 @@ class DftpServer {
     override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
       val setDataBatchLen = 100
       val ticketInfo = CodecUtils.decodeTicket(ticket.getBytes)
-      val request = new GetRequest {
-        override def getRequestedPath(): String = ticketInfo._2
-      }
       val operation = Operation.fromJsonString(ticketInfo._3)
+      val baseUrlAndPath = UrlValidator.extractBaseUrlAndPath(ticketInfo._2) match {
+        case Right(value) => value
+        case Left(message) => ("", ticketInfo._2)
+      }
+      val request = new GetRequest {
+        override def getRequestedPath(): String = baseUrlAndPath._2
+        override def getRequestedBaseUrl(): String = baseUrlAndPath._1
+      }
       val response = new GetResponse {
         override def sendDataFrame(inDataFrame: DataFrame): Unit = {
           val outDataFrame = operation.execute(inDataFrame)
@@ -237,8 +240,7 @@ class DftpServer {
             response.sendDataFrame(DefaultDataFrame(schema, stream))
           })
         }
-      }
-      dftpServiceHandler.doGet(request, response)
+      }else dftpServiceHandler.doGet(request, response)
     }
 
     override def acceptPut(
