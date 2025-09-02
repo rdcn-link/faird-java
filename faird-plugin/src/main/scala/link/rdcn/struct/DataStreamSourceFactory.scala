@@ -9,6 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.sql.{Connection, DriverManager, ResultSet}
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 /**
  * @Author renhao
@@ -78,6 +79,17 @@ object DataStreamSourceFactory{
       override def schema: StructType = structType
 
       override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(iterLines.onClose)
+    }
+  }
+
+  def createStructuredSource(dataFrame: Seq[Row], structType: StructType, source: Source): DataStreamSource = {
+
+    new DataStreamSource {
+      override def rowCount: Long = -1
+
+      override def schema: StructType = structType
+
+      override def iterator: ClosableIterator[Row] = ClosableIterator(dataFrame.iterator)(source.close())
     }
   }
 

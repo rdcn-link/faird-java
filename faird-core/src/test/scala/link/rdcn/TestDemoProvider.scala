@@ -12,10 +12,15 @@ import link.rdcn.server.exception._
 import link.rdcn.struct.ValueType.{DoubleType, IntType, LongType}
 import link.rdcn.struct._
 import link.rdcn.user._
+import link.rdcn.util.{ClosableIterator, DataUtils}
 import link.rdcn.util.DataUtils.listFiles
+import org.json.JSONObject
 
 import java.io.File
 import java.nio.file.Paths
+import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 //用于Demo的Provider
 class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String = "data") {
@@ -27,6 +32,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   val csvDir = getOutputDir(baseDirString, Seq(subDirString, "csv").mkString(File.separator))
   val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
   val jsonDir = getOutputDir(baseDirString, Seq(subDirString, "json").mkString(File.separator))
+  val structuredDir = getOutputDir(baseDirString, Seq(subDirString, "structured").mkString(File.separator))
 
 
   //根据文件生成元信息
@@ -42,10 +48,42 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
     DataFrameInfo(Paths.get("/json").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, JSONSource(true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
 
+  val structuredDataFrame = getStructuredDataFrame(structuredDir)
+  lazy val structuredDfInfos = listFiles(structuredDir).map(file => {
+    DataFrameInfo(Paths.get("/structured").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri,
+      StructuredSource(structuredDataFrame._1,structuredDataFrame._2, structuredDataFrame._3), StructType.empty.add("id", LongType).add("value", DoubleType))
+  })
+
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
   val dataSetExcel = DataSet("excel", "3", excelDfInfos.toList)
   val dataSetJson = DataSet("json", "4", jsonDfInfos.toList)
+  val dataSetStructrued = DataSet("structured", "5", structuredDfInfos.toList)
+
+  private def getStructuredDataFrame(structuredDir: String): (Seq[Row], StructType, Source) = {
+    val file =  listFiles(structuredDir).toSeq.head
+    val sampleSize = 1
+    val source = Source.fromFile(file)
+    val lines: Seq[String] = source.getLines().toSeq
+    val head = lines.take(1)
+    val headerArray = new ArrayBuffer[String]()
+    if (head.nonEmpty) {
+      val firstObject = new JSONObject(head.head)
+      firstObject.keys().asScala.foreach(key=> headerArray.append(key))
+    }
+    val sampleObjects = head.map(new JSONObject(_)).iterator.map { jo =>
+      // 根据 headerArray 的顺序提取每个 key 对应的值
+      headerArray.map(jo.get).map(_.toString).toArray
+    }.toArray
+    val structType = DataUtils.inferSchema(sampleObjects, headerArray)
+    val rows: Seq[Row] = lines.map { line =>
+      val jo = new JSONObject(line)
+      val seq = headerArray.map(jo.get).map(_.toString)
+      Row.fromSeq(seq.toSeq)
+    }
+    val convertedRows = rows.map(DataUtils.convertStringRowToTypedRow(_, structType))
+    (convertedRows, structType, source)
+  }
 
 
 
@@ -93,7 +131,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
     }
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
-    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel, dataSetJson)
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel, dataSetJson, dataSetStructrued)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       Paths.get(baseDir,relativePath).toString
     }
