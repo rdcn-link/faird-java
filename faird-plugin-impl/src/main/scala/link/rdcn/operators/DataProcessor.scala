@@ -1,6 +1,6 @@
 package link.rdcn.operators
 
-import link.rdcn.client.dag.Transformer11
+import link.rdcn.client.recipe.Transformer11
 import link.rdcn.struct.{DataFrame, Row}
 
 /**

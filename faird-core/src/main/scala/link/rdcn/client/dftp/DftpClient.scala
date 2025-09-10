@@ -1,9 +1,9 @@
 package link.rdcn.client.dftp
 
-import link.rdcn.client.dag._
+import link.rdcn.client.recipe._
 import link.rdcn.client._
-import link.rdcn.dftree.FunctionWrapper.RepositoryOperator
-import link.rdcn.dftree._
+import link.rdcn.optree.FunctionWrapper.RepositoryOperator
+import link.rdcn.optree._
 import link.rdcn.server.dftp.ArrowFlightStreamWriter
 import link.rdcn.struct._
 import link.rdcn.user.{Credentials, UsernamePassword}
@@ -41,11 +41,11 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
 
   def get(url: String): DataFrame = {
     val urlValidator = new UrlValidator(prefixSchema)
-    if(urlValidator.isPath(url)) RemoteDataFrameProxy(url, getRows) else {
+    if(urlValidator.isPath(url)) RemoteDataFrameProxy(SourceOp(url), getRows) else {
       urlValidator.validate(url) match {
         case Right((host, port, path)) => {
           if(host == this.host && port.getOrElse(3101)== this.port)
-            RemoteDataFrameProxy(url, getRows)
+            RemoteDataFrameProxy(SourceOp(url), getRows)
           else throw new IllegalArgumentException(s"Invalid request URL: $url  Expected format: $prefixSchema://${this.host}[:${this.port}]")
         }
         case Left(message) => throw new IllegalArgumentException(message)
@@ -100,9 +100,9 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
   def close(): Unit = flightClient.close()
 
   //执行 DAG
-  def execute(transformerDAG: Flow): ExecutionResult = {
-    val executePaths = transformerDAG.getExecutionPaths()
-    val dfs: Seq[DataFrame] = executePaths.map(path =>getRemoteDataFrameByDAGPath(path))
+  def execute(recipe: Flow): ExecutionResult = {
+    val executePaths: Seq[FlowPath] = recipe.getExecutionPaths()
+    val dfs: Seq[DataFrame] = executePaths.map(path => RemoteDataFrameProxy(transformFlowToOperation(path), getRows))
     new ExecutionResult() {
       override def single(): DataFrame = dfs.head
 
@@ -113,8 +113,14 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
       }.toMap
     }
   }
-  protected def getRows(dataFrameName: String, operationNode: String): (StructType, ClosableIterator[Row]) = {
-    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM ,dataFrameName, operationNode)))
+
+  def getByOperation(operation: Operation): DataFrame = {
+    val schemaAndRow =  getRows(operation.toJsonString)
+    DefaultDataFrame(schemaAndRow._1, schemaAndRow._2)
+  }
+
+  protected def getRows(operationNode: String): (StructType, ClosableIterator[Row]) = {
+    val schemaAndIter = getStream(flightClient, new Ticket(CodecUtils.encodeTicket(CodecUtils.URL_STREAM , operationNode)))
     val stream = schemaAndIter._2.map(seq => Row.fromSeq(seq))
     (schemaAndIter._1, ClosableIterator(stream)())
   }
@@ -144,7 +150,7 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
                   if(v.getField.getMetadata.isEmpty) (vec.getName, v.get(index))
                   else {
                     val blobId = CodecUtils.decodeString(v.get(index))
-                    val blobTicket =  new Ticket(CodecUtils.encodeTicket(CodecUtils.BLOB_STREAM , blobId, SourceOp().toJson.toString()))
+                    val blobTicket =  new Ticket(CodecUtils.encodeTicket(CodecUtils.BLOB_STREAM , SourceOp(blobId).toJson.toString()))
                     val blob = new Blob {
                       val iter = getStream(flightClient, blobTicket)._2
                       val chunkIterator = iter.map(value => {
@@ -172,26 +178,31 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
       (schema, iter)
     }
 
-  private def getRemoteDataFrameByDAGPath(path: Seq[FlowNode]): DataFrame = {
-    val dataFrameName = path.head.asInstanceOf[SourceNode].dataFrameName
-    var operation: Operation = SourceOp()
-    path.foreach(node => node match {
+  private def transformFlowToOperation(path: FlowPath): Operation = {
+    path.node match {
       case f: Transformer11 =>
-        val genericFunctionCall = DataFrameCall(new SerializableFunction[DataFrame, DataFrame] {
+        val genericFunctionCall = DataFrameCall11(new SerializableFunction[DataFrame, DataFrame] {
           override def apply(v1: DataFrame): DataFrame = f.transform(v1)
         })
-        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), operation)
-        operation = transformerNode
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), transformFlowToOperation(path.children.head))
+        transformerNode
+      case f: Transformer21 =>
+        val genericFunctionCall = DataFrameCall21(new SerializableFunction[(DataFrame, DataFrame), DataFrame] {
+          override def apply(v1: (DataFrame, DataFrame)): DataFrame = f.transform(v1._1, v1._2)
+        })
+        val leftInput = transformFlowToOperation(path.children.head)
+        val rightInput = transformFlowToOperation(path.children.last)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper.getJavaSerialized(genericFunctionCall), leftInput, rightInput)
+        transformerNode
       case node: RepositoryNode =>
         val jo = new JSONObject()
         jo.put("type", LangType.REPOSITORY_OPERATOR.name)
         jo.put("functionID", node.functionId)
-        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[RepositoryOperator], operation)
-        operation = transformerNode
-      case s: SourceNode => // 不做处理
-      case _ => throw new IllegalArgumentException(s"This FlowNode ${node} is not supported please extend Transformer11 trait")
-    })
-    RemoteDataFrameProxy(dataFrameName, getRows, operation)
+        val transformerNode: TransformerNode = TransformerNode(FunctionWrapper(jo).asInstanceOf[RepositoryOperator], transformFlowToOperation(path.children.head))
+        transformerNode
+      case s: SourceNode => SourceOp(s.dataFrameName)
+      case other => throw new IllegalArgumentException(s"This FlowNode ${other} is not supported please extend Transformer11 trait")
+    }
   }
 
   private val location = {
@@ -213,12 +224,7 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
     private var callToken: Array[Byte] = _
 
     override def authenticate(clientAuthSender: ClientAuthHandler.ClientAuthSender, iterator: java.util.Iterator[Array[Byte]]): Unit = {
-      credentials match {
-        case UsernamePassword(username, password) => clientAuthSender.send(CodecUtils.encodePair(username, password))
-        case Credentials.ANONYMOUS =>
-          clientAuthSender.send(CodecUtils.encodePair("ANONYMOUS","ANONYMOUS"))
-        case _ => new IllegalArgumentException(s"$credentials not supported")
-      }
+      clientAuthSender.send(CodecUtils.encodeCredentials(credentials))
       try {
         callToken = iterator.next()
       }catch {

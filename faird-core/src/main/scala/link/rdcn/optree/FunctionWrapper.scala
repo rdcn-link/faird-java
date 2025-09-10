@@ -1,4 +1,4 @@
-package link.rdcn.dftree
+package link.rdcn.optree
 
 import jep.Jep
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row}
@@ -121,6 +121,7 @@ object FunctionWrapper {
         case (r1: Row, r2: Row) => genericFunctionCall.transform((r1, r2))
         case iter: Iterator[Row] => genericFunctionCall.transform(iter)
         case df: DataFrame => genericFunctionCall.transform(df)
+        case dfs: (DataFrame, DataFrame) => genericFunctionCall.transform(dfs)
         case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
     }
@@ -147,7 +148,6 @@ object FunctionWrapper {
           method.invoke(instance, getDataFrameByStream(input.asInstanceOf[ClosableIterator[Row]])).asInstanceOf[DataFrame]
         case other => throw new IllegalArgumentException(s"Unsupported input: $other")
       }
-
     }
   }
 
@@ -195,7 +195,7 @@ object FunctionWrapper {
       val urls = Array(jarFile.toURI.toURL)
       val parentLoader = getClass.getClassLoader
       val pluginLoader = new PluginClassLoader(urls, parentLoader)
-      val serviceLoader = ServiceLoader.load(classOf[link.rdcn.client.dag.Transformer11], pluginLoader).iterator()
+      val serviceLoader = ServiceLoader.load(classOf[link.rdcn.client.recipe.Transformer11], pluginLoader).iterator()
       if (!serviceLoader.hasNext) throw new Exception(s"No Transformer11 implementation class was found in this jar $jarPath")
       val udfFunction = serviceLoader.next()
       input match {

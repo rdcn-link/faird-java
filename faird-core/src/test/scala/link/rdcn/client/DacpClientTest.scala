@@ -21,7 +21,7 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  */
 
 
-class FairdClientTest extends TestProvider {
+class DacpClientTest extends TestProvider {
   val csvModel: Model = genModel
   val binModel: Model = genModel
 

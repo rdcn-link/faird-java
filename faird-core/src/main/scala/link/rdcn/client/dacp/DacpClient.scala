@@ -18,7 +18,7 @@ import scala.collection.mutable
  * @Date 2025/8/18 16:30
  * @Modified By:
  */
-class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends DftpClient(host, port, useTLS) {
+class DacpClient(host: String, port: Int, useTLS: Boolean = false) extends DftpClient(host, port, useTLS) {
 
   override val prefixSchema: String = "dacp"
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
@@ -111,23 +111,23 @@ class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends Dftp
   }
 }
 
-object FairdClient {
+object DacpClient {
   val protocolSchema = "dacp"
   private val urlValidator = UrlValidator(protocolSchema)
-  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
+  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>
-        val client = new FairdClient(parsed._1, parsed._2.getOrElse(3101))
+        val client = new DacpClient(parsed._1, parsed._2.getOrElse(3101))
         client.login(credentials)
         client
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
   }
-  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
+  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>
-        val client = new FairdClient(parsed._1, parsed._2.getOrElse(3101), true)
+        val client = new DacpClient(parsed._1, parsed._2.getOrElse(3101), true)
         client.login(credentials)
         client
       case Left(err) =>

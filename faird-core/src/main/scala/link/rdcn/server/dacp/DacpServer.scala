@@ -3,13 +3,15 @@ package link.rdcn.server.dacp
 import link.rdcn.ConfigKeys._
 import link.rdcn.provider.DataProvider
 import link.rdcn.received.DataReceiver
-import link.rdcn.server.dftp.{ActionRequest, ActionResponse, DftpServer, DftpServiceHandler, GetRequest, GetResponse, PutRequest, PutResponse}
+import link.rdcn.server.dftp.{ActionRequest, ActionResponse, CookRequest, CookResponse, DftpServer, DftpServiceHandler, GetRequest, GetResponse, PutRequest, PutResponse}
 import link.rdcn.struct.ValueType._
 import link.rdcn.struct.{DFRef, DataFrame, DataStreamSource, DefaultDataFrame, Row, StructType}
 import link.rdcn.util.DataUtils
 import link.rdcn.util.ServerUtils.getResourceStatusString
 import link.rdcn.{ConfigLoader, FairdConfig}
 import link.rdcn.Logging
+import link.rdcn.client.UrlValidator
+import link.rdcn.optree.ExecutionContext
 import link.rdcn.user.AuthProvider
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.json.{JSONArray, JSONObject}
@@ -29,7 +31,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
   val dftpServiceHandler = new DftpServiceHandler {
     override def doAction(request: ActionRequest, response: ActionResponse): Unit = response.sendError(501, s"${request.getActionName()} Not Implemented")
 
-    override def doGet(request: GetRequest, response: GetResponse): Unit = this.doGet(request, response)
+    override def doGet(request: GetRequest, response: GetResponse): Unit = DacpServer.this.doGet(request, response)
 
     override def doPut(request: PutRequest, response: PutResponse): Unit = {
       val dataFrame = request.getDataFrame()
@@ -44,18 +46,48 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       val jo = new JSONObject()
       response.sendMessage(jo.put("status","success").toString)
     }
+
+    override def doCook(request: CookRequest, response: CookResponse): Unit = DacpServer.this.doCook(request, response)
   }
   val protocolSchema = "dacp"
   val server = new DftpServer().setProtocolSchema(protocolSchema)
     .setAuthHandler(authProvider)
-    .setDftpServiceHandler(dftpServiceHandler)
+    .setServiceHandler(dftpServiceHandler)
 
   def start(fairdConfig: FairdConfig): Unit = {
-    baseUrl = s"$protocolSchema://${fairdConfig.hostPosition}:${fairdConfig.hostPort}"
     ConfigLoader.init(fairdConfig)
+    baseUrl = s"$protocolSchema://${fairdConfig.hostPosition}:${fairdConfig.hostPort}"
     server.start(fairdConfig)
   }
   def close(): Unit = server.close()
+
+  def doCook(request: CookRequest, response: CookResponse): Unit = {
+    val operation = request.getOperation
+    try{
+      response.sendDataFrame(operation.execute(new ExecutionContext {
+        override def loadSourceDataFrame(dataFrameNameUrl: String): Option[DataFrame] = {
+          var resultDataFrame: Option[DataFrame] = None
+          val baseUrlAndPath: (Option[String], String) = UrlValidator.extractBaseUrlAndPath(dataFrameNameUrl) match {
+            case Right((baseUrl, path)) => (Some(baseUrl), path)
+            case Left(message) => (None, dataFrameNameUrl)
+          }
+          val getRequest = new GetRequest {
+            override def getRequestedPath(): String = baseUrlAndPath._2
+            override def getRequestedBaseUrl(): Option[String] = baseUrlAndPath._1
+          }
+          val getResponse = new GetResponse {
+            override def sendDataFrame(dataFrame: DataFrame): Unit = resultDataFrame = Some(dataFrame)
+
+            override def sendError(code: Int, message: String): Unit = response.sendError(code, message)
+          }
+          doGet(request = getRequest, response = getResponse)
+          resultDataFrame
+        }
+      }))
+    }catch {
+      case e: Exception => response.sendError(500, e.getMessage)
+    }
+  }
 
   def doGet(request: GetRequest, response: GetResponse): Unit = {
     request.getRequestedPath() match {
@@ -76,7 +108,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
             response.sendError(500, e.getMessage)
         }
       }
-      case path if path.startsWith("/listHostInfo") => {
+      case "/listHostInfo" => {
         try{
           response.sendDataFrame(doListHostInfo)
         }catch {
@@ -147,7 +179,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     DefaultDataFrame(schema, stream)
   }
 
-  var baseUrl: String = _
+  var baseUrl: String = s"$protocolSchema://${ConfigLoader.fairdConfig.hostPosition}:${ConfigLoader.fairdConfig.hostPort}"
 
   private def getHostInfoString(): String = {
     val hostInfo = Map(s"$FAIRD_HOST_NAME" -> s"${ConfigLoader.fairdConfig.hostName}",
@@ -183,6 +215,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     stream.map(_.toJsonObject(schema)).foreach(ja.put(_))
     ja.toString()
   }
+
   private def getDataFrameSchemaString(dataFrameName: String): String = {
     val structType = getSchema(dataFrameName)
     val schema = StructType.empty.add("name", StringType).add("valueType", StringType).add("nullable", StringType)
@@ -192,6 +225,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     stream.map(_.toJsonObject(schema)).foreach(ja.put(_))
     ja.toString()
   }
+
   private def getDataFrameStatisticsString(dataFrameName: String): String = {
     val statistics = dataProvider.getStatistics(dataFrameName)
     val jo = new JSONObject()

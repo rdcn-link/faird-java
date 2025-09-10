@@ -36,7 +36,7 @@ object TestEmptyProvider {
     /**
      * 判断用户是否具有某项权限
      */
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = true
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: List[DataOperationType]): Boolean = true
   }
 
   val emptyDataProvider: DataProviderImpl = new DataProviderImpl() {
@@ -63,8 +63,6 @@ object TestEmptyProvider {
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
-
-    override def token: String = ???
   }
 
 

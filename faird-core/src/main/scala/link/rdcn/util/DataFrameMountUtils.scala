@@ -1,7 +1,7 @@
 package link.rdcn.util
 
 import link.rdcn.Logging
-import link.rdcn.dftree.fuse.{RowBatchFS, RowBatchFSSource}
+import link.rdcn.optree.fuse.{RowBatchFS, RowBatchFSSource}
 import link.rdcn.struct.DefaultDataFrame
 
 import java.nio.file.{Files, Path}

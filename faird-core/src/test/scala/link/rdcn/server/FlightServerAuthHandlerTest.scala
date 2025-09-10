@@ -1,7 +1,7 @@
 package link.rdcn.server
 
 import link.rdcn.TestBase.{adminPassword, adminUsername}
-import link.rdcn.client.dacp.FairdClient
+import link.rdcn.client.dacp.DacpClient
 import link.rdcn.user.{Credentials, UsernamePassword}
 import link.rdcn.util.ExceptionHandler
 import link.rdcn.{ErrorCode, TestProvider}
@@ -16,7 +16,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
     // 模拟非admin用户的情况进行测试
     val ServerException = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword("NotAdmin", adminPassword))
+      () => DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword("NotAdmin", adminPassword))
     )
 
     assertEquals(ErrorCode.USER_NOT_FOUND, ExceptionHandler.getErrorCode(ServerException))
@@ -26,7 +26,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
   def testInvalidCredentials(): Unit = {
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
+      () => DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, "wrongPassword"))
     )
 
     assertEquals(CallStatus.UNAUTHENTICATED.code(), serverException.asInstanceOf[FlightRuntimeException].status().code())
@@ -35,7 +35,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
   //匿名访问DataFrame失败
   @Test
   def testAnonymousAccessDataFrameFalse(): Unit = {
-    val dc = FairdClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
+    val dc = DacpClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => dc.getByPath("/csv/data_1.csv").foreach(_ => ())

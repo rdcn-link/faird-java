@@ -4,11 +4,11 @@
  * @Data 2025/7/30 17:20
  * @Modified By:
  */
-package link.rdcn.dftree
+package link.rdcn.optree
 
 import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.dftree.OperatorClientTest.{operatorClient, operatorDir}
+import link.rdcn.optree.OperatorClientTest.{operatorClient, operatorDir}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.{AfterAll, Test}
 

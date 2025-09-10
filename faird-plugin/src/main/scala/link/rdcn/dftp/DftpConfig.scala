@@ -1,6 +1,7 @@
 package link.rdcn.dftp
 
 import java.io.File
+import java.security.{PrivateKey, PublicKey}
 
 /**
  * @Author renhao
@@ -14,4 +15,6 @@ trait DftpConfig {
   def useTls: Boolean
   def tlsCertFile: File
   def tlsKeyFile: File
+  def pubKeyMap: Map[String, PublicKey] = Map.empty
+  def privateKey: Option[PrivateKey] = None
 }

@@ -26,5 +26,5 @@ trait AuthProvider {
    */
   def checkPermission(user: AuthenticatedUser,
                       dataFrameName: String,
-                      opList: java.util.List[DataOperationType]): Boolean
+                      opList: List[DataOperationType]): Boolean
 }

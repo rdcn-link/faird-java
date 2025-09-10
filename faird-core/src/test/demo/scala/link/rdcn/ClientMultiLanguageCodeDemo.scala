@@ -8,8 +8,8 @@ package link.rdcn
 
 
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.client.dacp.FairdClient
-import link.rdcn.client.dag._
+import link.rdcn.client.dacp.DacpClient
+import link.rdcn.client.recipe._
 import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword
 
@@ -17,12 +17,12 @@ object ClientMultiLanguageCodeDemo {
 
   def main(args: Array[String]): Unit = {
     // 连接Faird服务
-    val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
 
     //构建数据源节点
     val sourceNode: FlowNode = FlowNode.source("/csv/data_1.csv")
     //构建自定义操作节点
-    val transformer11Node = FlowNode.ofTransfomer(new Transformer11 {
+    val transformer11Node = FlowNode.ofTransfomer11(new Transformer11 {
       override def transform(dataFrame: DataFrame): DataFrame = {
         dataFrame.map(row => Row.fromTuple(row.getAs[Long](0), row.get(1), 100))
       }

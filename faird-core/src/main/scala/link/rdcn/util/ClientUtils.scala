@@ -57,10 +57,11 @@ object ClientUtils {
         case t if t == Types.MinorType.BIGINT.getType => ValueType.LongType
         case t if t == Types.MinorType.FLOAT4.getType => ValueType.FloatType
         case t if t == Types.MinorType.FLOAT8.getType => ValueType.DoubleType
-        case t if t == Types.MinorType.VARCHAR.getType => ValueType.StringType
+        case t if t == Types.MinorType.VARCHAR.getType =>
+          if(field.getMetadata.isEmpty) ValueType.StringType else ValueType.RefType
         case t if t == Types.MinorType.BIT.getType => ValueType.BooleanType
         case t if t == Types.MinorType.VARBINARY.getType => if(field.getMetadata.isEmpty)
-          ValueType.BinaryType else ValueType.RefType
+          ValueType.BinaryType else ValueType.BlobType
         case _ => throw new UnsupportedOperationException(s"Unsupported Arrow type: ${field.getType}")
       }
       Column(field.getName, colType)

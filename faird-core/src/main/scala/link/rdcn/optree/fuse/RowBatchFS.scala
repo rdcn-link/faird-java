@@ -1,4 +1,4 @@
-package link.rdcn.dftree.fuse
+package link.rdcn.optree.fuse
 
 import jnr.constants.platform.Errno
 import jnr.ffi.Pointer

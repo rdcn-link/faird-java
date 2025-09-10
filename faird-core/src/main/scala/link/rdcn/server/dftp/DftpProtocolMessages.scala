@@ -1,6 +1,6 @@
 package link.rdcn.server.dftp
 
-import link.rdcn.dftree.Operation
+import link.rdcn.optree.Operation
 import link.rdcn.struct.DataFrame
 
 /**
@@ -11,7 +11,7 @@ import link.rdcn.struct.DataFrame
  */
 trait GetRequest {
   def getRequestedPath(): String
-  def getRequestedBaseUrl(): String
+  def getRequestedBaseUrl(): Option[String]
 }
 
 trait GetResponse {
@@ -36,5 +36,14 @@ trait PutRequest{
 
 trait PutResponse{
   def sendMessage(message: String): Unit
+  def sendError(code: Int, message: String): Unit
+}
+
+trait CookRequest{
+  def getOperation: Operation
+}
+
+trait CookResponse{
+  def sendDataFrame(dataFrame: DataFrame): Unit
   def sendError(code: Int, message: String): Unit
 }

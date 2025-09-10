@@ -4,7 +4,7 @@ import link.rdcn.ErrorCode
 import link.rdcn.TestBase.{adminPassword, adminUsername}
 import link.rdcn.TestEmptyProvider._
 import link.rdcn.server.dacp.DacpServer
-import link.rdcn.client.dacp.FairdClient
+import link.rdcn.client.dacp.DacpClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer}
@@ -21,7 +21,7 @@ class ServerExceptionTest {
   def testServerNotRunning(): Unit = {
     val exception = assertThrows(
       classOf[FlightRuntimeException],
-      () => FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+      () => DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
 
     )
     assertEquals(ErrorCode.SERVER_NOT_RUNNING, ExceptionHandler.getErrorCode(exception))

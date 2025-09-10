@@ -43,8 +43,6 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
-
-    override def token: String = ???
   }
 
 
@@ -74,7 +72,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
       }
     }
 
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = {
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: List[DataOperationType]): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
       if (userName == anonymousUsername)
         throw new AuthorizationException(USER_NOT_LOGGED_IN)

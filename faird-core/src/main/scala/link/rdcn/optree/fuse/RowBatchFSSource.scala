@@ -1,4 +1,4 @@
-package link.rdcn.dftree.fuse
+package link.rdcn.optree.fuse
 
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.ClosableIterator

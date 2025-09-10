@@ -4,7 +4,7 @@ import link.rdcn.TestBase.getOutputDir
 import link.rdcn.TestProvider
 import link.rdcn.TestProvider._
 import link.rdcn.client.DataFrameOperationTest._
-import link.rdcn.client.dag.{Flow, SourceNode, Transformer11}
+import link.rdcn.client.recipe.{Flow, SourceNode, Transformer11}
 import link.rdcn.struct._
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.FlightRuntimeException

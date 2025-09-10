@@ -1,7 +1,7 @@
 package link.rdcn
 
-import link.rdcn.client.dacp.FairdClient
-import link.rdcn.client.dag.{Flow, FlowNode}
+import link.rdcn.client.dacp.DacpClient
+import link.rdcn.client.recipe.{Flow, FlowNode}
 import link.rdcn.client.RemoteDataFrameProxy
 import link.rdcn.provider.DataFrameDocument
 import link.rdcn.struct.{Blob, DataFrame, ExecutionResult, Row}
@@ -25,7 +25,7 @@ object ClientDemo {
     // 通过用户名密码非加密连接FairdClient
     //     val dc: FairdClient = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
     // 通过用户名密码tls加密连接FairdClient
-    val dc: FairdClient = FairdClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
     // 匿名连接FairdClient
 //    val dcAnonymous: FairdClient = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 

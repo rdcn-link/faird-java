@@ -6,7 +6,7 @@
  */
 package link.rdcn.client
 
-import link.rdcn.client.dag._
+import link.rdcn.client.recipe._
 import org.codehaus.janino.SimpleCompiler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

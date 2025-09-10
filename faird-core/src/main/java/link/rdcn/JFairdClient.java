@@ -8,9 +8,8 @@ package link.rdcn;
  */
 
 
-import link.rdcn.client.dacp.FairdClient;
-import link.rdcn.client.RemoteDataFrameProxy;
-import link.rdcn.client.dag.Flow;
+import link.rdcn.client.dacp.DacpClient;
+import link.rdcn.client.recipe.Flow;
 import link.rdcn.struct.DataFrame;
 import link.rdcn.struct.ExecutionResult;
 import link.rdcn.user.Credentials;
@@ -22,42 +21,42 @@ import java.util.List;
 import java.util.Map;
 
 public class JFairdClient {
-    private FairdClient fairdClient;
+    private DacpClient dacpClient;
 
-    public JFairdClient(FairdClient fairdClient) {
-        this.fairdClient = fairdClient;
+    public JFairdClient(DacpClient dacpClient) {
+        this.dacpClient = dacpClient;
     }
 
     public DataFrame get(String dataFrameName) {
-        return fairdClient.get(dataFrameName);
+        return dacpClient.get(dataFrameName);
     }
 
     public List<String> listDataSetNames() {
-        return convertToJavaList(fairdClient.listDataSetNames());
+        return convertToJavaList(dacpClient.listDataSetNames());
     }
 
     public List<String> listDataFrameNames(String dsName) {
-        return convertToJavaList(fairdClient.listDataFrameNames(dsName));
+        return convertToJavaList(dacpClient.listDataFrameNames(dsName));
     }
 
     public Model getDataSetMetaData(String dsName) {
-        return fairdClient.getDataSetMetaData(dsName);
+        return dacpClient.getDataSetMetaData(dsName);
     }
 
     public Map<String, String> getHostInfo() {
-        return JavaConverters.mapAsJavaMap(fairdClient.getHostInfo());
+        return JavaConverters.mapAsJavaMap(dacpClient.getHostInfo());
     }
 
     public Map<String, String> getServerResourceInfo() {
-        return JavaConverters.mapAsJavaMap(fairdClient.getServerResourceInfo());
+        return JavaConverters.mapAsJavaMap(dacpClient.getServerResourceInfo());
     }
 
     public void close() {
-        fairdClient.close();
+        dacpClient.close();
     }
 
     public JExecutionResult execute(Flow flow) {
-        ExecutionResult executionResult =  fairdClient.execute(flow);
+        ExecutionResult executionResult =  dacpClient.execute(flow);
         return
         new JExecutionResult(){
 
@@ -80,11 +79,11 @@ public class JFairdClient {
 
 
     public static JFairdClient connect(String url, Credentials credentials) {
-        return new JFairdClient(FairdClient.connect(url, credentials));
+        return new JFairdClient(DacpClient.connect(url, credentials));
     }
 
     public static JFairdClient connectTLS(String url, Credentials credentials) {
-        return new JFairdClient(FairdClient.connectTLS(url, credentials));
+        return new JFairdClient(DacpClient.connectTLS(url, credentials));
     }
 
     public static <T> java.util.List<T> convertToJavaList(Seq<T> scalaSeq) {
