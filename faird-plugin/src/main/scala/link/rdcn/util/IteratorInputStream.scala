@@ -1,6 +1,7 @@
 package link.rdcn.util
 
 import java.io.InputStream
+
 /**
  * @Author renhao
  * @Description:

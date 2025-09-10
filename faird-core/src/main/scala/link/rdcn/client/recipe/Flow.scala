@@ -9,29 +9,30 @@ import scala.annotation.varargs
  * @Description:
  * Flow(
  * Nodes(
- *      "A" -> SourceOp("/abcd"),
- *      "B" -> Functiion.STOCKED("cn.piflow.Transfomer1", params),
- *      "C" -> Function.PYTHON_Code(code),
- *      "D" -> Function.JAVA(bytes2)
- *     ),
+ * "A" -> SourceOp("/abcd"),
+ * "B" -> Functiion.STOCKED("cn.piflow.Transfomer1", params),
+ * "C" -> Function.PYTHON_Code(code),
+ * "D" -> Function.JAVA(bytes2)
+ * ),
  * Edges(
- *     "A" -> Seq("B", "C"),
- *     "B" -> "D"
- *     )
+ * "A" -> Seq("B", "C"),
+ * "B" -> "D"
+ * )
  * )
  * @Data 2025/7/12 21:30
  * @Modified By:
  */
 case class FlowPath(node: FlowNode, children: Seq[FlowPath] = Seq.empty)
+
 case class Flow(
-                           nodes: Map[String, FlowNode],
-                           edges: Map[String, Seq[String]]
-                         ){
+                 nodes: Map[String, FlowNode],
+                 edges: Map[String, Seq[String]]
+               ) {
   /**
    * Edges(
    * "A" -> Seq("B", "C"),        A->B->D
-   *                                 ^
-   *                                 E
+   * ^
+   * E
    * "B" -> "D"               =>  A->C
    * "E" -> "B"
    * )
@@ -48,6 +49,7 @@ case class Flow(
     val allTargets = reverseEdges.values.flatten.toSet
     val allSources = reverseEdges.keySet
     val rootNodes = allSources.diff(allTargets)
+
     def buildPath(current: String, visited: Set[String]): FlowPath = {
       if (visited.contains(current)) {
         throw new IllegalArgumentException(s"Cycle detected: node '$current' is revisited")
@@ -58,6 +60,7 @@ case class Flow(
       ))
       FlowPath(currentNode, children.map(child => buildPath(child, visited + current)))
     }
+
     rootNodes.toSeq.map(root => buildPath(root, Set.empty))
   }
 
@@ -69,13 +72,13 @@ case class Flow(
     rootNodes.foreach(rootKey => nodes.get(rootKey) match {
       case Some(_: SourceNode) => // 合法，继续
       case Some(_: RemoteSourceProxyOp) =>
-      case Some(other) => throw new IllegalArgumentException( s"Invalid DAG: root node '$other' is not of type SourceOp, but ${other.getClass.getSimpleName}." )
-      case None => throw new IllegalArgumentException( s"Invalid DAG: root node '$rootKey' is not defined in the node map." )
+      case Some(other) => throw new IllegalArgumentException(s"Invalid DAG: root node '$other' is not of type SourceOp, but ${other.getClass.getSimpleName}.")
+      case None => throw new IllegalArgumentException(s"Invalid DAG: root node '$rootKey' is not defined in the node map.")
     })
   }
 }
 
-object Flow{
+object Flow {
   @varargs
   def pipe(head: FlowNode, tail: FlowNode*): Flow = {
     val nodes = head +: tail
@@ -86,9 +89,10 @@ object Flow{
       case (node, index) =>
         (index.toString, node)
     }.toMap
-    val keysSeq =  pairs.keys.toSeq
+    val keysSeq = pairs.keys.toSeq
     val edges = keysSeq.zip(keysSeq.tail).map { case (currentElement, nextElement) =>
-      currentElement -> Seq(nextElement)}.toMap
+      currentElement -> Seq(nextElement)
+    }.toMap
     Flow(pairs, edges)
   }
 }

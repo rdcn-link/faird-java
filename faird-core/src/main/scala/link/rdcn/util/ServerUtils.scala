@@ -95,7 +95,7 @@ object ServerUtils {
     reader.getVectorSchemaRoot
   }
 
-  def createFileChunkBatch( chunks: Iterator[(Int, String, Array[Byte])],arrowRoot: VectorSchemaRoot, batchSize: Int = 10
+  def createFileChunkBatch(chunks: Iterator[(Int, String, Array[Byte])], arrowRoot: VectorSchemaRoot, batchSize: Int = 10
                           ): Iterator[ArrowRecordBatch] = {
 
 
@@ -188,12 +188,12 @@ object ServerUtils {
     val availableProcessors = osBean.getAvailableProcessors
 
     val totalMemory = runtime.totalMemory() / 1024 / 1024 // MB
-    val freeMemory = runtime.freeMemory() / 1024 / 1024   // MB
-    val maxMemory = runtime.maxMemory() / 1024 / 1024     // MB
+    val freeMemory = runtime.freeMemory() / 1024 / 1024 // MB
+    val maxMemory = runtime.maxMemory() / 1024 / 1024 // MB
     val usedMemory = totalMemory - freeMemory
 
     val systemMemoryTotal = osBean.getTotalPhysicalMemorySize / 1024 / 1024 // MB
-    val systemMemoryFree = osBean.getFreePhysicalMemorySize / 1024 / 1024   // MB
+    val systemMemoryFree = osBean.getFreePhysicalMemorySize / 1024 / 1024 // MB
     val systemMemoryUsed = systemMemoryTotal - systemMemoryFree
     Map(
       "cpu.cores" -> s"$availableProcessors",
@@ -256,10 +256,4 @@ object ServerUtils {
       row
     }
   }
-
-//  def init(allocatorServer: BufferAllocator): Unit = {
-//    allocator = allocatorServer
-//  }
-//
-//  private var allocator: BufferAllocator = _
 }

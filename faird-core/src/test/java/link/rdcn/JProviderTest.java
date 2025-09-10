@@ -162,7 +162,7 @@ public class JProviderTest {
             public DataStreamSource getDataStreamSource(String dataFrameName) {
                 DirectorySource directorySource = new DirectorySource(false);
                 DataFrameInfo dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(null);
-                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()),false);
+                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()), false);
             }
 
             /**

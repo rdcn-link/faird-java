@@ -18,13 +18,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 object RepositoryClientTest {
-//  implicit val system: ActorSystem = ActorSystem("HttpClient")
+  //  implicit val system: ActorSystem = ActorSystem("HttpClient")
   val operatorClient = new RepositoryClient("10.0.89.38", 8088)
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
 
   @AfterAll
   def close(): Unit = {
-//    Await.result(system.terminate(), 10.seconds)
+    //    Await.result(system.terminate(), 10.seconds)
   }
 }
 

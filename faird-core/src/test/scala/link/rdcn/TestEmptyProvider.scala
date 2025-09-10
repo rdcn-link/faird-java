@@ -1,10 +1,5 @@
-/**
- * @Author Yomi
- * @Description:
- * @Data 2025/7/16 13:34
- * @Modified By:
- */
 package link.rdcn
+
 import link.rdcn.TestBase.{getOutputDir, getResourcePath}
 import link.rdcn.received.DataReceiver
 import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType}
@@ -12,19 +7,23 @@ import link.rdcn.struct.{DataFrame, DataStreamSource}
 import org.apache.arrow.flight.Location
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 
-import java.util
-
-trait TestEmptyProvider{
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/7/16 13:34
+ * @Modified By:
+ */
+trait TestEmptyProvider {
 
 }
 
-/***
+/** *
  * 用于不需要生成数据的测试的Provider
  */
 object TestEmptyProvider {
   ConfigLoader.init(getResourcePath(""))
 
-  val outputDir = getOutputDir("test_output","output")
+  val outputDir = getOutputDir("test_output", "output")
 
   val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.hostPosition, ConfigLoader.fairdConfig.hostPort)
   val allocator: BufferAllocator = new RootAllocator()

@@ -3,7 +3,7 @@ package link.rdcn.client
 import link.rdcn.Logging
 import link.rdcn.optree._
 import link.rdcn.struct.{DataFrame, Row, StructType}
-import link.rdcn.util.{ClosableIterator, ResourceUtils}
+import link.rdcn.util.ClosableIterator
 
 /**
  * @Author renhao
@@ -12,7 +12,7 @@ import link.rdcn.util.{ClosableIterator, ResourceUtils}
  * @Modified By:
  */
 
-case class RemoteDataFrameProxy(operation: Operation, getRows: String => (StructType,ClosableIterator[Row])) extends DataFrame with Logging {
+case class RemoteDataFrameProxy(operation: Operation, getRows: String => (StructType, ClosableIterator[Row])) extends DataFrame with Logging {
 
   override val schema: StructType = getRows(operation.toJsonString)._1
 

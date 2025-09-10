@@ -35,12 +35,12 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
 
     override def doPut(request: PutRequest, response: PutResponse): Unit = {
       val dataFrame = request.getDataFrame()
-      try{
+      try {
         dataReceiver.start()
         dataReceiver.receiveRow(dataFrame)
         dataReceiver.finish()
         dataReceiver.close()
-      }catch {
+      } catch {
         case e: Exception => response.sendError(500, e.getMessage)
       }
       response.sendDataFrame(DefaultDataFrame(StructType.empty.add("status", StringType), Seq(Row.fromSeq(Seq("success"))).toIterator))
@@ -58,11 +58,12 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     baseUrl = s"$protocolSchema://${fairdConfig.hostPosition}:${fairdConfig.hostPort}"
     server.start(fairdConfig)
   }
+
   def close(): Unit = server.close()
 
   def doCook(request: CookRequest, response: CookResponse): Unit = {
     val operation = request.getOperation
-    try{
+    try {
       response.sendDataFrame(operation.execute(new ExecutionContext {
         override def loadSourceDataFrame(dataFrameNameUrl: String): Option[DataFrame] = {
           var resultDataFrame: Option[DataFrame] = None
@@ -72,6 +73,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
           }
           val getRequest = new GetRequest {
             override def getRequestedPath(): String = baseUrlAndPath._2
+
             override def getRequestedBaseUrl(): Option[String] = baseUrlAndPath._1
           }
           val getResponse = new GetResponse {
@@ -83,7 +85,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
           resultDataFrame
         }
       }))
-    }catch {
+    } catch {
       case e: Exception => response.sendError(500, e.getMessage)
     }
   }
@@ -93,35 +95,35 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       case "/listDataSets" =>
         try {
           response.sendDataFrame(doListDataSets())
-        }catch {
+        } catch {
           case e: Exception =>
             logger.error("Error while listDataSets", e)
             response.sendError(500, e.getMessage)
         }
       case path if path.startsWith("/listDataFrames") => {
-        try{
+        try {
           response.sendDataFrame(doListDataFrames(request.getRequestedPath()))
-        }catch {
+        } catch {
           case e: Exception =>
             logger.error("Error while listDataFrames", e)
             response.sendError(500, e.getMessage)
         }
       }
       case "/listHostInfo" => {
-        try{
+        try {
           response.sendDataFrame(doListHostInfo)
-        }catch {
+        } catch {
           case e: Exception =>
             logger.error("Error while listHostInfo", e)
             response.sendError(500, e.getMessage)
         }
       }
       case otherPath =>
-        try{
+        try {
           val dataStreamSource: DataStreamSource = dataProvider.getDataStreamSource(otherPath)
           val dataFrame: DataFrame = DefaultDataFrame(dataStreamSource.schema, dataStreamSource.iterator)
           response.sendDataFrame(dataFrame)
-        }catch {
+        } catch {
           case e: Exception =>
             logger.error(s"Error while get resource $otherPath", e)
             response.sendError(500, e.getMessage)
@@ -141,7 +143,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       model.write(writer, "RDF/XML");
       val dataSetInfo = new JSONObject().put("name", dsName).toString
       Row.fromTuple((dsName, writer.toString
-        ,dataSetInfo, DFRef(s"${baseUrl}/listDataFrames/$dsName")))
+        , dataSetInfo, DFRef(s"${baseUrl}/listDataFrames/$dsName")))
     }).toIterator
     val schema = StructType.empty.add("name", StringType)
       .add("meta", StringType).add("DataSetInfo", StringType).add("dataFrames", RefType)
@@ -157,11 +159,11 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
     val schema = StructType.empty.add("name", StringType).add("size", LongType)
       .add("document", StringType).add("schema", StringType).add("statistics", StringType)
       .add("dataFrame", RefType)
-    val stream: Iterator[Row] =dataProvider.listDataFrameNames(dataSetName).asScala
+    val stream: Iterator[Row] = dataProvider.listDataFrameNames(dataSetName).asScala
       .map(dfName => {
         (dfName, dataProvider.getDataStreamSource(dfName).rowCount
-          ,getDataFrameDocumentJsonString(dfName) , getDataFrameSchemaString(dfName)
-          ,getDataFrameStatisticsString(dfName), DFRef(s"${baseUrl}/$dfName"))
+          , getDataFrameDocumentJsonString(dfName), getDataFrameSchemaString(dfName)
+          , getDataFrameStatisticsString(dfName), DFRef(s"${baseUrl}/$dfName"))
       })
       .map(Row.fromTuple(_)).toIterator
     DefaultDataFrame(schema, stream)

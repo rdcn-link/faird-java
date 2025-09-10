@@ -21,7 +21,7 @@ import java.nio.file.Paths
 import java.util
 import java.util.Arrays
 
-object UnionServerTest{
+object UnionServerTest {
   var unionServer: UnionServer = _
   var dacpServer1: DacpServer = _
   var dacpServer2: DacpServer = _
@@ -42,18 +42,18 @@ object UnionServerTest{
       override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.asList("/dataFrame1")
 
       override def getDataStreamSource(dataFrameName: String): DataStreamSource = {
-        if(dataFrameName == "/dataFrame1"){
+        if (dataFrameName == "/dataFrame1") {
           new DataStreamSource {
             override def rowCount: Long = -1
 
             override def schema: StructType = StructType.empty.add("col1", StringType)
 
             override def iterator: ClosableIterator[Row] = {
-              val rows =Seq.range(0, 10).map(index => Row.fromSeq(Seq("id"+index))).toIterator
+              val rows = Seq.range(0, 10).map(index => Row.fromSeq(Seq("id" + index))).toIterator
               ClosableIterator(rows)()
             }
           }
-        }else {
+        } else {
           throw new Exception(s"$dataFrameName not found")
         }
 
@@ -86,18 +86,18 @@ object UnionServerTest{
       override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.asList("/dataFrame2")
 
       override def getDataStreamSource(dataFrameName: String): DataStreamSource = {
-        if(dataFrameName == "/dataFrame2"){
+        if (dataFrameName == "/dataFrame2") {
           new DataStreamSource {
             override def rowCount: Long = -1
 
             override def schema: StructType = StructType.empty.add("col1", StringType)
 
             override def iterator: ClosableIterator[Row] = {
-              val rows =Seq.range(0, 10).map(index => Row.fromSeq(Seq("id"+index))).toIterator
+              val rows = Seq.range(0, 10).map(index => Row.fromSeq(Seq("id" + index))).toIterator
               ClosableIterator(rows)()
             }
           }
-        }else {
+        } else {
           throw new Exception(s"$dataFrameName not found")
         }
 
@@ -132,7 +132,7 @@ object UnionServerTest{
     dacpServer2.start(ConfigLoader.fairdConfig)
 
     ConfigLoader.init(unionServerHome)
-    unionServer = UnionServer.connect("dacp://0.0.0.0:3102","dacp://0.0.0.0:3103")
+    unionServer = UnionServer.connect("dacp://0.0.0.0:3102", "dacp://0.0.0.0:3103")
     println(s"启动UnionServer bind ${ConfigLoader.fairdConfig.host}:" + ConfigLoader.fairdConfig.port)
     unionServer.start(ConfigLoader.fairdConfig)
   }
@@ -184,7 +184,7 @@ class UnionServerTest {
     nodeMap.put("B", SourceNode("dacp://0.0.0.0:3103/dataFrame2"))
     nodeMap.put("C", new Transformer21 {
       override def transform(leftDataFrame: DataFrame, rightDataFrame: DataFrame): DataFrame = {
-        val stream: Iterator[Row]= leftDataFrame.mapIterator[Iterator[Row]](iter => iter) ++ rightDataFrame.mapIterator[Iterator[Row]](iter => iter)
+        val stream: Iterator[Row] = leftDataFrame.mapIterator[Iterator[Row]](iter => iter) ++ rightDataFrame.mapIterator[Iterator[Row]](iter => iter)
         val schema = leftDataFrame.schema
         DefaultDataFrame(schema, stream)
       }

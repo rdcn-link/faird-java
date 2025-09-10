@@ -8,10 +8,10 @@ package link.rdcn.util
  * @Modified By:
  */
 case class ClosableIterator[T](
-                              underlying: Iterator[T],
-                              val onClose: () => Unit,
-                              val isFileList: Boolean = false
-                            ) extends Iterator[T] with AutoCloseable {
+                                underlying: Iterator[T],
+                                val onClose: () => Unit,
+                                val isFileList: Boolean = false
+                              ) extends Iterator[T] with AutoCloseable {
 
   private var closed = false
   //避免多次触发close

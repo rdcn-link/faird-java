@@ -8,5 +8,6 @@ package link.rdcn.provider
 
 trait DataFrameStatistics extends Serializable {
   def rowCount: Long
+
   def byteSize: Long
 }

@@ -131,7 +131,7 @@ object TestProvider {
   def getServer: DacpServer = synchronized {
     if (fairdServer.isEmpty) {
       ConfigLoader.init(Paths.get(getResourcePath("")).toString)
-      val s = new DacpServer(dataProvider,  dataReceiver, authprovider)
+      val s = new DacpServer(dataProvider, dataReceiver, authprovider)
       s.start(ConfigLoader.fairdConfig)
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)

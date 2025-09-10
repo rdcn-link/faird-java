@@ -34,6 +34,7 @@ sealed trait Operation {
     inputs = operations
     this
   }
+
   def operationType: String
 
   def toJson: JSONObject
@@ -47,13 +48,12 @@ object Operation {
   def fromJsonString(json: String, sourceList: ListBuffer[String]): Operation = {
     val parsed: JSONObject = new JSONObject(json)
     val opType = parsed.getString("type")
-   if (opType == "SourceOp") {
+    if (opType == "SourceOp") {
       sourceList.append(parsed.getString("dataFrameName"))
       SourceOp(parsed.getString("dataFrameName"))
-    }else if(opType == "RemoteSourceProxyOp") {
-     RemoteSourceProxyOp(parsed.getString("baseUrl")+parsed.getString("path"), parsed.getString("token"))
-   }
-    else {
+    } else if (opType == "RemoteSourceProxyOp") {
+      RemoteSourceProxyOp(parsed.getString("baseUrl") + parsed.getString("path"), parsed.getString("token"))
+    } else {
       val ja: JSONArray = parsed.getJSONArray("input")
       val inputs = (0 until ja.length).map(ja.getJSONObject(_).toString()).map(fromJsonString(_, sourceList))
       opType match {
@@ -135,8 +135,8 @@ case class FilterOp(functionWrapper: FunctionWrapper, inputOperations: Operation
     val ja = new JSONArray()
     inputs.foreach(op => ja.put(op.toJson))
     new JSONObject().put("type", operationType)
-    .put("function", functionWrapper.toJson)
-    .put("input", ja)
+      .put("function", functionWrapper.toJson)
+      .put("input", ja)
   }
 
   override def execute(ctx: ExecutionContext): DataFrame = {
@@ -176,8 +176,8 @@ case class SelectOp(input: Operation, columns: String*) extends Operation {
     val ja = new JSONArray()
     inputs.foreach(op => ja.put(op.toJson))
     new JSONObject().put("type", operationType)
-    .put("args", new JSONArray(columns.asJava))
-    .put("input", ja)
+      .put("args", new JSONArray(columns.asJava))
+      .put("input", ja)
   }
 
   override def execute(ctx: ExecutionContext): DataFrame = {
@@ -201,6 +201,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, inputOperations: Op
       .put("function", functionWrapper.toJson)
       .put("input", ja)
   }
+
   override def execute(ctx: ExecutionContext): DataFrame = {
     functionWrapper match {
       case PythonBin(functionID, functionName, whlPath, batchSize) =>
@@ -208,7 +209,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, inputOperations: Op
           val jep = JepInterpreterManager.getJepInterpreter(functionID, whlPath)
           val in = inputs.head.execute(ctx)
           in.mapIterator[DataFrame](iter => {
-            val newStream =  functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[Iterator[Row]]
+            val newStream = functionWrapper.applyToInput(iter, Some(jep)).asInstanceOf[Iterator[Row]]
             getDataFrameByStream(ClosableIterator(newStream)(iter.onClose))
           })
         }(singleThreadEc), Duration.Inf)
@@ -233,7 +234,7 @@ case class TransformerNode(functionWrapper: FunctionWrapper, inputOperations: Op
           case LangType.CPP_BIN.name =>
             CppBin(id).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.JAVA_JAR.name =>
-            JavaJar(id,fileName).applyToInput(in).asInstanceOf[DataFrame]
+            JavaJar(id, fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.PYTHON_BIN.name =>
             val downloadFuture = operatorClient.downloadPackage(id, operatorDir)
             Await.result(downloadFuture, 30.seconds)

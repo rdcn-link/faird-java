@@ -56,25 +56,25 @@ public class JFairdClient {
     }
 
     public JExecutionResult execute(Flow flow) {
-        ExecutionResult executionResult =  dacpClient.execute(flow);
+        ExecutionResult executionResult = dacpClient.execute(flow);
         return
-        new JExecutionResult(){
+                new JExecutionResult() {
 
-            @Override
-            public DataFrame single() {
-                return executionResult.single();
-            }
+                    @Override
+                    public DataFrame single() {
+                        return executionResult.single();
+                    }
 
-            @Override
-            public DataFrame get(String name) {
-                return executionResult.get(name);
-            }
+                    @Override
+                    public DataFrame get(String name) {
+                        return executionResult.get(name);
+                    }
 
-            @Override
-            public Map<String, DataFrame> map() {
-                return convertToJavaMap(executionResult.map());
-            }
-        };
+                    @Override
+                    public Map<String, DataFrame> map() {
+                        return convertToJavaMap(executionResult.map());
+                    }
+                };
     }
 
 
@@ -90,7 +90,7 @@ public class JFairdClient {
         return JavaConverters.seqAsJavaListConverter(scalaSeq).asJava();
     }
 
-    public static <K,V> java.util.Map<K,V> convertToJavaMap(scala.collection.Map<K,V> scalaMap) {
+    public static <K, V> java.util.Map<K, V> convertToJavaMap(scala.collection.Map<K, V> scalaMap) {
         return JavaConverters.mapAsJavaMap(scalaMap);
     }
 
@@ -99,6 +99,8 @@ public class JFairdClient {
 
 interface JExecutionResult {
     DataFrame single();
+
     DataFrame get(String name);
+
     Map<String, DataFrame> map();
 }

@@ -10,6 +10,7 @@ case class UrlValidator(protocolPrefix: String) {
   private val DftpUrlPattern = s"^${protocolPrefix}://([^:/]+)(?::(\\d+))?(/.*)?$$".r
   // 路径规则：必须/开头，且后面至少有一个非/字符（或单独一个/）
   private val pathPattern = "^/([^/].*)?$".r
+
   def validate(url: String): Either[String, (String, Option[Int], String)] = {
     url match {
       case DftpUrlPattern(host, portStr, path) =>

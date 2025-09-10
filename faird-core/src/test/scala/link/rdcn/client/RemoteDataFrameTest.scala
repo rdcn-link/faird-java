@@ -78,7 +78,7 @@ object DataFrameOperationTest {
       val cols = line.split(",")
       val id = cols(0).toLong
       val rest = cols.tail.mkString(",")
-      s"${id*2},$rest"
+      s"${id * 2},$rest"
     }
   }
 
@@ -92,18 +92,18 @@ object DataFrameOperationTest {
   }
 
   def addLineBreak(lines: Seq[String]): Seq[String] = {
-    lines.map { line => line + "\n"}
+    lines.map { line => line + "\n" }
   }
 
 }
 
 class DataFrameOperationTest extends TestProvider {
-  val outputDir = getOutputDir("test_output","output")
+  val outputDir = getOutputDir("test_output", "output")
 
 
   @Test
   def testDataFrameForEach(): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.mkString("\n") + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail.mkString("\n") + "\n"
     val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -119,7 +119,7 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameLimit(num: Int): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail.take(num).mkString("\n") + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail.take(num).mkString("\n") + "\n"
     val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -135,7 +135,7 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(2))
   def testDataFrameFilter(id: Int): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq(id) + "\n"
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq(id) + "\n"
     val df = dc.getByPath("/csv/data_1.csv")
     val stringWriter = new StringWriter()
     val printWriter = new PrintWriter(stringWriter)
@@ -153,7 +153,7 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameMap(num: Long): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -183,7 +183,7 @@ class DataFrameOperationTest extends TestProvider {
 
   @Test
   def testDataFrameMapColumn(): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -211,7 +211,7 @@ class DataFrameOperationTest extends TestProvider {
 
   @Test
   def testDataFrameSelect(): Unit = {
-    val expectedOutput = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines()
+    val expectedOutput = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines()
       .toSeq
       .tail // 跳过标题行
       .map { line =>
@@ -240,7 +240,7 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(0, 10, 20000))
   def testDataFrameUDFTake(num: Int): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new Transformer11 {
@@ -259,7 +259,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map { case (_, df)  =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -276,7 +276,7 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(0, 10, 20000))
   def testDataFrameUDFFilter(num: Int): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.take(num).map(line => line + '\n').mkString("")
 
     val udf = new Transformer11 {
@@ -295,7 +295,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -312,8 +312,8 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFMap(num: Int): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val expectedOutput = addLineBreak(transformB(lines,num)).mkString("")
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val expectedOutput = addLineBreak(transformB(lines, num)).mkString("")
 
     val transformerDAG = Flow(
       Map(
@@ -325,7 +325,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -342,8 +342,8 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFLinearDAG(num: Int): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val expectedOutput = addLineBreak(transformC(transformB(lines,num),num)).mkString("")
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val expectedOutput = addLineBreak(transformC(transformB(lines, num), num)).mkString("")
 
 
     val transformerDAG = Flow(
@@ -358,7 +358,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -377,9 +377,9 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFForkDAG(num: Int): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val expectedOutputAB = addLineBreak(transformB(lines,num)).mkString("")
-    val expectedOutputAC = addLineBreak(transformC(lines,num)).mkString("")
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val expectedOutputAB = addLineBreak(transformB(lines, num)).mkString("")
+    val expectedOutputAC = addLineBreak(transformC(lines, num)).mkString("")
 
     val transformerDAG = Flow(
       Map(
@@ -388,11 +388,11 @@ class DataFrameOperationTest extends TestProvider {
         "C" -> udfC(num)
       ),
       Map(
-        "A" -> Seq("B","C"),
+        "A" -> Seq("B", "C"),
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -414,8 +414,8 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFJoinDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val lines2 = Source.fromFile(Paths.get(csvDir,"data_2.csv").toString).getLines().toSeq.tail
+    val lines1 = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val lines2 = Source.fromFile(Paths.get(csvDir, "data_2.csv").toString).getLines().toSeq.tail
     val expectedOutputAC = addLineBreak(transformC(lines1, num)).mkString
     val expectedOutputBC = addLineBreak(transformC(lines2, num)).mkString
 
@@ -431,7 +431,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -455,10 +455,10 @@ class DataFrameOperationTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(10))
   def testDataFrameUDFHybridDAG(num: Int): Unit = {
-    val lines1 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val lines2 = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
-    val expectedOutputABDE = addLineBreak(transformE(transformD(transformB(lines1,num)))).mkString
-    val expectedOutputACDE = addLineBreak(transformE(transformD(transformC(lines2,num)))).mkString
+    val lines1 = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val lines2 = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
+    val expectedOutputABDE = addLineBreak(transformE(transformD(transformB(lines1, num)))).mkString
+    val expectedOutputACDE = addLineBreak(transformE(transformD(transformC(lines2, num)))).mkString
 
     val transformerDAG = Flow(
       Map(
@@ -476,7 +476,7 @@ class DataFrameOperationTest extends TestProvider {
       )
     )
     val dfs: ExecutionResult = dc.execute(transformerDAG)
-    val actualOutputs = dfs.map().map {case(_,df) =>
+    val actualOutputs = dfs.map().map { case (_, df) =>
       val stringWriter = new StringWriter()
       val printWriter = new PrintWriter(stringWriter)
 
@@ -563,7 +563,7 @@ class DataFrameOperationTest extends TestProvider {
 
   @Test
   def testDataFrameRowIndexAccess(): Unit = {
-    val lines = Source.fromFile(Paths.get(csvDir,"data_1.csv").toString).getLines().toSeq.tail
+    val lines = Source.fromFile(Paths.get(csvDir, "data_1.csv").toString).getLines().toSeq.tail
     val expectedOutput = lines.mkString("\n") + "\n"
 
     val df = dc.getByPath("/csv/data_1.csv")
@@ -592,7 +592,7 @@ class DataFrameOperationTest extends TestProvider {
         println(row._3)
       }
     })
-    assertEquals(exceptionRowIndexOutOfBound.getMessage,"2")
+    assertEquals(exceptionRowIndexOutOfBound.getMessage, "2")
   }
 
 }

@@ -10,12 +10,12 @@ import java.util.Base64
  * @Modified By:
  */
 case class SignatureAuth(
-                      serverId: String,
-                      nonce: String,
-                      issueTime: Long, //签发时间
-                      validTo: Long, //过期时间
-                      signature: Array[Byte] // UnionServer 私钥签名
-                   ) extends Credentials{
+                          serverId: String,
+                          nonce: String,
+                          issueTime: Long, //签发时间
+                          validTo: Long, //过期时间
+                          signature: Array[Byte] // UnionServer 私钥签名
+                        ) extends Credentials {
   def toJson(): JSONObject = {
     val json = new JSONObject()
     json.put("serverId", serverId)

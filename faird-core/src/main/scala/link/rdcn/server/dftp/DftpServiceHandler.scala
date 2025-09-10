@@ -3,6 +3,7 @@ package link.rdcn.server.dftp
 import link.rdcn.client.UrlValidator
 import link.rdcn.optree.{ExecutionContext, Operation}
 import link.rdcn.struct.DataFrame
+
 /**
  * @Author renhao
  * @Description:
@@ -19,7 +20,7 @@ trait DftpServiceHandler {
 
   def doCook(request: CookRequest, response: CookResponse): Unit = {
     val operation = request.getOperation
-    try{
+    try {
       response.sendDataFrame(operation.execute(new ExecutionContext {
         override def loadSourceDataFrame(dataFrameNameUrl: String): Option[DataFrame] = {
           var resultDataFrame: Option[DataFrame] = None
@@ -29,6 +30,7 @@ trait DftpServiceHandler {
           }
           val getRequest = new GetRequest {
             override def getRequestedPath(): String = baseUrlAndPath._2
+
             override def getRequestedBaseUrl(): Option[String] = baseUrlAndPath._1
           }
           val getResponse = new GetResponse {
@@ -40,7 +42,7 @@ trait DftpServiceHandler {
           resultDataFrame
         }
       }))
-    }catch {
+    } catch {
       case e: Exception => response.sendError(500, e.getMessage)
     }
   }

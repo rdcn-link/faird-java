@@ -11,39 +11,46 @@ import link.rdcn.struct.DataFrame
  */
 trait GetRequest {
   def getRequestedPath(): String
+
   def getRequestedBaseUrl(): Option[String]
 }
 
 trait GetResponse {
   def sendDataFrame(dataFrame: DataFrame): Unit
+
   def sendError(code: Int, message: String): Unit
 }
 
-trait ActionRequest{
+trait ActionRequest {
   def getActionName(): String
+
   def getActionParameters(): Array[Byte]
+
   def getActionParameterMap(): Map[String, Any]
 }
 
-trait ActionResponse{
+trait ActionResponse {
   def sendDataFrame(dataFrame: DataFrame): Unit
+
   def sendError(code: Int, message: String): Unit
 }
 
-trait PutRequest{
+trait PutRequest {
   def getDataFrame(): DataFrame
 }
 
-trait PutResponse{
+trait PutResponse {
   def sendDataFrame(dataFrame: DataFrame): Unit
+
   def sendError(code: Int, message: String): Unit
 }
 
-trait CookRequest{
+trait CookRequest {
   def getOperation: Operation
 }
 
-trait CookResponse{
+trait CookResponse {
   def sendDataFrame(dataFrame: DataFrame): Unit
+
   def sendError(code: Int, message: String): Unit
 }

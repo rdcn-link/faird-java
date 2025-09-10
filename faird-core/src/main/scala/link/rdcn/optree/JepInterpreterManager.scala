@@ -5,6 +5,7 @@ import link.rdcn.{ConfigLoader, Logging}
 
 import java.nio.file.{Files, Paths}
 import scala.sys.process._
+
 /**
  * @Author renhao
  * @Description:
@@ -12,7 +13,7 @@ import scala.sys.process._
  * @Modified By:
  */
 
-object JepInterpreterManager extends Logging{
+object JepInterpreterManager extends Logging {
   // ThreadLocal stores each thread's SharedInterpreter instance
   private val threadLocalInterpreter: ThreadLocal[SharedInterpreter] = new ThreadLocal[SharedInterpreter] {
     override def initialValue(): SharedInterpreter = {
@@ -44,6 +45,7 @@ object JepInterpreterManager extends Logging{
       }
     }
   }
+
   Runtime.getRuntime.addShutdownHook(new Thread(() => {
     logger.debug("JVM shutdown hook activated. Attempting to close current thread's Jep interpreter if active.")
     closeInterpreterForCurrentThread()
@@ -51,7 +53,7 @@ object JepInterpreterManager extends Logging{
 
   def getJepInterpreter(functionId: String, whlPath: String): SubInterpreter = {
     //根据functionId 下载.whl包 对接算子库获取，构造依赖环境
-    try{
+    try {
       val sitePackagePath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "python", functionId).toString
       //将依赖环境安装到指定目录
       val env = Option(ConfigLoader.fairdConfig.pythonHome).map("PATH" -> _)
@@ -63,7 +65,7 @@ object JepInterpreterManager extends Logging{
       val config = new JepConfig
       config.addIncludePaths(sitePackagePath).setClassEnquirer(new JavaUtilOnlyClassEnquirer)
       new SubInterpreter(config)
-    }catch {
+    } catch {
       case e: Exception =>
         e.printStackTrace()
         throw e
@@ -95,7 +97,7 @@ object JepInterpreterManager extends Logging{
       // Unix-like 系统上的可执行文件名通常没有 .exe 后缀
       // 这里的 .reverse.foreach 和 .filter(Files.exists) 保证了查找的健壮性
       commonPythonExecutables.map(_.stripSuffix(".exe")) // 移除 .exe 后缀
-    }else{
+    } else {
       commonPythonExecutables
     }
 
@@ -106,7 +108,7 @@ object JepInterpreterManager extends Logging{
         for (execName <- commonPythonExecutables) {
           val fullPath = dirPath.resolve(execName)
           if (Files.exists(fullPath) && Files.isRegularFile(fullPath) && Files.isExecutable(fullPath)) {
-//            println(s"Found Python executable at: ${fullPath.toString}")
+            //            println(s"Found Python executable at: ${fullPath.toString}")
             return fullPath.toString // 找到并返回第一个
           }
         }

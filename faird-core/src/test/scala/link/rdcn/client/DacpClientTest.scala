@@ -72,7 +72,7 @@ class DacpClientTest extends TestProvider {
       FAIRD_TLS_KEY_PATH
     )
     val hostInfo = dc.getHostInfo
-    allKeys.foreach(key =>{
+    allKeys.foreach(key => {
       assertTrue(hostInfo.contains(key), s"实际结果中缺少键：$key")
       assertEquals(expectedHostInfo(key), hostInfo(key), s"键 '$key' 的值与预期不符！")
     }
@@ -101,7 +101,7 @@ class DacpClientTest extends TestProvider {
       SYSTEM_MEMORY_TOTAL_MB
     )
     val serverResouceInfo = dc.getServerResourceInfo
-    allKeys.foreach(key =>{
+    allKeys.foreach(key => {
       assertTrue(serverResouceInfo.contains(key), s"实际结果中缺少键：$key")
     }
     )

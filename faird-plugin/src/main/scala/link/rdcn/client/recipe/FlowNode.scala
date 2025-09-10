@@ -19,13 +19,13 @@ trait Transformer21 extends FlowNode with Serializable {
 }
 
 case class RepositoryNode(
-                    functionId: String,
-                    args: Map[String, String] = Map.empty
-                  ) extends FlowNode
+                           functionId: String,
+                           args: Map[String, String] = Map.empty
+                         ) extends FlowNode
 
 
 //只为DAG执行提供dataFrameName
-case class SourceNode (dataFrameName: String) extends FlowNode
+case class SourceNode(dataFrameName: String) extends FlowNode
 
 object FlowNode {
   def source(dataFrameName: String): SourceNode = {

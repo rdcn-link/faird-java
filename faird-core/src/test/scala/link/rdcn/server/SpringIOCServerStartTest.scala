@@ -20,7 +20,7 @@ import java.util.Arrays
 class SpringIOCServerStartTest {
   @Test
   def serverStart(): Unit = {
-    val f = new XmlBeanFactory(new ClassPathResource("applicationContext.xml"))
+    val f = new XmlBeanFactory(new ClassPathResource("faird.xml"))
     val dataReceiver = f.getBean("dataReceiver").asInstanceOf[DataReceiver]
     val dataProvider = f.getBean("dataProvider").asInstanceOf[DataProvider]
     val authProvider = f.getBean("authProvider").asInstanceOf[AuthProvider]
@@ -34,6 +34,7 @@ class SpringIOCServerStartTest {
     assert(client.listDataSetNames().head == "dataSet1")
     assert(client.listDataFrameNames("dataSet1").head == "dataFrame1")
   }
+
   @Test
   def serverDstpTest(): Unit = {
     val dacpServer = new DacpServer(new DataProviderTest, new DataReceiverTest, new AuthorProviderTest)
@@ -83,8 +84,8 @@ class DataProviderTest extends DataProvider {
    * @param dataSetId 数据集 ID
    * @param rdfModel  RDF 模型（由调用者传入，方法将其填充）
    */
-override def getDataSetMetaData(dataSetId: String, rdfModel: Model): Unit = {
-}
+  override def getDataSetMetaData(dataSetId: String, rdfModel: Model): Unit = {
+  }
 
   /**
    * 列出指定数据集下的所有数据帧名称
@@ -92,7 +93,7 @@ override def getDataSetMetaData(dataSetId: String, rdfModel: Model): Unit = {
    * @param dataSetId 数据集 ID
    * @return java.util.List[String]
    */
-override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.asList("dataFrame1")
+  override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.asList("dataFrame1")
 
   /**
    * 获取数据帧的数据流
@@ -106,7 +107,7 @@ override def listDataFrameNames(dataSetId: String): util.List[String] = Arrays.a
     override def schema: StructType = StructType.empty.add("col1", StringType)
 
     override def iterator: ClosableIterator[Row] = {
-      val rows =Seq.range(0, 10).map(index => Row.fromSeq(Seq("id"+index))).toIterator
+      val rows = Seq.range(0, 10).map(index => Row.fromSeq(Seq("id" + index))).toIterator
       ClosableIterator(rows)()
     }
   }
@@ -156,7 +157,7 @@ class AuthorProviderTest extends AuthProvider {
    */
   override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: List[DataOperationType]): Boolean = {
     user match {
-      case a: TokenAuthenticatedUser => if(a.token == "1") true else false
+      case a: TokenAuthenticatedUser => if (a.token == "1") true else false
       case _ => false
     }
   }

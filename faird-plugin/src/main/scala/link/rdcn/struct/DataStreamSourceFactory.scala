@@ -15,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
  * @Modified By:
  */
 
-object DataStreamSourceFactory{
+object DataStreamSourceFactory {
 
   private val sampleSize = 10
   private val jdbcFetchSize = 500
@@ -24,7 +24,7 @@ object DataStreamSourceFactory{
     val fileRowCount = DataUtils.countLinesFast(csvFile)
     val iterLines: ClosableIterator[String] = DataUtils.getFileLines(csvFile)
     val headerArray = new ArrayBuffer[String]()
-    if(header) iterLines.next().split(delimiter, -1).map(headerArray.append(_))
+    if (header) iterLines.next().split(delimiter, -1).map(headerArray.append(_))
 
     val sampleBuffer = iterLines.take(sampleSize).map(_.split(delimiter, -1)).toArray
     val structType = DataUtils.inferSchema(sampleBuffer, headerArray)
@@ -55,19 +55,19 @@ object DataStreamSourceFactory{
   }
 
   def createFileListDataStreamSource(dir: File, recursive: Boolean = false): DataStreamSource = {
-    var iterFiles:Iterator[(File, BasicFileAttributes)] = Iterator.empty
-    iterFiles = if(recursive) DataUtils.listAllFilesWithAttrs(dir)
+    var iterFiles: Iterator[(File, BasicFileAttributes)] = Iterator.empty
+    iterFiles = if (recursive) DataUtils.listAllFilesWithAttrs(dir)
     else DataUtils.listFilesWithAttributes(dir).toIterator
     val stream = iterFiles
       // schema [name, byteSize, 文件类型, 创建时间, 最后修改时间, 最后访问时间, file]
-      .map{file => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis,Blob.fromFile(file._1))}
+      .map { file => (file._1.getName, file._2.size(), DataUtils.getFileTypeByExtension(file._1), file._2.creationTime().toMillis, file._2.lastModifiedTime().toMillis, file._2.lastAccessTime().toMillis, Blob.fromFile(file._1)) }
       .map(Row.fromTuple(_))
     new DataStreamSource {
       override def rowCount: Long = -1
 
       override def schema: StructType = StructType.binaryStructType
 
-      override def iterator: ClosableIterator[Row] = new ClosableIterator(stream, ()=>{},true)
+      override def iterator: ClosableIterator[Row] = new ClosableIterator(stream, () => {}, true)
     }
   }
 
@@ -96,7 +96,7 @@ object DataStreamSourceFactory{
 
       override def schema: StructType = structType
 
-      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(()=>{
+      override def iterator: ClosableIterator[Row] = ClosableIterator(iterRows)(() => {
         rs.close()
         stmt.close()
         conn.close()

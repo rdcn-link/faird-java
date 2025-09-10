@@ -28,7 +28,7 @@ import scala.collection.mutable
  * @Date 2025/8/20 13:57
  * @Modified By:
  */
-class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authProvider: AuthProvider) extends DacpServer(dataProvider, dataReceiver, authProvider)  {
+class UnionServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authProvider: AuthProvider) extends DacpServer(dataProvider, dataReceiver, authProvider) {
 
   private val endpoints = mutable.ListBuffer[Endpoint]()
 
@@ -36,7 +36,7 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
   private val endpointMap = mutable.Map[String, Endpoint]()
 
   val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-  val recipeCounter   = new AtomicLong(0L)
+  val recipeCounter = new AtomicLong(0L)
 
   def addEndpoint(endpoints: Endpoint*): Unit = {
     endpoints.foreach(endpoint => {
@@ -72,18 +72,18 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
           case Right((baseUrl, path)) => (baseUrl, path)
           case Left(message) => (this.baseUrl, s.dataFrameUrl)
         }
-        if(baseUrlAndPath._1 == this.baseUrl){
+        if (baseUrlAndPath._1 == this.baseUrl) {
           baseUrlAndPath._2 match {
             case "/listDataSets" => response.sendDataFrame(doListDataSets())
             case "/listHostInfo" => response.sendDataFrame(doListHostInfo())
             case "/listDataFrames" => response.sendDataFrame(doListDataFrames(s.dataFrameUrl))
             case other => response.sendError(404, s"not found resource ${baseUrl}${other}")
           }
-        }else {
-          try{
-            val client =  endpointClientsMap.getOrElse(baseUrlAndPath._1, throw new Exception(s"Access to FaridServer ${s.dataFrameUrl} is denied"))
+        } else {
+          try {
+            val client = endpointClientsMap.getOrElse(baseUrlAndPath._1, throw new Exception(s"Access to FaridServer ${s.dataFrameUrl} is denied"))
             response.sendDataFrame(client.getByOperation(operation))
-          }catch {
+          } catch {
             case e: Exception =>
               logger.error(e)
               response.sendError(500, e.getMessage)
@@ -95,7 +95,7 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
 
   private def createSignature(expirationTime: Long): SignatureAuth = {
     val privateKey = ConfigLoader.fairdConfig.privateKey
-    if(privateKey.isEmpty) throw new Exception("Private key not found. Please configure private key information for this UnionServer.")
+    if (privateKey.isEmpty) throw new Exception("Private key not found. Please configure private key information for this UnionServer.")
     else {
       val nonce = UUID.randomUUID().toString
       val issueTime = System.currentTimeMillis()
@@ -117,10 +117,11 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
       }
     }).flatten
   }
+
   private def rebuildOperation(operation: Operation, baseUrl: String): Operation = {
     val inputs = operation.inputs.map(operation => operation match {
       case s: SourceOp =>
-        if(s.dataFrameUrl.startsWith(baseUrl)) s else {
+        if (s.dataFrameUrl.startsWith(baseUrl)) s else {
           val certificate = createSignature(60L * 60 * 1000) //default expirationTime 1h
           RemoteSourceProxyOp(s.dataFrameUrl, certificate.toJson().toString)
         }
@@ -131,7 +132,7 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
 
   private def getRecipeId(): String = {
     val timestamp = ZonedDateTime.now(ZoneId.of("UTC")).format(formatter)
-    val seq       = recipeCounter.incrementAndGet()
+    val seq = recipeCounter.incrementAndGet()
     s"job-${timestamp}-${seq}"
   }
 
@@ -140,11 +141,12 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
                              operation: Operation,
                              executionNodeBaseUrl: String,
                              attributes: Map[String, String] = Map()
-                           ){
+                           ) {
     def execute(): DataFrame = {
-      val client =  endpointClientsMap.getOrElse(executionNodeBaseUrl, throw new Exception(s"Access to FaridServer ${executionNodeBaseUrl} is denied"))
+      val client = endpointClientsMap.getOrElse(executionNodeBaseUrl, throw new Exception(s"Access to FaridServer ${executionNodeBaseUrl} is denied"))
       client.getByOperation(operation)
     }
+
     //TODO kill Job
     def close(): Unit = {}
   }
@@ -152,7 +154,7 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
   //  TODO 根据计算资源判定执行节点
   //可强制指定执行节点
   private def createRecipe(operation: Operation, executionNodeBaseUrl: Option[String] = None): Recipe = {
-    if(executionNodeBaseUrl.isEmpty){
+    if (executionNodeBaseUrl.isEmpty) {
       val baseUrl = getOperationSource(Seq(operation)).map(_.asInstanceOf[SourceOp].dataFrameUrl)
         .map(UrlValidator.extractBase(_).get._1)
         .groupBy(identity)
@@ -160,19 +162,19 @@ class UnionServer (dataProvider: DataProvider, dataReceiver: DataReceiver, authP
         .maxBy(_._2)._1
       val reOperation = rebuildOperation(operation, baseUrl)
       Recipe(getRecipeId(), reOperation, baseUrl)
-    }else{
-      Recipe(getRecipeId(), rebuildOperation(operation,executionNodeBaseUrl.get), executionNodeBaseUrl.get)
+    } else {
+      Recipe(getRecipeId(), rebuildOperation(operation, executionNodeBaseUrl.get), executionNodeBaseUrl.get)
     }
   }
 
   private def mergeDataFrame(dataFrames: List[DataFrame]): DataFrame = {
-    val stream: Iterator[Row]= dataFrames.map(df => df.mapIterator[Iterator[Row]](iter => iter)).reduce(_ ++ _)
+    val stream: Iterator[Row] = dataFrames.map(df => df.mapIterator[Iterator[Row]](iter => iter)).reduce(_ ++ _)
     val schema = dataFrames.head.schema
     DefaultDataFrame(schema, stream)
   }
 }
 
-object UnionServer{
+object UnionServer {
 
   def apply(endpoints: List[Endpoint]): UnionServer = {
     val unionServer = new UnionServer(dataProvider, dataReceiver, authProvider)
@@ -194,15 +196,22 @@ object UnionServer{
 
   private val dataProvider = new DataProvider {
     override def listDataSetNames(): util.List[String] = ???
+
     override def getDataSetMetaData(dataSetId: String, rdfModel: Model): Unit = ???
+
     override def listDataFrameNames(dataSetId: String): util.List[String] = ???
+
     override def getDataStreamSource(dataFrameName: String): DataStreamSource = ???
+
     override def getDocument(dataFrameName: String): DataFrameDocument = ???
+
     override def getStatistics(dataFrameName: String): DataFrameStatistics = ???
   }
   private val dataReceiver = new DataReceiver {
     override def start(): Unit = ???
+
     override def receiveRow(dataFrame: DataFrame): Unit = ???
+
     override def finish(): Unit = ???
   }
 }
@@ -210,7 +219,7 @@ object UnionServer{
 case class Endpoint(
                      host: String,
                      port: Int
-                   ){
+                   ) {
   // 解析Url获取的key
   def url: String = s"${DacpClient.protocolSchema}://${host}:${port}"
 

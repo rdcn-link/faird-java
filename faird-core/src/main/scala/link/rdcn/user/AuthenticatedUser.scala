@@ -15,18 +15,18 @@ import java.security.PublicKey
 trait AuthenticatedUser
 
 case class KeyAuthenticatedUser(
-                               serverId: String,
-                               nonce: String,
-                               issueTime: Long, //签发时间
-                               validTo: Long, //过期时间
-                               signature: Array[Byte] // UnionServer 私钥签名
+                                 serverId: String,
+                                 nonce: String,
+                                 issueTime: Long, //签发时间
+                                 validTo: Long, //过期时间
+                                 signature: Array[Byte] // UnionServer 私钥签名
                                ) extends AuthenticatedUser {
   def checkPermission(): Boolean = {
     val publicKey: Option[PublicKey] = ConfigLoader.fairdConfig.pubKeyMap.get(serverId)
-    if(publicKey.isEmpty) false else {
-      if(validTo > issueTime){
+    if (publicKey.isEmpty) false else {
+      if (validTo > issueTime) {
         KeyBasedAuthUtils.verifySignature(publicKey.get, getChallenge(), signature) && System.currentTimeMillis() < validTo
-      }else{
+      } else {
         KeyBasedAuthUtils.verifySignature(publicKey.get, getChallenge(), signature)
       }
     }

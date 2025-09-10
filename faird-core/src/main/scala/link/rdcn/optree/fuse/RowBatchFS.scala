@@ -41,12 +41,12 @@ class RowBatchFS(batchSource: RowBatchFSSource) extends FuseStubFS {
     } else {
 
       val name = path.stripPrefix(File.separator)
-      if(name == "batch.json"){
+      if (name == "batch.json") {
         stat.st_mode.set(FileStat.S_IFREG | 0x444) // 只读文件权限
         stat.st_size.set(estimateFileSize(name)) // 估算文件大小，-1表示未知
         stat.st_nlink.set(1)
         0
-      } else  -Errno.ENOENT.intValue()
+      } else -Errno.ENOENT.intValue()
     }
   }
 

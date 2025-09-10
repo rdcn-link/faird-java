@@ -10,9 +10,9 @@ import link.rdcn.util.{ClosableIterator, DataUtils, ResourceUtils}
  */
 
 case class DefaultDataFrame(
-                      schema: StructType,
-                      stream: ClosableIterator[Row]
-                    ) extends DataFrame {
+                             schema: StructType,
+                             stream: ClosableIterator[Row]
+                           ) extends DataFrame {
 
   override def map(f: Row => Row): DataFrame = {
     val iter = ClosableIterator(stream.map(f(_)))(stream.close())
@@ -20,7 +20,7 @@ case class DefaultDataFrame(
   }
 
   override def filter(f: Row => Boolean): DataFrame = {
-    val iter =  ClosableIterator(stream.filter(f(_)))(stream.close())
+    val iter = ClosableIterator(stream.filter(f(_)))(stream.close())
     DataUtils.getDataFrameByStream(iter)
   }
 
@@ -44,9 +44,11 @@ case class DefaultDataFrame(
 
   override def reduce(f: ((Row, Row)) => Row): DataFrame = ???
 
-  override def foreach(f: Row => Unit): Unit = ResourceUtils.using(stream){ iter => iter.foreach(f(_))}
+  override def foreach(f: Row => Unit): Unit = ResourceUtils.using(stream) { iter => iter.foreach(f(_)) }
 
-  override def collect(): List[Row] = ResourceUtils.using(stream){_.toList}
+  override def collect(): List[Row] = ResourceUtils.using(stream) {
+    _.toList
+  }
 
   override def mapIterator[T](f: ClosableIterator[Row] => T): T = f(stream)
 }

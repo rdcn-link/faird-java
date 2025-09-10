@@ -29,14 +29,14 @@ object ClientUtils {
             null
           } else {
             vector match {
-              case v: VarCharVector   =>
+              case v: VarCharVector =>
                 val strValue = v.getObject(rowIndex).toString
-                if(v.getField.getMetadata.isEmpty) strValue else DFRef(strValue)
-              case v: IntVector      => v.get(rowIndex)
-              case v: BigIntVector    => v.get(rowIndex)
-              case v: Float4Vector    => v.get(rowIndex)
-              case v: Float8Vector    => v.get(rowIndex)
-              case v: BitVector       => v.get(rowIndex) != 0
+                if (v.getField.getMetadata.isEmpty) strValue else DFRef(strValue)
+              case v: IntVector => v.get(rowIndex)
+              case v: BigIntVector => v.get(rowIndex)
+              case v: Float4Vector => v.get(rowIndex)
+              case v: Float8Vector => v.get(rowIndex)
+              case v: BitVector => v.get(rowIndex) != 0
               case v: VarBinaryVector => v.get(rowIndex)
               case _ => throw new UnsupportedOperationException(
                 s"Unsupported type: ${vector.getClass}"
@@ -87,14 +87,14 @@ object ClientUtils {
   def arrowSchemaToStructType(schema: org.apache.arrow.vector.types.pojo.Schema): StructType = {
     val columns = schema.getFields.asScala.map { field =>
       val colType = field.getType match {
-        case t if t == Types.MinorType.INT.getType  => ValueType.IntType
+        case t if t == Types.MinorType.INT.getType => ValueType.IntType
         case t if t == Types.MinorType.BIGINT.getType => ValueType.LongType
         case t if t == Types.MinorType.FLOAT4.getType => ValueType.FloatType
         case t if t == Types.MinorType.FLOAT8.getType => ValueType.DoubleType
         case t if t == Types.MinorType.VARCHAR.getType =>
-          if(field.getMetadata.isEmpty) ValueType.StringType else ValueType.RefType
+          if (field.getMetadata.isEmpty) ValueType.StringType else ValueType.RefType
         case t if t == Types.MinorType.BIT.getType => ValueType.BooleanType
-        case t if t == Types.MinorType.VARBINARY.getType => if(field.getMetadata.isEmpty)
+        case t if t == Types.MinorType.VARBINARY.getType => if (field.getMetadata.isEmpty)
           ValueType.BinaryType else ValueType.BlobType
         case _ => throw new UnsupportedOperationException(s"Unsupported Arrow type: ${field.getType}")
       }

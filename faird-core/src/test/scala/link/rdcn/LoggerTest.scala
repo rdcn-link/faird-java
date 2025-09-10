@@ -21,10 +21,7 @@ class LoggerTest extends Logging {
   val filePath = Paths.get(ExpectedLogger.getFileName)
   val regex = "^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\s+\\[(?<thread>\\S+)\\]\\s+(?<level>[A-Z]{4,5})\\s+(?<logger>\\S+)\\s+-\\s+(?<message>.*)$".r
 
-
-
   //测试builder是否正确设置
-
   @Test
   def testBuilderProperties(): Unit = {
 

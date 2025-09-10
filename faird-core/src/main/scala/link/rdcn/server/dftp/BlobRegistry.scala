@@ -30,5 +30,5 @@ object BlobRegistry {
     }
   }
 
-  def cleanUp():Unit = handlers.clear()
+  def cleanUp(): Unit = handlers.clear()
 }

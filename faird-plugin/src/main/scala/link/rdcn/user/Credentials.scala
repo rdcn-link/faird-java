@@ -11,7 +11,7 @@ trait Credentials extends Serializable
 object AnonymousCredentials extends Credentials
 
 object Credentials {
-    val ANONYMOUS = AnonymousCredentials
+  val ANONYMOUS = AnonymousCredentials
 }
 
 

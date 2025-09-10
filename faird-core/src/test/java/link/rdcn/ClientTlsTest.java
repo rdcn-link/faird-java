@@ -22,7 +22,7 @@ public class ClientTlsTest {
 
         System.out.println(stringSeq.size());
 
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             System.out.println(iterator.next());
         }
         scala.collection.immutable.Map<String, String> serverResourceInfo = dc.getServerResourceInfo();

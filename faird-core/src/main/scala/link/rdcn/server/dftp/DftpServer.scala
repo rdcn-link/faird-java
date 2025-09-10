@@ -3,7 +3,7 @@ package link.rdcn.server.dftp
 import link.rdcn.optree.{ExecutionContext, Operation}
 import link.rdcn.struct.ValueType.{BinaryType, StringType}
 import link.rdcn.struct.{DataFrame, DefaultDataFrame, Row, StructType}
-import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, KeyAuthenticatedUser, SignatureAuth, TokenAuth, UsernamePassword}
+import link.rdcn.user.{AuthProvider, AuthenticatedUser, Credentials, DataOperationType, KeyAuthenticatedUser, SignatureAuth}
 import link.rdcn.util.ServerUtils.convertStructTypeToArrowSchema
 import link.rdcn.util.{ClientUtils, CodecUtils, DataUtils, ServerUtils}
 import link.rdcn.Logging
@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.LockSupport
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+
 /**
  * @Author renhao
  * @Description:
@@ -28,7 +29,7 @@ import scala.collection.mutable.ListBuffer
  * @Modified By:
  */
 
-class NullDftpServiceHandler extends DftpServiceHandler{
+class NullDftpServiceHandler extends DftpServiceHandler {
   override def doGet(request: GetRequest, response: GetResponse): Unit = {
     response.sendError(404, s"resource ${request.getRequestedPath()} not found")
   }
@@ -41,8 +42,10 @@ class NullDftpServiceHandler extends DftpServiceHandler{
     response.sendError(404, s"Action ${request.getActionName()} not found")
   }
 }
-class AllowAllAuthProvider extends AuthProvider{
-  override def authenticate(credentials: Credentials): AuthenticatedUser = new AuthenticatedUser{}
+
+class AllowAllAuthProvider extends AuthProvider {
+  override def authenticate(credentials: Credentials): AuthenticatedUser = new AuthenticatedUser {}
+
   override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: List[DataOperationType]): Boolean = true
 }
 
@@ -62,6 +65,7 @@ class DftpServer {
     this.protocolSchema = protocolSchema
     this
   }
+
   def start(dftpConfig: DftpConfig): Unit = synchronized {
     if (started) return
     buildServer(dftpConfig)
@@ -120,7 +124,7 @@ class DftpServer {
   @volatile private var started: Boolean = false
 
   private def buildServer(dftpConfig: DftpConfig): Unit = {
-    val location = if(dftpConfig.useTls)
+    val location = if (dftpConfig.useTls)
       Location.forGrpcTls(dftpConfig.host, dftpConfig.port)
     else
       Location.forGrpcInsecure(dftpConfig.host, dftpConfig.port)
@@ -129,33 +133,33 @@ class DftpServer {
 
     val producer = new DftpFlightProducer(allocator, location, dftpServiceHandler, authProvider, authenticatedUserMap)
 
-    if(dftpConfig.useTls){
+    if (dftpConfig.useTls) {
       flightServer = FlightServer.builder(allocator, location, producer)
         .useTls(dftpConfig.tlsCertFile, dftpConfig.tlsKeyFile)
         .authHandler(new FlightServerAuthHandler(authProvider, authenticatedUserMap))
         .build()
-    }else{
+    } else {
       flightServer = FlightServer.builder(allocator, location, producer)
         .authHandler(new FlightServerAuthHandler(authProvider, authenticatedUserMap))
         .build()
     }
   }
 
-  private class FlightServerAuthHandler(authProvider: AuthProvider, tokenMap: ConcurrentHashMap[String, AuthenticatedUser]) extends ServerAuthHandler{
+  private class FlightServerAuthHandler(authProvider: AuthProvider, tokenMap: ConcurrentHashMap[String, AuthenticatedUser]) extends ServerAuthHandler {
     override def authenticate(serverAuthSender: ServerAuthHandler.ServerAuthSender, iterator: util.Iterator[Array[Byte]]): Boolean = {
       var authenticatedUser: AuthenticatedUser = null
-      try{
+      try {
         val cred = CodecUtils.decodeCredentials(iterator.next())
         cred match {
           case sig: SignatureAuth =>
-            authenticatedUser =  KeyAuthenticatedUser(sig.serverId, sig.nonce, sig.issueTime, sig.validTo, sig.signature)
+            authenticatedUser = KeyAuthenticatedUser(sig.serverId, sig.nonce, sig.issueTime, sig.validTo, sig.signature)
           case _ => authenticatedUser = authProvider.authenticate(cred)
         }
         val token = UUID.randomUUID().toString()
         tokenMap.put(token, authenticatedUser)
         serverAuthSender.send(CodecUtils.encodeString(token))
         true
-      }catch {
+      } catch {
         case e: Exception => false
       }
     }
@@ -174,7 +178,7 @@ class DftpServer {
 
     override def doAction(context: FlightProducer.CallContext, action: Action, listener: FlightProducer.StreamListener[Result]): Unit = {
       val actionResponse = new ActionResponse {
-        override def sendDataFrame(dataFrame: DataFrame): Unit =  ServerUtils.sendDataFrame(dataFrame, listener, allocator)
+        override def sendDataFrame(dataFrame: DataFrame): Unit = ServerUtils.sendDataFrame(dataFrame, listener, allocator)
 
         override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
       }
@@ -186,7 +190,7 @@ class DftpServer {
 
         override def getActionParameterMap(): Map[String, Any] = body._2
       }
-      dftpServiceHandler.doAction(actionRequest,actionResponse)
+      dftpServiceHandler.doAction(actionRequest, actionResponse)
     }
 
     override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
@@ -223,13 +227,16 @@ class DftpServer {
             }
           })
         }
+
         override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
       }
       val ticketInfo = CodecUtils.decodeTicket(ticket.getBytes)
-      if(ticketInfo._1 == CodecUtils.BLOB_STREAM){
+      if (ticketInfo._1 == CodecUtils.BLOB_STREAM) {
         val blobId = ticketInfo._2
         val blob = BlobRegistry.getBlob(blobId)
-        if(blob.isEmpty){sendErrorWithFlightStatus(404, s"blob ${blobId} resource closed")}
+        if (blob.isEmpty) {
+          sendErrorWithFlightStatus(404, s"blob ${blobId} resource closed")
+        }
         else {
           blob.get.offerStream(inputStream => {
             val stream: Iterator[Row] = DataUtils.chunkedIterator(inputStream).map(bytes => Row.fromSeq(Seq(bytes)))
@@ -237,7 +244,7 @@ class DftpServer {
             response.sendDataFrame(DefaultDataFrame(schema, stream))
           })
         }
-      }else {
+      } else {
         val sourceList = new ListBuffer[String]
         val operation = Operation.fromJsonString(ticketInfo._2, sourceList)
         val authenticatedUser = authenticatedUserMap.get(context.peerIdentity())
@@ -246,13 +253,13 @@ class DftpServer {
           case _ => None
         }
         sourceList.find(dataFrameName => {
-          if(keyPermission.nonEmpty) !keyPermission.get else
-          !authProvider.checkPermission(authenticatedUser, dataFrameName, List.empty)
+          if (keyPermission.nonEmpty) !keyPermission.get else
+            !authProvider.checkPermission(authenticatedUser, dataFrameName, List.empty)
         }) match {
           case Some(forbiddenName) =>
             response.sendError(403, s"access $forbiddenName Forbidden")
           case None =>
-            val request = new CookRequest{
+            val request = new CookRequest {
               override def getOperation: Operation = operation
             }
             dftpServiceHandler.doCook(request, response)
@@ -270,12 +277,14 @@ class DftpServer {
           val request = new PutRequest {
             override def getDataFrame(): DataFrame = {
               var schema = StructType.empty
-              if(flightStream.next()){
+              if (flightStream.next()) {
                 val root = flightStream.getRoot
                 schema = ClientUtils.arrowSchemaToStructType(root.getSchema)
                 val stream = ServerUtils.flightStreamToRowIterator(flightStream)
                 new DataFrameWithArrowRoot(root, schema, stream)
-              }else{DefaultDataFrame(schema, Iterator.empty) }
+              } else {
+                DefaultDataFrame(schema, Iterator.empty)
+              }
             }
           }
           val response = new PutResponse {
@@ -300,6 +309,7 @@ class DftpServer {
                   ackStream.onError(e)
               }
             }
+
             override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
           }
           dftpServiceHandler.doPut(request, response)
@@ -340,7 +350,7 @@ class DftpServer {
         case 500 => CallStatus.INTERNAL
         case 501 => CallStatus.UNIMPLEMENTED
         case 503 => CallStatus.UNAVAILABLE
-        case _   => CallStatus.UNKNOWN
+        case _ => CallStatus.UNKNOWN
       }
       throw status.withDescription(message).toRuntimeException
     }

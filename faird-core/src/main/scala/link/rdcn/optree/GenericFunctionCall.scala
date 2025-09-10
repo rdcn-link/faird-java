@@ -10,9 +10,11 @@ import link.rdcn.struct.{DataFrame, Row}
  * @Modified By:
  */
 trait SerializableFunction[-T, +R] extends (T => R) with Serializable
+
 trait GenericFunctionCall extends Serializable {
   def transform(input: Any): Any
 }
+
 case class SingleRowCall(f: SerializableFunction[Row, Any]) extends GenericFunctionCall {
   override def transform(input: Any): Any = input match {
     case row: Row => f(row)
@@ -41,7 +43,7 @@ case class DataFrameCall11(f: SerializableFunction[DataFrame, DataFrame]) extend
   }
 }
 
-case class DataFrameCall21(f: SerializableFunction[(DataFrame, DataFrame), DataFrame]) extends GenericFunctionCall{
+case class DataFrameCall21(f: SerializableFunction[(DataFrame, DataFrame), DataFrame]) extends GenericFunctionCall {
   override def transform(input: Any): Any = input match {
     case r: (DataFrame, DataFrame) => f(r)
     case _ => throw new IllegalArgumentException(s"Expected (DataFrame,DataFrame) but got ${input}")

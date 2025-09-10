@@ -1,9 +1,3 @@
-/**
- * @Author Yomi
- * @Description:
- * @Data 2025/7/16 14:19
- * @Modified By:
- */
 package link.rdcn
 
 import link.rdcn.ErrorCode._
@@ -17,6 +11,13 @@ import link.rdcn.util.DataUtils.listFiles
 import java.io.File
 import java.nio.file.Paths
 
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/7/16 14:19
+ * @Modified By:
+ */
+
 //用于Demo的Provider
 class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String = "data") {
   ConfigLoader.init(Paths.get(getResourcePath("tls")).toString)
@@ -29,12 +30,12 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
 
   //根据文件生成元信息
   lazy val csvDfInfos = listFiles(csvDir).map(file => {
-    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
+    DataFrameInfo(Paths.get("/csv").resolve(file.getName).toString.replace("\\", "/"), Paths.get(file.getAbsolutePath).toUri, CSVSource(",", true), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
   lazy val binDfInfos = Seq(
-    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\","/"),Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(binDir).getFileName).toString.replace("\\", "/"), Paths.get(binDir).toUri, DirectorySource(false), StructType.binaryStructType))
   lazy val excelDfInfos = listFiles(excelDir).map(file => {
-    DataFrameInfo(Paths.get("/excel").resolve(file.getName).toString.replace("\\","/"), Paths.get(file.getAbsolutePath).toUri, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
+    DataFrameInfo(Paths.get("/excel").resolve(file.getName).toString.replace("\\", "/"), Paths.get(file.getAbsolutePath).toUri, ExcelSource(), StructType.empty.add("id", IntType).add("value", IntType))
   })
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
@@ -44,7 +45,6 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
   }
-
 
   val authProvider = new AuthProvider {
 
@@ -85,7 +85,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
     override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
-      Paths.get(baseDir,relativePath).toString
+      Paths.get(baseDir, relativePath).toString
     }
 
   }

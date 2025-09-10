@@ -35,7 +35,7 @@ class FlightServerAuthHandlerTest extends TestProvider {
   //匿名访问DataFrame失败
   @Test
   def testAnonymousAccessDataFrameFalse(): Unit = {
-    val dc = DacpClient.connect("dacp://0.0.0.0:3101",Credentials.ANONYMOUS)
+    val dc = DacpClient.connect("dacp://0.0.0.0:3101", Credentials.ANONYMOUS)
     val serverException = assertThrows(
       classOf[FlightRuntimeException],
       () => dc.getByPath("/csv/data_1.csv").foreach(_ => ())

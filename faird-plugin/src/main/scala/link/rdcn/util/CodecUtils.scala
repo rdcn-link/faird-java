@@ -19,7 +19,7 @@ object CodecUtils {
   private val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
 
-  def encodePair(user:String, password: String): Array[Byte] = {
+  def encodePair(user: String, password: String): Array[Byte] = {
     val userBytes = user.getBytes(StandardCharsets.UTF_8)
     val passwordBytes = password.getBytes(StandardCharsets.UTF_8)
 
@@ -114,7 +114,7 @@ object CodecUtils {
     (typeId, new String(b, "UTF-8"))
   }
 
-  def encodePairWithTypeId(typeId: Byte, user:String, password: String): Array[Byte] = {
+  def encodePairWithTypeId(typeId: Byte, user: String, password: String): Array[Byte] = {
     val userBytes = user.getBytes(StandardCharsets.UTF_8)
     val passwordBytes = password.getBytes(StandardCharsets.UTF_8)
 
@@ -213,7 +213,7 @@ object CodecUtils {
     }
 
     val serverId = readString()
-    val nonce    = readString()
+    val nonce = readString()
     val issueTime = dis.readLong()
     val validTo = dis.readLong()
 

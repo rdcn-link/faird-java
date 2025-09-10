@@ -17,6 +17,7 @@ import scala.collection.JavaConverters._
  */
 object KeyBasedAuthUtils {
   Security.addProvider(new BouncyCastleProvider())
+
   // 生成RSA密钥对
   def generateKeyPair(): KeyPair = {
     val keyGen = KeyPairGenerator.getInstance("RSA", "BC")
@@ -92,18 +93,18 @@ object KeyBasedAuthUtils {
     val m = loadPublicKeys("/home/renhao/IdeaProjects/faird-java/faird-core/src/test/resources/keyPair/server.pub")
     println(m.get("dacp://0.0.0.0:3101").get == serverPublicKey)
     println(privateKey == serverPrivateKey)
-//    // Client 先保存 Server 的公钥（就像 SSH known_hosts）
-//    val knownServerPublicKey = serverPublicKey
-//
-//    // Client 发一个随机 challenge 给 Server
-//    val challenge = "hello-secure-world".getBytes("UTF-8")
-//
-//    // Server 用私钥签名
-//    val signature = signData(serverPrivateKey, challenge)
-//
-//    println(s"Signature: ${Base64.getEncoder.encodeToString(signature)}")
-//
-//    // Client 用 Server 公钥验证
-//    val ok = verifySignature(knownServerPublicKey, challenge, signature)
+    //    // Client 先保存 Server 的公钥（就像 SSH known_hosts）
+    //    val knownServerPublicKey = serverPublicKey
+    //
+    //    // Client 发一个随机 challenge 给 Server
+    //    val challenge = "hello-secure-world".getBytes("UTF-8")
+    //
+    //    // Server 用私钥签名
+    //    val signature = signData(serverPrivateKey, challenge)
+    //
+    //    println(s"Signature: ${Base64.getEncoder.encodeToString(signature)}")
+    //
+    //    // Client 用 Server 公钥验证
+    //    val ok = verifySignature(knownServerPublicKey, challenge, signature)
   }
 }

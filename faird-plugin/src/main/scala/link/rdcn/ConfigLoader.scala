@@ -7,6 +7,7 @@ import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory
 import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilder
+
 /**
  * @Author renhao
  * @Description:
@@ -19,14 +20,14 @@ object ConfigLoader {
   var fairdConfig: FairdConfig = _
 
   def init(fairdHome: String): Unit = synchronized {
-    val props = loadProperties(s"$fairdHome"+File.separator+ "conf" +File.separator+ "faird.conf")
+    val props = loadProperties(s"$fairdHome" + File.separator + "conf" + File.separator + "faird.conf")
     props.setProperty(ConfigKeys.FAIRD_HOME, fairdHome)
     fairdConfig = FairdConfig.load(props)
     initLog4j(fairdConfig)
   }
 
   def init(config: FairdConfig): Unit =
-    if(config != null) fairdConfig = config else fairdConfig = new FairdConfig
+    if (config != null) fairdConfig = config else fairdConfig = new FairdConfig
 
   private def loadProperties(path: String): Properties = {
     val props = new Properties()
@@ -65,7 +66,7 @@ object ConfigLoader {
   }
 }
 
-object ConfigBridge{
+object ConfigBridge {
   def getConfig(): FairdConfig = ConfigLoader.fairdConfig
 }
 

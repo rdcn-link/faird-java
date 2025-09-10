@@ -6,7 +6,7 @@ import link.rdcn.struct.DefaultDataFrame
 
 import java.nio.file.{Files, Path}
 
-object DataFrameMountUtils extends Logging{
+object DataFrameMountUtils extends Logging {
 
   def mountDataFrameToTempPath(df: DefaultDataFrame, f: java.io.File => Unit): Unit = {
     //构造批次源和虚拟文件系统
@@ -57,7 +57,7 @@ object DataFrameMountUtils extends Logging{
     val startTime = System.currentTimeMillis()
     val timeoutMillis = timeoutSeconds * 1000
 
-    while ({
+    while ( {
       val files = mountPath.toFile.listFiles()
       (files == null || files.isEmpty) && (System.currentTimeMillis() - startTime < timeoutMillis)
     }) {
