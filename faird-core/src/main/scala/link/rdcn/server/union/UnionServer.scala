@@ -182,7 +182,7 @@ object UnionServer {
     unionServer
   }
 
-  def connect(urls: String*): UnionServer = {
+  def initCluster(urls: String*): UnionServer = {
     val endpoints = urls.map(url => {
       UrlValidator.validate(url) match {
         case Right(value) => Endpoint(value._2, value._3.getOrElse(3101))

@@ -132,7 +132,7 @@ object UnionServerTest {
     dacpServer2.start(ConfigLoader.fairdConfig)
 
     ConfigLoader.init(unionServerHome)
-    unionServer = UnionServer.connect("dacp://0.0.0.0:3102", "dacp://0.0.0.0:3103")
+    unionServer = UnionServer.initCluster("dacp://0.0.0.0:3102", "dacp://0.0.0.0:3103")
     println(s"启动UnionServer bind ${ConfigLoader.fairdConfig.host}:" + ConfigLoader.fairdConfig.port)
     unionServer.start(ConfigLoader.fairdConfig)
   }
