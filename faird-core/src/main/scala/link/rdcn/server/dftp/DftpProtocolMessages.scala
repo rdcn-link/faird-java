@@ -35,7 +35,7 @@ trait PutRequest{
 }
 
 trait PutResponse{
-  def sendMessage(message: String): Unit
+  def sendDataFrame(dataFrame: DataFrame): Unit
   def sendError(code: Int, message: String): Unit
 }
 

@@ -8,7 +8,7 @@ package link.rdcn.optree
 
 import link.rdcn.ConfigLoader
 import link.rdcn.TestBase.getResourcePath
-import link.rdcn.optree.OperatorClientTest.{operatorClient, operatorDir}
+import link.rdcn.optree.RepositoryClientTest.{operatorClient, operatorDir}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.{AfterAll, Test}
 
@@ -17,9 +17,9 @@ import java.nio.file.Paths
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-object OperatorClientTest {
+object RepositoryClientTest {
 //  implicit val system: ActorSystem = ActorSystem("HttpClient")
-  val operatorClient = new OperatorClient("10.0.89.38", 8088)
+  val operatorClient = new RepositoryClient("10.0.89.38", 8088)
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
 
   @AfterAll
@@ -28,7 +28,7 @@ object OperatorClientTest {
   }
 }
 
-class OperatorClientTest {
+class RepositoryClientTest {
 
 
   @Test

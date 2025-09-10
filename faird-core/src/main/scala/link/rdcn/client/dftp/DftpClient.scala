@@ -53,7 +53,7 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
     }
   }
 
-  def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
+  def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): DataFrame = {
     val arrowSchema = ServerUtils.convertStructTypeToArrowSchema(dataFrame.schema)
     val childAllocator = allocator.newChildAllocator("put-data-session", 0, Long.MaxValue)
     val root = VectorSchemaRoot.create(arrowSchema, childAllocator)
@@ -75,18 +75,7 @@ class DftpClient (host: String, port: Int, useTLS: Boolean = false) {
           }
         })
         writer.completed()
-        val ack: PutResult = putListener.read()
-        var result = ""
-        if (ack != null) {
-          val metadataBuf = ack.getApplicationMetadata
-          val bytes = new Array[Byte](metadataBuf.readableBytes().toInt)
-          metadataBuf.readBytes(bytes)
-          result = CodecUtils.decodeString(bytes)
-          ack.close()
-        }
-        // 等待服务端最终完成信号
-        putListener.getResult()
-        result
+        ClientUtils.parsePutListener(putListener)
       } catch {
         case e: Throwable => writer.error(e)
           throw e

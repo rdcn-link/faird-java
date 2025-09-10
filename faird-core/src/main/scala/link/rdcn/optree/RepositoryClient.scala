@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class OperatorClient(host: String = "localhost", port: Int = 8088) {
+class RepositoryClient(host: String = "localhost", port: Int = 8088) {
   val baseUrl = s"http://$host:$port"
 
   def getOperatorInfo(functionId: String): Future[JSONObject] = {

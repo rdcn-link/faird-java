@@ -32,7 +32,7 @@ sealed trait FunctionWrapper {
 
 object FunctionWrapper {
   val operatorDir = Paths.get(getClass.getClassLoader.getResource("").toURI).toString
-  val operatorClient = new OperatorClient("10.0.89.38",8088)
+  val operatorClient = new RepositoryClient("10.0.89.38",8088)
 
   case class PythonCode(code: String, batchSize: Int = 100) extends FunctionWrapper {
     override def toJson: JSONObject = {

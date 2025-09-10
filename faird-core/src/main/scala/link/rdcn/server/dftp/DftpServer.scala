@@ -279,19 +279,25 @@ class DftpServer {
             }
           }
           val response = new PutResponse {
-            override def sendMessage(message: String): Unit = {
-              val bytes = CodecUtils.encodeString(message)
-              val buf: ArrowBuf = allocator.buffer(bytes.length)
+            override def sendDataFrame(dataFrame: DataFrame): Unit = {
               try {
-                buf.writeBytes(bytes)
-                ackStream.onNext(PutResult.metadata(buf))
+                dataFrame.mapIterator(messages => {
+                  messages.foreach { message =>
+                    val bytes = CodecUtils.encodeString(message.toJsonString(dataFrame.schema))
+                    val buf: ArrowBuf = allocator.buffer(bytes.length)
+                    try {
+                      buf.writeBytes(bytes)
+                      ackStream.onNext(PutResult.metadata(buf))
+                    } finally {
+                      buf.close()
+                    }
+                  }
+                })
                 ackStream.onCompleted()
               } catch {
                 case e: Throwable =>
                   e.printStackTrace()
                   ackStream.onError(e)
-              } finally {
-                buf.close()
               }
             }
             override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)

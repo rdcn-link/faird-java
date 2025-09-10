@@ -23,8 +23,10 @@ import scala.io.Source
  * @Modified By:
  */
 object DataUtils extends Logging{
+  //TODO remove
   private val resourceManager = new ResourceManager
 
+  //TODO remove
   private class ResourceManager {
     private val resources = mutable.Map[String, Source]()
 

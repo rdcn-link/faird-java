@@ -43,8 +43,7 @@ class DacpServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPro
       }catch {
         case e: Exception => response.sendError(500, e.getMessage)
       }
-      val jo = new JSONObject()
-      response.sendMessage(jo.put("status","success").toString)
+      response.sendDataFrame(DefaultDataFrame(StructType.empty.add("status", StringType), Seq(Row.fromSeq(Seq("success"))).toIterator))
     }
 
     override def doCook(request: CookRequest, response: CookResponse): Unit = DacpServer.this.doCook(request, response)

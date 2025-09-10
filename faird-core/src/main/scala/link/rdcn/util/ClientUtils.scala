@@ -1,9 +1,9 @@
 package link.rdcn.util
 
-import link.rdcn.struct.{Column, DataFrame, DefaultDataFrame, DFRef, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, DFRef, DataFrame, DefaultDataFrame, Row, StructType, ValueType}
 import io.circe.{DecodingFailure, parser}
 import org.apache.arrow.vector.types.Types
-import org.apache.arrow.flight.Result
+import org.apache.arrow.flight.{PutResult, Result, SyncPutListener}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.ArrowStreamWriter
 import org.apache.arrow.vector._
@@ -48,6 +48,40 @@ object ClientUtils {
       }
     }
     DefaultDataFrame(schema, ClosableIterator(allRows.toIterator)())
+  }
+
+  def parsePutListener(putListener: SyncPutListener): DataFrame = {
+    val iter = new Iterator[String] {
+      private var nextElem: Option[String] = fetchNext()
+
+      override def hasNext: Boolean = nextElem.isDefined
+
+      override def next(): String = {
+        if (!hasNext) throw new NoSuchElementException("No more elements")
+        val res = nextElem.get
+        nextElem = fetchNext()
+        res
+      }
+
+      private def fetchNext(): Option[String] = {
+        val ack: PutResult = putListener.read()
+        if (ack == null) {
+          putListener.getResult()
+          None
+        } else {
+          try {
+            val metadataBuf = ack.getApplicationMetadata
+            val bytes = new Array[Byte](metadataBuf.readableBytes().toInt)
+            metadataBuf.readBytes(bytes)
+            Some(CodecUtils.decodeString(bytes))
+          } finally {
+            ack.close()
+          }
+        }
+      }
+    }
+    val schemaAndStream = DataUtils.getStructTypeStreamFromJson(iter)
+    DefaultDataFrame(schemaAndStream._2, schemaAndStream._1)
   }
 
   def arrowSchemaToStructType(schema: org.apache.arrow.vector.types.pojo.Schema): StructType = {

@@ -1,6 +1,5 @@
 package link.rdcn
 
-import org.apache.arrow.flight.FlightRuntimeException
 import enumeratum._
 
 import scala.collection.immutable
@@ -9,7 +8,7 @@ sealed abstract class ErrorCode( val code: Int,
                                  val message: String) extends EnumEntry {
   val INVALID_ERROR_CODE = "-1"
 }
-
+// TODO: Remove this ErrorCode enum. Use NewErrorCode instead.
 case object ErrorCode extends Enum[ErrorCode] {
   val values: immutable.IndexedSeq[ErrorCode] = findValues
   case object USER_NOT_FOUND extends ErrorCode(100, "User not found")
