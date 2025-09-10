@@ -124,7 +124,6 @@ object TestProvider {
   def stop(): Unit = {
     stopServer()
     BlobRegistry.cleanUp()
-    DataUtils.closeAllFileSources()
     TestDataGenerator.cleanupTestData(baseDir)
   }
 

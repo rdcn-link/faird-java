@@ -8,12 +8,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.json.JSONObject
 
 import java.io._
-import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
-import scala.collection.JavaConverters.{asScalaIteratorConverter, seqAsJavaListConverter}
-import scala.collection.mutable
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.io.Source
 
 /**
@@ -23,44 +21,6 @@ import scala.io.Source
  * @Modified By:
  */
 object DataUtils extends Logging {
-  //TODO remove
-  private val resourceManager = new ResourceManager
-
-  //TODO remove
-  private class ResourceManager {
-    private val resources = mutable.Map[String, Source]()
-
-    def register(source: Source, filePath: String): Unit = {
-      resources.synchronized {
-        resources += (filePath -> source)
-      }
-    }
-
-    def getSource(filePath: String): Option[Source] = {
-      resources.synchronized {
-        resources.get(filePath)
-      }
-    }
-
-    def close(filePath: String): Unit = {
-      resources.synchronized {
-        resources.get(filePath).foreach { source =>
-          source.close()
-          resources -= filePath
-        }
-      }
-    }
-
-    def closeAll(): Unit = {
-      resources.synchronized {
-        resources.values.foreach(_.close())
-        resources.clear()
-        System.gc()
-        Thread.sleep(100)
-      }
-    }
-  }
-
   def getStructTypeFromMap(row: Map[String, Any]): StructType = {
     StructType(row.map(row => Column(row._1, inferValueType(row._2))).toSeq)
   }
@@ -260,21 +220,12 @@ object DataUtils extends Logging {
 
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
-    resourceManager.register(source, filePath)
     source.getLines()
   }
 
   def getFileLines(file: File): ClosableIterator[String] = {
     val source = Source.fromFile(file)
     ClosableIterator(source.getLines())(source.close())
-  }
-
-  def closeFileSource(filePath: String): Unit = {
-    resourceManager.close(filePath)
-  }
-
-  def closeAllFileSources(): Unit = {
-    resourceManager.closeAll()
   }
 
   def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
