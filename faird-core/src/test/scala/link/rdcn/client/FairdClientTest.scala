@@ -47,12 +47,30 @@ class FairdClientTest extends TestProvider {
   }
 
   @Test
-  def testSchema(): Unit = {
+  def testGetSchema(): Unit = {
     //注入元数据
     dataProvider.getDataSetMetaData("csv", csvModel)
     assertTrue(csvModel.isIsomorphicWith(dc.getDataSetMetaData("csv")), "GetDataSetMetaData接口读取csv文件输出与预期不符！")
     dataProvider.getDataSetMetaData("bin", binModel)
     assertTrue(binModel.isIsomorphicWith(dc.getDataSetMetaData("bin")), "GetDataSetMetaData接口读取二进制文件输出与预期不符！")
+  }
+
+  @Test
+  def testGetDocument(): Unit = {
+    val expectedDocument = dataProvider.getDocument("/bin")
+    val clientDocument = dc.getDocument("/bin")
+    assertEquals(expectedDocument.getSchemaURL(),clientDocument.getSchemaURL(), "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.getColumnURL("id"),clientDocument.getColumnURL("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.getColumnAlias("id"),clientDocument.getColumnAlias("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.getColumnTitle("id"),clientDocument.getColumnTitle("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
+  }
+
+  @Test
+  def testGetStatistics(): Unit = {
+    val expectedDocument = dataProvider.getStatistics("/bin")
+    val clientDocument = dc.getStatistics("/bin")
+    assertEquals(expectedDocument.rowCount,clientDocument.rowCount, "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.byteSize,clientDocument.byteSize, "GetDocument接口读取SchemaURL输出与预期不符！")
   }
 
   @Test
