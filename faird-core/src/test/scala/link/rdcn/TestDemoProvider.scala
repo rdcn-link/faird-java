@@ -33,6 +33,8 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
   val excelDir = getOutputDir(baseDirString, Seq(subDirString, "excel").mkString(File.separator))
   val jsonDir = getOutputDir(baseDirString, Seq(subDirString, "json").mkString(File.separator))
   val structuredDir = getOutputDir(baseDirString, Seq(subDirString, "structured").mkString(File.separator))
+  val dirDir = getOutputDir(baseDirString, Seq(subDirString, "dir", "images").mkString(File.separator))
+  val blobDir = getOutputDir(baseDirString, Seq(subDirString, "blob").mkString(File.separator))
 
 
   //根据文件生成元信息
@@ -53,12 +55,20 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
     DataFrameInfo(Paths.get("/structured").resolve(file.getName).toString.replace("\\","/"),Paths.get(file.getAbsolutePath).toUri,
       StructuredSource(structuredDataFrame._1,structuredDataFrame._2, structuredDataFrame._3), StructType.empty.add("id", LongType).add("value", DoubleType))
   })
+  lazy val dirDfInfos = Seq(
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(dirDir).getFileName).toString.replace("\\","/"),Paths.get(dirDir).toUri, DirectorySource(false), StructType.binaryStructType))
+
+  lazy val blobDfInfos = Seq(
+    DataFrameInfo(Paths.get("/").resolve(Paths.get(blobDir).getFileName).toString.replace("\\","/"),Paths.get(blobDir).toUri, DirectorySource(false), StructType.binaryStructType))
+
 
   val dataSetCsv = DataSet("csv", "1", csvDfInfos.toList)
   val dataSetBin = DataSet("bin", "2", binDfInfos.toList)
   val dataSetExcel = DataSet("excel", "3", excelDfInfos.toList)
   val dataSetJson = DataSet("json", "4", jsonDfInfos.toList)
   val dataSetStructrued = DataSet("structured", "5", structuredDfInfos.toList)
+  val dataSetDir= DataSet("dir", "6", dirDfInfos.toList)
+  val dataSetBlob = DataSet("blob", "7", blobDfInfos.toList)
 
   private def getStructuredDataFrame(structuredDir: String): (Seq[Row], StructType, Source) = {
     val file =  listFiles(structuredDir).toSeq.head
@@ -131,7 +141,7 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
     }
   }
   val dataProvider: DataProviderImpl = new DataProviderImpl() {
-    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel, dataSetJson, dataSetStructrued)
+    override val dataSetsScalaList: List[DataSet] = List(dataSetCsv, dataSetBin, dataSetExcel, dataSetJson, dataSetStructrued, dataSetDir, dataSetDir)
     override val dataFramePaths: (String => String) = (relativePath: String) => {
       Paths.get(baseDir,relativePath).toString
     }

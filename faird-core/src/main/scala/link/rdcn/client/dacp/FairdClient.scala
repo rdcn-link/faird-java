@@ -26,9 +26,12 @@ class FairdClient private(url: String, port: Int, useTLS: Boolean = false) exten
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
 
   def listDataFrameNames(dsName: String): Seq[String] = {
-    get(dacpUrlPrefix + s"/listDataFrames/$dsName").mapIterator(iter => iter.foreach(row=>{println(row.getAs[String](0))}))
     val result = get(dacpUrlPrefix + s"/listDataFrames/$dsName").collect()
     result.toSeq.map(row=>row.getAs[String](0))
+  }
+
+  override def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
+    super.put(dataFrame, setDataBatchLen)
   }
 
   def getDataSetMetaData(dsName: String): Model = {
