@@ -1,234 +1,142 @@
-//import link.rdcn.{ConfigLoader, Logging}
-//import link.rdcn.client.{Blob, FairdClient}
-//import link.rdcn.provider.DataProvider
-//import link.rdcn.server.FlightProducerImpl
-//import link.rdcn.struct.ValueType.{BinaryType, IntType, StringType}
-//import link.rdcn.struct.{Row, StructType}
-//import org.apache.arrow.flight.{FlightServer, Location}
-//import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
-//import org.junit.jupiter.api.{AfterAll, BeforeAll, Test}
-//
-//import java.nio.charset.StandardCharsets
-//
-///**
-// * @Author renhao
-// * @Description:
-// * @Data 2025/6/18 17:24
-// * @Modified By:
-// */
-//object BpsTest extends Logging {
-//  val location = Location.forGrpcInsecure(ConfigLoader.fairdConfig.getHostPosition, ConfigLoader.fairdConfig.getHostPort)
-//  val allocator: BufferAllocator = new RootAllocator()
-//  val producer = new FlightProducerImpl(allocator, location, dataProvider, authprovider)
-//  val flightServer = FlightServer.builder(allocator, location, producer).build()
-//  @BeforeAll
-//  def startServer(): Unit = {
-//    //
-//    flightServer.start()
-//    println(s"Server (Location): Listening on port ${flightServer.getPort}")
-//  }
-//  @AfterAll
-//  def stopServer(): Unit = {
-//
-//    producer.close()
-//    flightServer.close()
-//
-//  }
-//}
-//
-//class BpsTest {
-//
-//  @Test
-//  def listDataSetTest(): Unit = {
-//    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
-//    dc.listDataSetNames().foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("unstructured").foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("hdfs").foreach(println)
-//    println("---------------------------------------------------------------------------")
-//    dc.listDataFrameNames("ldbc").foreach(println)
-//  }
-//
-//  @Test
-//  def readBinaryTest(): Unit = {
-//    val dc = FairdClient.connect("dacp://0.0.0.0:3101")
-//
-//    //    val df = dc.get("C:\\Users\\Yomi\\PycharmProjects\\Faird\\Faird\\target\\test_output\\bin\\data_1.csv")
-//    val df = dc.get("\\bin")
-//
-//    val cnt=0
-//    df.foreach(
-//      println
-//    )
-//  }
-//
-//  @Test
-//  def dfApiTest(): Unit = {
-//
-//    val schema = StructType.empty
-//      .add("id", IntType, nullable = false)
-//      .add("name", StringType)
-//      .add("bin", BinaryType)
-//
-//    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    val df = dc.get("dacp://10.0.0.1/bindata")
-//    var totalBytes: Long = 0L
-//    var realBytes: Long = 0L
-//    var count: Int = 0
-//    val batchSize = 2
-//    val startTime = System.currentTimeMillis()
-//    var start = System.currentTimeMillis()
-//
-//    println("SchemaURI:"+df.getSchemaURI)
-//    println("---------------------------------------------------------------------------")
-//
-//    println("StructType:"+df.getSchema)
-//    println("---------------------------------------------------------------------------")
-//    df.foreach(row => {
-//      //      计算当前 row 占用的字节数（UTF-8 编码）
-//      //      val index = row.get(0).asInstanceOf[Int]
-//      val name = row.get(0).asInstanceOf[String]
-//      val blob = row.get(6).asInstanceOf[Blob]
-//      //      val bytesLen = blob.length
-//      val bytesLen = blob.rowCount
-//      println(f"Received: ${blob.chunkCount} chunks, name:$name")
-//      totalBytes += bytesLen
-//      realBytes += bytesLen
-//
-//      count += 1
-//
-//      if (count % batchSize == 0) {
-//        val endTime = System.currentTimeMillis()
-//        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-//        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-//        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-//        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-//        val bps = real_mbReceived / real_elapsedSeconds
-//        val obps = total_mbReceived / total_elapsedSeconds
-//        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-//        start = System.currentTimeMillis()
-//        realBytes = 0L
-//      }
-//    })
-//    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
-//  }
-//
-//
-//  @Test
-//  def binaryFilesTest(): Unit = {
-//
-//    val schema = StructType.empty
-//      .add("id", IntType, nullable = false)
-//      .add("name", StringType)
-//      .add("bin", BinaryType)
-//
-//    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//
-//    val df = dc.get("C:\\Users\\NatsusakiYomi\\Downloads\\数据")
-//    var totalBytes: Long = 0L
-//    var realBytes: Long = 0L
-//    var count: Int = 0
-//    val batchSize = 2
-//    val startTime = System.currentTimeMillis()
-//    var start = System.currentTimeMillis()
-//    df.foreach(row => {
-//      //      计算当前 row 占用的字节数（UTF-8 编码）
-////      val index = row.get(0).asInstanceOf[Int]
-//      val name = row.get(0).asInstanceOf[String]
-//      val blob = row.get(1).asInstanceOf[Blob]
-//      //      val bytesLen = blob.length
-//      val bytesLen = blob.rowCount
-//      println(f"Received: ${blob.chunkCount} chunks, name:$name")
-//      totalBytes += bytesLen
-//      realBytes += bytesLen
-//
-//      count += 1
-//
-//      if (count % batchSize == 0) {
-//        val endTime = System.currentTimeMillis()
-//        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-//        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-//        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-//        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-//        val bps = real_mbReceived / real_elapsedSeconds
-//        val obps = total_mbReceived / total_elapsedSeconds
-//        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-//        start = System.currentTimeMillis()
-//        realBytes = 0L
-//      }
-//    })
-//    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
-//  }
-//
-//  @Test
-//  def bpsTest(): Unit = {
-//
-//    val schema = StructType.empty
-//      .add("name", StringType)
-//
-//    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    val df = dc.get("/Users/renhao/Downloads/MockData/hdfs")
-//    var totalBytes: Long = 0L
-//    var realBytes: Long = 0L
-//    var count: Int = 0
-//    val batchSize = 500000
-//    val startTime = System.currentTimeMillis()
-//    var start = System.currentTimeMillis()
-//    df.foreach(row => {
-//      //      计算当前 row 占用的字节数（UTF-8 编码）
-//      val bytesLen =
-////        row.get(0).asInstanceOf[Array[Byte]].length
-//              row.get(0).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
-//
-//      //          row.get(1).asInstanceOf[String].getBytes(StandardCharsets.UTF_8).length
-//
-//      totalBytes += bytesLen
-//      realBytes += bytesLen
-//
-//      count += 1
-//
-//      if (count % batchSize == 0) {
-//        val endTime = System.currentTimeMillis()
-//        val real_elapsedSeconds = (endTime - start).toDouble / 1000
-//        val total_elapsedSeconds = (endTime - startTime).toDouble / 1000
-//        val real_mbReceived = realBytes.toDouble / (1024 * 1024)
-//        val total_mbReceived = totalBytes.toDouble / (1024 * 1024)
-//        val bps = real_mbReceived / real_elapsedSeconds
-//        val obps = total_mbReceived / total_elapsedSeconds
-//        println(f"Received: $count rows, total: $total_mbReceived%.2f MB, speed: $bps%.2f MB/s")
-//        start = System.currentTimeMillis()
-//        realBytes = 0L
-//      }
-//    })
-//    println(f"total: ${totalBytes/(1024*1024)}%.2f MB, time: ${System.currentTimeMillis() - startTime}")
-//  }
-//
-//  @Test
-//  def csvSourceTest(): Unit = {
-//    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-//    val schema = StructType.empty
-//      .add("col1", StringType)
-//      .add("col2", StringType)
-//    val df = dc.get("/Users/renhao/Downloads/MockData/hdfs")
-//    df.limit(10).foreach(row => {
-//      println(row)
-//    })
-//    df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString)).foreach(println)
-//    df.limit(10).map(x=>Row("-------"+x.get(0).toString, "#########"+x.get(1).toString))
-//      .filter(x=>x.getAs[String](0).get.startsWith("###"))
-//      .foreach(println)
-//  }
-//  @Test
-//  def csvSourceLdbcTest(): Unit = {
-//    val dc = FairdClient.connect("dacp://0.0.0.0:33333")
-////    id|type|name|url
-//    val schema = StructType.empty
-//      .add("id", StringType)
-//      .add("type", StringType)
-//      .add("name", StringType)
-//      .add("url", StringType)
-//    val df = dc.get("/Users/renhao/Downloads/MockData/ldbc")
-//    df.limit(10).foreach(println)
-//  }
-//}
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/8/28 16:07
+ * @Modified By:
+ */
+package link.rdcn
+
+import link.rdcn.client.dacp.FairdClient
+import link.rdcn.struct.{Blob, DataFrame, Row}
+import link.rdcn.user.UsernamePassword
+import org.apache.commons.io.IOUtils
+
+import java.io.{File, FileOutputStream}
+import java.nio.file.{Files, Path, Paths}
+
+object BpsTest {
+
+  //测试数据文件夹
+  val prefix = "/home/faird/faird-core/src/test/demo/data/"
+  val dc: FairdClient = FairdClient.connect("dacp://10.0.87.114:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+  val step = 1000000
+
+  def main(args: Array[String]): Unit = {
+    val csvPath = "/csv/data_7.csv"
+    val jsonPath = "/json/million_lines.json"
+    val binPath = "/bin"
+        time(testBin,binPath)
+        time(testJson,jsonPath)
+        time(testJsonSelect,jsonPath)
+        time(testCsv,csvPath)
+        testRowJson(jsonPath,step)
+        testRowCsv(csvPath,step)
+        testRowSelectCsv(csvPath,step)
+        testRowSelectJson(jsonPath,step)
+  }
+
+  def testCsv(name: String): Unit = {
+    val dfCsv: DataFrame = dc.getByPath(name)
+    dfCsv.collect()
+  }
+
+  def testJson(name: String): Unit = {
+    val dfJson: DataFrame = dc.getByPath(name)
+    dfJson.collect()
+  }
+
+  def testJsonSelect(name: String): Unit = {
+    val dfJson: DataFrame = dc.getByPath(name)
+    dfJson.select("id").collect()
+  }
+
+  def testBin(name: String): Unit = {
+    val dfBin: DataFrame = dc.getByPath(name)
+
+    dfBin.foreach(row => {
+      val blob = row.getAs[Blob](6)
+      blob.offerStream(inputStream => {
+        val path: Path = Paths.get(prefix, "bin.bin")
+        val outputStream = new FileOutputStream(path.toFile)
+        IOUtils.copy(inputStream, outputStream)
+      })
+    })
+  }
+
+  def testRowCsv(name: String, step: Int): Unit = {
+    val dfCsv: DataFrame = dc.getByPath(name)
+    timeIterator(dfCsv, step, () => _)
+  }
+
+  def testRowSelectCsv(name: String, step: Int): Unit = {
+    val dfCsv: DataFrame = dc.getByPath(name)
+    timeIterator(dfCsv.select("value"), step, () => _)
+  }
+
+  def testRowJson(name: String, step: Int): Unit = {
+    val dfJson: DataFrame = dc.getByPath(name)
+    timeIterator(dfJson, step, () => _)
+  }
+
+  def testRowSelectJson(name: String, step: Int): Unit = {
+    val dfJson: DataFrame = dc.getByPath(name)
+    timeIterator(dfJson.select("id","status","timestamp"), step, () => _)
+  }
+
+  def time(codeBlock: String => Unit, name: String): Unit = {
+    val filePath = Paths.get(prefix, name).toString
+    val file = new File(filePath)
+    if (file.exists()) {
+      val sizeInBytes = if (file.isFile) file.length()
+      else 1024 * 1024 * 1024L
+      val sizeInKB = sizeInBytes / 1024.0
+      val sizeInMB = sizeInKB / 1024.0
+
+      println(s"file: ${file.getName}")
+      println(f"size: $sizeInMB%.2f MB")
+      var startTime = System.currentTimeMillis()
+      val result = codeBlock(name)
+      var timeInMs = System.currentTimeMillis() - startTime
+      println(f"total: $sizeInMB MB, time: ${timeInMs}")
+
+      var timeInSeconds = timeInMs / 1000.0
+      if (timeInSeconds > 0) {
+        val speedInMBps = sizeInMB / timeInSeconds
+        println(f"test speed: $speedInMBps%.2f MB/s")
+      } else {
+        println("无法计算速度，因为耗时太短。")
+      }
+    } else {
+      println(s"文件不存在或不是一个文件: $filePath")
+    }
+  }
+
+
+  def timeIterator(
+                    it: DataFrame,
+                    step: Int,
+                    op: Row => Unit
+                  ): Unit = {
+
+    var count = 0
+    var end = System.currentTimeMillis()
+    var start = end
+    it.foreach { item =>
+      op(item)
+      count += 1
+
+      if (count % step == 0) {
+        start = end
+        end = System.currentTimeMillis()
+        val duration = (end - start)
+        println(s"Processed $count rows in ${duration/ 1000.0} s. Average speed: ${(step.toDouble / duration *1000).toLong} rows/sec.")
+      }
+    }
+
+    // 打印最终总耗时
+    //    end = System.currentTimeMillis()
+    //    val totalDuration = (end - start) / 1000.0
+    //    println(s"Total processed $count rows in ${totalDuration} s.")
+  }
+
+}

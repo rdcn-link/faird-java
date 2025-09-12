@@ -1,7 +1,7 @@
 package link.rdcn
 
 import link.rdcn.provider._
-import link.rdcn.struct.{Row, StructType, DataStreamSource, DataStreamSourceFactory}
+import link.rdcn.struct.{DataStreamSource, DataStreamSourceFactory, Row, StructType}
 import link.rdcn.util.ClosableIterator
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.apache.jena.vocabulary.RDF
@@ -11,6 +11,7 @@ import java.net.URI
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.io.Source
 
 
 /** *
@@ -98,6 +99,8 @@ abstract class DataProviderImpl extends DataProvider {
       case _: CSVSource => DataStreamSourceFactory.createCsvDataStreamSource(new File(dataFrameInfo.path))
       case _: DirectorySource => DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path))
       case _: ExcelSource => DataStreamSourceFactory.createExcelDataStreamSource(Paths.get(dataFrameInfo.path).toString)
+      case jsonSource: JSONSource => DataStreamSourceFactory.createJSONDataStreamSource(new File(dataFrameInfo.path), jsonSource.multiline)
+      case structuredSource: StructuredSource => DataStreamSourceFactory.createStructuredSource(structuredSource.dataFrame, structuredSource.structType, structuredSource.source)
       case _: InputSource => ???
     }
 
@@ -188,7 +191,11 @@ case class DirectorySource(
                             recursive: Boolean = true
                           ) extends InputSource
 
-case class StructuredSource() extends InputSource
+case class StructuredSource(
+                            dataFrame: Seq[Row],
+                            structType: StructType,
+                            source: Source
+                           ) extends InputSource
 
 case class ExcelSource() extends InputSource
 

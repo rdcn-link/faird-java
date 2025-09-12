@@ -183,7 +183,7 @@ class DftpServer {
     }
 
     override def getStream(context: FlightProducer.CallContext, ticket: Ticket, listener: FlightProducer.ServerStreamListener): Unit = {
-      val setDataBatchLen = 100
+      val setDataBatchLen = 10000
       val ticketInfo = CodecUtils.decodeTicket(ticket.getBytes)
       val operation = Operation.fromJsonString(ticketInfo._3)
       val baseUrlAndPath = UrlValidator.extractBaseUrlAndPath(ticketInfo._2) match {

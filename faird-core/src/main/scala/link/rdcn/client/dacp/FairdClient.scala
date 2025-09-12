@@ -28,6 +28,10 @@ class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends Dftp
     get(url).collect().map(row=>row.getAs[String](0))
   }
 
+  override def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
+    super.put(dataFrame, setDataBatchLen)
+  }
+
   def getDataSetMetaData(dsName: String): Model = {
     val model = ModelFactory.createDefaultModel()
     val rdfString = getDataSetInfoMap.get(dsName).getOrElse(return model)._1
