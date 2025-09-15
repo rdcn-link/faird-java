@@ -64,7 +64,7 @@ object TestDataGenerator {
       val fileName = s"data_$i.csv"
       val filePath = Paths.get(csvDir).resolve(fileName).toFile
       val startTime = System.currentTimeMillis()
-      val rows = 5000000 // 1 亿行
+      val rows = 10000 // 1 亿行
       var writer: BufferedWriter = null // 声明为 var，方便 finally 块中访问
 
       try {

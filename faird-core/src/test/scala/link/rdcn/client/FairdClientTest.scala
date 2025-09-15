@@ -60,17 +60,17 @@ class FairdClientTest extends TestProvider {
     val expectedDocument = dataProvider.getDocument("/bin")
     val clientDocument = dc.getDocument("/bin")
     assertEquals(expectedDocument.getSchemaURL(),clientDocument.getSchemaURL(), "GetDocument接口读取SchemaURL输出与预期不符！")
-    assertEquals(expectedDocument.getColumnURL("id"),clientDocument.getColumnURL("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
-    assertEquals(expectedDocument.getColumnAlias("id"),clientDocument.getColumnAlias("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
-    assertEquals(expectedDocument.getColumnTitle("id"),clientDocument.getColumnTitle("id"), "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.getColumnURL("id"),clientDocument.getColumnURL("id"), "GetDocument接口读取ColumnURL输出与预期不符！")
+    assertEquals(expectedDocument.getColumnAlias("id"),clientDocument.getColumnAlias("id"), "GetDocument接口读取ColumnAlias输出与预期不符！")
+    assertEquals(expectedDocument.getColumnTitle("id"),clientDocument.getColumnTitle("id"), "GetDocument接口读取ColumnTitle输出与预期不符！")
   }
 
   @Test
   def testGetStatistics(): Unit = {
     val expectedDocument = dataProvider.getStatistics("/bin")
     val clientDocument = dc.getStatistics("/bin")
-    assertEquals(expectedDocument.rowCount,clientDocument.rowCount, "GetDocument接口读取SchemaURL输出与预期不符！")
-    assertEquals(expectedDocument.byteSize,clientDocument.byteSize, "GetDocument接口读取SchemaURL输出与预期不符！")
+    assertEquals(expectedDocument.rowCount,clientDocument.rowCount, "GetStatistics接口读取rowCount输出与预期不符！")
+    assertEquals(expectedDocument.byteSize,clientDocument.byteSize, "GetStatistics接口读取byteSize输出与预期不符！")
   }
 
   @Test
