@@ -6,7 +6,7 @@ import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DFRef, DataFrame}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.json.{JSONArray, JSONObject}
+import org.json.{JSONArray, JSONException, JSONObject}
 
 import java.io.StringReader
 import scala.collection.JavaConverters.asScalaIteratorConverter
@@ -29,7 +29,7 @@ class DacpClient(host: String, port: Int, useTLS: Boolean = false) extends DftpC
     get(url).collect().map(row => row.getAs[String](0))
   }
 
-  override def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
+  override def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): DataFrame = {
     super.put(dataFrame, setDataBatchLen)
   }
 
@@ -47,8 +47,8 @@ class DacpClient(host: String, port: Int, useTLS: Boolean = false) extends DftpC
   }
 
   def getDocument(dataFrameName: String): DataFrameDocument = {
-    val jo = new JSONArray(getDataFrameInfoMap.get(dataFrameName).map(_._3).getOrElse(None)).getJSONObject(0)
-
+    val jsonString: String = getDataFrameInfoMap.get(dataFrameName).map(_._2).getOrElse("[]")
+    val jo = new JSONArray(jsonString).getJSONObject(0)
     new DataFrameDocument {
       override def getSchemaURL(): Option[String] = Some("[SchemaURL defined by provider]")
 
@@ -61,7 +61,8 @@ class DacpClient(host: String, port: Int, useTLS: Boolean = false) extends DftpC
   }
 
   def getStatistics(dataFrameName: String): DataFrameStatistics = {
-    val jo = new JSONObject(getDataFrameInfoMap.get(dataFrameName).map(_._4).getOrElse(""))
+    val jsonString: String = getDataFrameInfoMap.get(dataFrameName).map(_._4).getOrElse("{}")
+    val jo = new JSONObject(jsonString)
     new DataFrameStatistics {
       override def rowCount: Long = jo.getLong("rowCount")
 

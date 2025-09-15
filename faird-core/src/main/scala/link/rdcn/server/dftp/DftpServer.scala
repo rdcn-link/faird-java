@@ -231,8 +231,10 @@ class DftpServer {
         override def sendError(code: Int, message: String): Unit = sendErrorWithFlightStatus(code, message)
       }
       val ticketInfo = CodecUtils.decodeTicket(ticket.getBytes)
+      val sourceList = new ListBuffer[String]
+      val operation = Operation.fromJsonString(ticketInfo._2, sourceList)
       if (ticketInfo._1 == CodecUtils.BLOB_STREAM) {
-        val blobId = ticketInfo._2
+        val blobId = sourceList.head
         val blob = BlobRegistry.getBlob(blobId)
         if (blob.isEmpty) {
           sendErrorWithFlightStatus(404, s"blob ${blobId} resource closed")
@@ -245,11 +247,10 @@ class DftpServer {
           })
         }
       } else {
-        val sourceList = new ListBuffer[String]
-        val operation = Operation.fromJsonString(ticketInfo._2, sourceList)
         val authenticatedUser = authenticatedUserMap.get(context.peerIdentity())
         val keyPermission: Option[Boolean] = authenticatedUser match {
           case keyAuthenticatedUser: KeyAuthenticatedUser => Some(keyAuthenticatedUser.checkPermission())
+//          case authenticatedUser: AuthenticatedUser => Some(authenticatedUser.checkPermission())
           case _ => None
         }
         sourceList.find(dataFrameName => {

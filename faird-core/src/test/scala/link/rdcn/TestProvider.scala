@@ -156,7 +156,7 @@ object TestProvider {
   }
 
   def connectClient: Unit = synchronized {
-    dc = DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+    dc = DacpClient.connect("dacp://localhost:3101", UsernamePassword(adminUsername, adminPassword))
   }
 
   def stopServer(): Unit = synchronized {

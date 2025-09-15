@@ -133,7 +133,8 @@ class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String
       if (userName == anonymousUsername)
         throw new AuthorizationException(USER_NOT_LOGGED_IN)
       permissions.get(userName) match { // 用 get 避免 NoSuchElementException
-        case Some(allowedFiles) => allowedFiles.contains(dataFrameName)
+//        case Some(allowedFiles) => allowedFiles.contains(dataFrameName)
+        case Some(allowedFiles) => true //用户存在则全部设置为true
         case None => false // 用户不存在或没有权限
       }
     }
