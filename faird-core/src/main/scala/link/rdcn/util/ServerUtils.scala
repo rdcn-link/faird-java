@@ -1,9 +1,9 @@
 package link.rdcn.util
 
 import com.sun.management.OperatingSystemMXBean
-import link.rdcn.struct.{Row, DataFrame, StructType, ValueType}
+import link.rdcn.struct.{Blob, DataFrame, Row, StructType, ValueType}
 import link.rdcn.struct.ValueType.{BinaryType, BlobType, BooleanType, DoubleType, FloatType, IntType, LongType, RefType, StringType}
-import org.apache.arrow.flight.{FlightProducer, Result, FlightStream}
+import org.apache.arrow.flight.{FlightProducer, FlightStream, Result}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.message.ArrowRecordBatch
 import org.apache.arrow.vector.ipc.{ArrowStreamReader, ArrowStreamWriter}
@@ -12,7 +12,7 @@ import org.apache.arrow.vector.types.pojo.{ArrowType, Field, FieldType, Schema}
 import org.apache.arrow.vector._
 import org.apache.jena.rdf.model.Model
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import java.lang.management.ManagementFactory
 import java.util.Collections
 import scala.collection.JavaConverters._

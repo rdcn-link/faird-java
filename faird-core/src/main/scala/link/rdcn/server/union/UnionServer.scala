@@ -81,7 +81,8 @@ class UnionServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPr
           }
         } else {
           try {
-            val client = endpointClientsMap.getOrElse(baseUrlAndPath._1, throw new Exception(s"Access to FaridServer ${s.dataFrameUrl} is denied"))
+            val client = endpointClientsMap.getOrElse(baseUrlAndPath._1
+              , throw new Exception(s"Access to FaridServer ${s.dataFrameUrl} is denied"))
             response.sendDataFrame(client.getByOperation(operation))
           } catch {
             case e: Exception =>
@@ -143,7 +144,8 @@ class UnionServer(dataProvider: DataProvider, dataReceiver: DataReceiver, authPr
                              attributes: Map[String, String] = Map()
                            ) {
     def execute(): DataFrame = {
-      val client = endpointClientsMap.getOrElse(executionNodeBaseUrl, throw new Exception(s"Access to FaridServer ${executionNodeBaseUrl} is denied"))
+      val client = endpointClientsMap.getOrElse(executionNodeBaseUrl
+        , throw new Exception(s"Access to FaridServer ${executionNodeBaseUrl} is denied"))
       client.getByOperation(operation)
     }
 

@@ -87,7 +87,10 @@ class DftpClient(host: String, port: Int, useTLS: Boolean = false) {
     })
   }
 
-  def close(): Unit = flightClient.close()
+  def close(): Unit = {
+    allocator.close()
+    flightClient.close()
+  }
 
   //执行 DAG
   def execute(recipe: Flow): ExecutionResult = {
