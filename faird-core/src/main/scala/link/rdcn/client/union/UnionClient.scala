@@ -1,10 +1,9 @@
 package link.rdcn.client.union
 
 import link.rdcn.client.{RemoteDataFrameProxy, UrlValidator}
-import link.rdcn.client.dacp.FairdClient
-import link.rdcn.client.dag.{Flow, FlowNode, SourceNode}
-import link.rdcn.client.dftp.DftpClient
-import link.rdcn.struct.{DFRef, DataFrame, ExecutionResult}
+import link.rdcn.client.dacp.DacpClient
+import link.rdcn.optree.SourceOp
+import link.rdcn.struct.DataFrame
 import link.rdcn.user.Credentials
 
 /**
@@ -13,13 +12,13 @@ import link.rdcn.user.Credentials
  * @Date 2025/8/28 09:23
  * @Modified By:
  */
-class UnionClient private(host: String, port: Int, useTLS: Boolean = false) extends FairdClient(host, port, useTLS){
+class UnionClient private(host: String, port: Int, useTLS: Boolean = false) extends DacpClient(host, port, useTLS) {
 
   override def get(url: String): DataFrame = {
     val urlValidator = new UrlValidator(prefixSchema)
-    if(urlValidator.isPath(url)) RemoteDataFrameProxy(url, super.getRows) else {
+    if (urlValidator.isPath(url)) RemoteDataFrameProxy(SourceOp(url), super.getRows) else {
       urlValidator.validate(url) match {
-        case Right(value) => RemoteDataFrameProxy(url, getRows)
+        case Right(value) => RemoteDataFrameProxy(SourceOp(url), getRows)
         case Left(message) => throw new IllegalArgumentException(message)
       }
     }
@@ -29,6 +28,7 @@ class UnionClient private(host: String, port: Int, useTLS: Boolean = false) exte
 object UnionClient {
   val protocolSchema = "dacp"
   private val urlValidator = UrlValidator(protocolSchema)
+
   def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): UnionClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>
@@ -39,6 +39,7 @@ object UnionClient {
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
   }
+
   def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): UnionClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>

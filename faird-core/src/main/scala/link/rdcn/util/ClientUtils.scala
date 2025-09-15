@@ -1,9 +1,9 @@
 package link.rdcn.util
 
-import link.rdcn.struct.{Column, DataFrame, DefaultDataFrame, DFRef, Row, StructType, ValueType}
+import link.rdcn.struct.{Column, DFRef, DataFrame, DefaultDataFrame, Row, StructType, ValueType}
 import io.circe.{DecodingFailure, parser}
 import org.apache.arrow.vector.types.Types
-import org.apache.arrow.flight.Result
+import org.apache.arrow.flight.{PutResult, Result, SyncPutListener}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.ipc.ArrowStreamWriter
 import org.apache.arrow.vector._
@@ -29,14 +29,14 @@ object ClientUtils {
             null
           } else {
             vector match {
-              case v: VarCharVector   =>
+              case v: VarCharVector =>
                 val strValue = v.getObject(rowIndex).toString
-                if(v.getField.getMetadata.isEmpty) strValue else DFRef(strValue)
-              case v: IntVector      => v.get(rowIndex)
-              case v: BigIntVector    => v.get(rowIndex)
-              case v: Float4Vector    => v.get(rowIndex)
-              case v: Float8Vector    => v.get(rowIndex)
-              case v: BitVector       => v.get(rowIndex) != 0
+                if (v.getField.getMetadata.isEmpty) strValue else DFRef(strValue)
+              case v: IntVector => v.get(rowIndex)
+              case v: BigIntVector => v.get(rowIndex)
+              case v: Float4Vector => v.get(rowIndex)
+              case v: Float8Vector => v.get(rowIndex)
+              case v: BitVector => v.get(rowIndex) != 0
               case v: VarBinaryVector => v.get(rowIndex)
               case _ => throw new UnsupportedOperationException(
                 s"Unsupported type: ${vector.getClass}"
@@ -50,17 +50,52 @@ object ClientUtils {
     DefaultDataFrame(schema, ClosableIterator(allRows.toIterator)())
   }
 
+  def parsePutListener(putListener: SyncPutListener): DataFrame = {
+    val iter = new Iterator[String] {
+      private var nextElem: Option[String] = fetchNext()
+
+      override def hasNext: Boolean = nextElem.isDefined
+
+      override def next(): String = {
+        if (!hasNext) throw new NoSuchElementException("No more elements")
+        val res = nextElem.get
+        nextElem = fetchNext()
+        res
+      }
+
+      private def fetchNext(): Option[String] = {
+        val ack: PutResult = putListener.read()
+        if (ack == null) {
+          putListener.getResult()
+          None
+        } else {
+          try {
+            val metadataBuf = ack.getApplicationMetadata
+            val bytes = new Array[Byte](metadataBuf.readableBytes().toInt)
+            metadataBuf.readBytes(bytes)
+            Some(CodecUtils.decodeString(bytes))
+          } finally {
+            ack.close()
+          }
+        }
+      }
+    }
+    val schemaAndStream = DataUtils.getStructTypeStreamFromJson(iter)
+    DefaultDataFrame(schemaAndStream._2, schemaAndStream._1)
+  }
+
   def arrowSchemaToStructType(schema: org.apache.arrow.vector.types.pojo.Schema): StructType = {
     val columns = schema.getFields.asScala.map { field =>
       val colType = field.getType match {
-        case t if t == Types.MinorType.INT.getType  => ValueType.IntType
+        case t if t == Types.MinorType.INT.getType => ValueType.IntType
         case t if t == Types.MinorType.BIGINT.getType => ValueType.LongType
         case t if t == Types.MinorType.FLOAT4.getType => ValueType.FloatType
         case t if t == Types.MinorType.FLOAT8.getType => ValueType.DoubleType
-        case t if t == Types.MinorType.VARCHAR.getType => ValueType.StringType
+        case t if t == Types.MinorType.VARCHAR.getType =>
+          if (field.getMetadata.isEmpty) ValueType.StringType else ValueType.RefType
         case t if t == Types.MinorType.BIT.getType => ValueType.BooleanType
-        case t if t == Types.MinorType.VARBINARY.getType => if(field.getMetadata.isEmpty)
-          ValueType.BinaryType else ValueType.RefType
+        case t if t == Types.MinorType.VARBINARY.getType => if (field.getMetadata.isEmpty)
+          ValueType.BinaryType else ValueType.BlobType
         case _ => throw new UnsupportedOperationException(s"Unsupported Arrow type: ${field.getType}")
       }
       Column(field.getName, colType)

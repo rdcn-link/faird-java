@@ -1,4 +1,4 @@
-package link.rdcn.client.dag
+package link.rdcn.client.recipe
 
 import link.rdcn.struct.DataFrame
 
@@ -15,25 +15,29 @@ trait Transformer11 extends FlowNode with Serializable {
 }
 
 trait Transformer21 extends FlowNode with Serializable {
-  def transform(leftDataFrame: DataFrame, rightDataFrame: DataFrame)
+  def transform(leftDataFrame: DataFrame, rightDataFrame: DataFrame): DataFrame
 }
 
 case class RepositoryNode(
-                    functionId: String,
-                    args: Map[String, String] = Map.empty
-                  ) extends FlowNode
+                           functionId: String,
+                           args: Map[String, String] = Map.empty
+                         ) extends FlowNode
 
 
 //只为DAG执行提供dataFrameName
-case class SourceNode (dataFrameName: String) extends FlowNode
+case class SourceNode(dataFrameName: String) extends FlowNode
 
 object FlowNode {
   def source(dataFrameName: String): SourceNode = {
     SourceNode(dataFrameName)
   }
 
-  def ofTransfomer(transformer11: Transformer11): Transformer11 = {
+  def ofTransfomer11(transformer11: Transformer11): Transformer11 = {
     transformer11
+  }
+
+  def ofTransfomer21(transformer21: Transformer21): Transformer21 = {
+    transformer21
   }
 
   def ofScalaFunction(func: DataFrame => DataFrame): Transformer11 = {

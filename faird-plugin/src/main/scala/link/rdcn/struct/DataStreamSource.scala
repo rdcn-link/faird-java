@@ -2,6 +2,7 @@ package link.rdcn.struct
 
 import link.rdcn.struct.{Row, StructType}
 import link.rdcn.util.ClosableIterator
+
 /**
  * @Author renhao
  * @Description:
@@ -11,7 +12,9 @@ import link.rdcn.util.ClosableIterator
 
 trait DataStreamSource {
   def rowCount: Long
+
   def schema: StructType
+
   def iterator: ClosableIterator[Row]
 }
 

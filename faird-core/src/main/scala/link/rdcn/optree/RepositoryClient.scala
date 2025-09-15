@@ -1,17 +1,11 @@
-/**
- * @Author Yomi
- * @Description:
- * @Data 2025/7/30 17:03
- * @Modified By:
- */
-package link.rdcn.dftree
+package link.rdcn.optree
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
-import link.rdcn.dftree.FunctionWrapper.operatorClient
+import link.rdcn.optree.FunctionWrapper.operatorClient
 import org.json.JSONObject
 
 import java.io.File
@@ -22,7 +16,14 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-class OperatorClient(host: String = "localhost", port: Int = 8088) {
+/**
+ * @Author Yomi
+ * @Description:
+ * @Data 2025/7/30 17:03
+ * @Modified By:
+ */
+
+class RepositoryClient(host: String = "localhost", port: Int = 8088) {
   val baseUrl = s"http://$host:$port"
 
   def getOperatorInfo(functionId: String): Future[JSONObject] = {
@@ -135,7 +136,7 @@ class OperatorClient(host: String = "localhost", port: Int = 8088) {
     val info = Await.result(infoFuture, 30.seconds)
 
     val downloadUrl = s"$baseUrl/downloadPackage?id=$functionId"
-    val outputFilePath = Paths.get(targetPath,info.get("fileName").asInstanceOf[String]).toString // 下载文件保存路径
+    val outputFilePath = Paths.get(targetPath, info.get("fileName").asInstanceOf[String]).toString // 下载文件保存路径
 
     // 创建 HTTP GET 请求
     val request = HttpRequest(
@@ -168,7 +169,6 @@ class OperatorClient(host: String = "localhost", port: Int = 8088) {
         system.terminate()
     }
   }
-
 
 
 }

@@ -8,12 +8,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.json.JSONObject
 
 import java.io._
-import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
-import scala.collection.JavaConverters.{asScalaIteratorConverter, seqAsJavaListConverter}
-import scala.collection.mutable
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.io.Source
 
 /**
@@ -22,55 +20,19 @@ import scala.io.Source
  * @Data 2025/6/19 16:03
  * @Modified By:
  */
-object DataUtils extends Logging{
-  private val resourceManager = new ResourceManager
-
-  private class ResourceManager {
-    private val resources = mutable.Map[String, Source]()
-
-    def register(source: Source, filePath: String): Unit = {
-      resources.synchronized {
-        resources += (filePath -> source)
-      }
-    }
-
-    def getSource(filePath: String): Option[Source] = {
-      resources.synchronized {
-        resources.get(filePath)
-      }
-    }
-
-    def close(filePath: String): Unit = {
-      resources.synchronized {
-        resources.get(filePath).foreach { source =>
-          source.close()
-          resources -= filePath
-        }
-      }
-    }
-
-    def closeAll(): Unit = {
-      resources.synchronized {
-        resources.values.foreach(_.close())
-        resources.clear()
-        System.gc()
-        Thread.sleep(100)
-      }
-    }
-  }
-
+object DataUtils extends Logging {
   def getStructTypeFromMap(row: Map[String, Any]): StructType = {
     StructType(row.map(row => Column(row._1, inferValueType(row._2))).toSeq)
   }
 
   def getStructTypeStreamFromJson(iter: Iterator[String]): (Iterator[Row], StructType) = {
-    if(iter.hasNext){
+    if (iter.hasNext) {
       val firstLine = iter.next()
       val jo = new JSONObject(firstLine)
       val structType: StructType = StructType(jo.keys().asScala.map(key => Column(key, inferValueType(jo.get(key)))).toSeq)
       val stream: Iterator[Row] = iter.map(Row.fromJsonString(_)) ++ Seq(Row.fromJsonString(firstLine)).iterator
       (stream, structType)
-    }else (Iterator.empty, StructType.empty)
+    } else (Iterator.empty, StructType.empty)
   }
 
   def convertStringRowToTypedRow(row: Row, schema: StructType): Row = {
@@ -79,19 +41,18 @@ object DataUtils extends Logging{
       if (rawValue == null) {
         null
       } else field.colType match {
-        case IntType    => rawValue.toInt
-        case LongType       => rawValue.toLong
-        case DoubleType     => rawValue.toDouble
-        case FloatType      => rawValue.toFloat
-        case BooleanType    => rawValue.toBoolean
-        case StringType     => rawValue
+        case IntType => rawValue.toInt
+        case LongType => rawValue.toLong
+        case DoubleType => rawValue.toDouble
+        case FloatType => rawValue.toFloat
+        case BooleanType => rawValue.toBoolean
+        case StringType => rawValue
         // 你可以继续扩展其他类型
         case _ => throw new UnsupportedOperationException(s"Unsupported type: ${field.colType}")
       }
     }
     Row.fromSeq(typedValues)
   }
-
 
 
   def inferSchemaFromRow(row: Row): StructType = {
@@ -104,16 +65,16 @@ object DataUtils extends Logging{
   }
 
   def getDataFrameByStream(stream: Iterator[Row]): DefaultDataFrame = {
-    if(stream.isEmpty) return DefaultDataFrame(StructType.empty, ClosableIterator(Iterator.empty)(()=>()))
+    if (stream.isEmpty) return DefaultDataFrame(StructType.empty, ClosableIterator(Iterator.empty)(() => ()))
     val row = stream.next()
     val structType = inferSchemaFromRow(row)
     stream match {
       case iter: ClosableIterator[Row] => DefaultDataFrame(structType, ClosableIterator(Seq(row).iterator ++ stream)(iter.close))
-      case _ => DefaultDataFrame(structType, ClosableIterator(Seq(row).iterator ++ stream)(()=>()))
+      case _ => DefaultDataFrame(structType, ClosableIterator(Seq(row).iterator ++ stream)(() => ()))
     }
   }
 
-//  /** 推断一个值的类型 */
+  //  /** 推断一个值的类型 */
   def inferStringValueType(value: String): ValueType = {
     if (value == null || value.isEmpty) StringType
     else if (value.matches("^-?\\d+$")) LongType
@@ -123,15 +84,15 @@ object DataUtils extends Logging{
   }
 
   def inferValueType(value: Any): ValueType = value match {
-    case null                   => NullType
-    case _: Int                 => IntType
-    case _: Long                => LongType
-    case _: Double | _: Float   => DoubleType
-    case _: Boolean             => BooleanType
-    case _: Array[Byte]         => BinaryType
-    case _: java.io.File        => BinaryType
-    case _: Blob                => BlobType
-    case _                      => StringType
+    case null => NullType
+    case _: Int => IntType
+    case _: Long => LongType
+    case _: Double | _: Float => DoubleType
+    case _: Boolean => BooleanType
+    case _: Array[Byte] => BinaryType
+    case _: java.io.File => BinaryType
+    case _: Blob => BlobType
+    case _ => StringType
   }
 
   /** 推断多列的类型（每列保留最大兼容类型） */
@@ -231,12 +192,12 @@ object DataUtils extends Logging{
   def getFileTypeByExtension(file: File): String = {
     val fileName = file.getName
     fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase match {
-      case "txt"  => "Text File"
-      case "jpg"  => "Image File"
-      case "png"  => "Image File"
-      case "pdf"  => "PDF Document"
-      case "csv"  => "CSV File"
-      case _      => "Unknown Type"
+      case "txt" => "Text File"
+      case "jpg" => "Image File"
+      case "png" => "Image File"
+      case "pdf" => "PDF Document"
+      case "csv" => "CSV File"
+      case _ => "Unknown Type"
     }
   }
 
@@ -259,21 +220,12 @@ object DataUtils extends Logging{
 
   def getFileLines(filePath: String): Iterator[String] = {
     val source = Source.fromFile(filePath)
-    resourceManager.register(source, filePath)
     source.getLines()
   }
 
   def getFileLines(file: File): ClosableIterator[String] = {
     val source = Source.fromFile(file)
     ClosableIterator(source.getLines())(source.close())
-  }
-
-  def closeFileSource(filePath: String): Unit = {
-    resourceManager.close(filePath)
-  }
-
-  def closeAllFileSources(): Unit = {
-    resourceManager.closeAll()
   }
 
   def readFileInChunks(file: File, chunkSize: Int = 5 * 1024 * 1024): Iterator[Array[Byte]] = {
@@ -394,11 +346,11 @@ object DataUtils extends Logging{
 
   private def readCell(cell: Cell, valueType: ValueType): Any = {
     valueType match {
-      case ValueType.IntType     => cell.getNumericCellValue.toInt
-      case ValueType.LongType    => cell.getNumericCellValue.toLong
-      case ValueType.DoubleType  => cell.getNumericCellValue
+      case ValueType.IntType => cell.getNumericCellValue.toInt
+      case ValueType.LongType => cell.getNumericCellValue.toLong
+      case ValueType.DoubleType => cell.getNumericCellValue
       case ValueType.BooleanType => cell.getBooleanCellValue
-      case _                     => cell.toString.trim
+      case _ => cell.toString.trim
     }
   }
 

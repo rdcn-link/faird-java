@@ -1,4 +1,5 @@
 package link.rdcn.struct
+
 import link.rdcn.struct.ValueType._
 
 /**
@@ -7,7 +8,7 @@ import link.rdcn.struct.ValueType._
  * @Data 2025/6/24 14:55
  * @Modified By:
  */
-case class Column(name: String, colType: ValueType,  nullable: Boolean = true)
+case class Column(name: String, colType: ValueType, nullable: Boolean = true)
 
 case class StructType(val columns: Seq[Column]) {
 
@@ -61,7 +62,7 @@ case class StructType(val columns: Seq[Column]) {
   def append(column: Column): StructType = new StructType(columns :+ column)
 
   override def toString: String =
-      columns.map(c => s"${c.name}: ${c.colType}").mkString("schema(", ", ", ")")
+    columns.map(c => s"${c.name}: ${c.colType}").mkString("schema(", ", ", ")")
 }
 
 object StructType {
@@ -121,6 +122,6 @@ object StructType {
   def binaryStructType: StructType = {
     StructType.empty.add("name", StringType).add("byteSize", LongType).add("type", StringType)
       .add("creationTime", LongType).add("lastModifiedTime", LongType).add("lastAccessTime", LongType)
-      .add("File",BlobType)
+      .add("File", BlobType)
   }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class ErrorCodeTest {
+
   @Test()
   def testInvalidError(): Unit = {
     val exception = new ClientException(ErrorCode.UNKNOWN_ERROR)
@@ -14,8 +15,7 @@ class ErrorCodeTest {
 
   @Test()
   def testErrorCodeNotExist(): Unit = {
-    val exception = new ServerException()//未设置ErrorCode
+    val exception = new ServerException() //未设置ErrorCode
     assertEquals(ErrorCode.ERROR_CODE_NOT_EXIST, exception.getErrorCode)
   }
-
 }

@@ -52,11 +52,6 @@ public class JProviderTest {
             TestAuthenticatedUser(String token) {
                 this.token = token;
             }
-
-            @Override
-            public String token() {
-                return token;
-            }
         }
 
         // 创建AuthProvider的实现类，用于处理用户认证和授权逻辑
@@ -81,7 +76,7 @@ public class JProviderTest {
              * @return 如果用户有权限访问指定的DataFrame，则返回true；否则返回false，需要Provider按需求实现。
              */
             @Override
-            public boolean checkPermission(AuthenticatedUser user, String dataFrameName, List<DataOperationType> opList) {
+            public boolean checkPermission(AuthenticatedUser user, String dataFrameName, scala.collection.immutable.List<DataOperationType> opList) {
                 return true;
             }
         };
@@ -167,7 +162,7 @@ public class JProviderTest {
             public DataStreamSource getDataStreamSource(String dataFrameName) {
                 DirectorySource directorySource = new DirectorySource(false);
                 DataFrameInfo dataFrameInfo = getDataFrameInfo(dataFrameName).getOrElse(null);
-                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()),false);
+                return DataStreamSourceFactory.createFileListDataStreamSource(new File(dataFrameInfo.path()), false);
             }
 
             /**

@@ -36,7 +36,7 @@ object TestBase {
   //生成Token
   val genToken = () => UUID.randomUUID().toString
 
-  val demoBaseDir = Paths.get("/faird-core","src","test","demo").toString
+  val demoBaseDir = Paths.get("/faird-core", "src", "test", "demo").toString
 
   //权限
   val permissions = Map(
@@ -105,6 +105,7 @@ abstract class DataProviderImpl extends DataProvider {
     }
 
   }
+
   //若使用config，客户端也需要初始化因为是不同进程
   override def getDocument(dataFrameName: String): DataFrameDocument = {
     new DataFrameDocument {
@@ -160,7 +161,7 @@ case class DataSet(
     val hasFile = model.createProperty(datasetURI + "/hasFile")
     val hasName = model.createProperty(datasetURI + "/name")
 
-    datasetRes.addProperty(RDF.`type`, model.createResource(datasetURI+"/DataSet"))
+    datasetRes.addProperty(RDF.`type`, model.createResource(datasetURI + "/DataSet"))
     datasetRes.addProperty(hasName, dataSetName)
 
     dataFrames.foreach { df =>

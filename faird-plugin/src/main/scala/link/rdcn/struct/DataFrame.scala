@@ -38,12 +38,12 @@ object DataFrame {
   }
 
   def fromSeq(seq: Seq[Any]): DataFrame = {
-    val stream = ClosableIterator(seq.map(value => Row.fromSeq(Seq(value))).toIterator)(()=>{})
+    val stream = ClosableIterator(seq.map(value => Row.fromSeq(Seq(value))).toIterator)(() => {})
     DataUtils.getDataFrameByStream(stream)
   }
 
   def fromMap(maps: Seq[Map[String, Any]]): DataFrame = {
-    val stream =  ClosableIterator(maps.map(m => Row.fromSeq(m.values.toSeq)).toIterator)(()=>{})
+    val stream = ClosableIterator(maps.map(m => Row.fromSeq(m.values.toSeq)).toIterator)(() => {})
     DefaultDataFrame(DataUtils.getStructTypeFromMap(maps.head), stream)
   }
 

@@ -1,4 +1,4 @@
-package link.rdcn.dftree
+package link.rdcn.optree
 
 import link.rdcn.struct.{DataFrame, Row}
 
@@ -10,9 +10,11 @@ import link.rdcn.struct.{DataFrame, Row}
  * @Modified By:
  */
 trait SerializableFunction[-T, +R] extends (T => R) with Serializable
+
 trait GenericFunctionCall extends Serializable {
   def transform(input: Any): Any
 }
+
 case class SingleRowCall(f: SerializableFunction[Row, Any]) extends GenericFunctionCall {
   override def transform(input: Any): Any = input match {
     case row: Row => f(row)
@@ -34,9 +36,18 @@ case class IteratorRowCall(f: SerializableFunction[Iterator[Row], Any]) extends 
   }
 }
 
-case class DataFrameCall(f: SerializableFunction[DataFrame, DataFrame]) extends GenericFunctionCall {
+case class DataFrameCall11(f: SerializableFunction[DataFrame, DataFrame]) extends GenericFunctionCall {
   override def transform(input: Any): Any = input match {
     case r: DataFrame => f(r)
-    case _ => throw new IllegalArgumentException(s"Expected Iterator[Row] but got ${input}")
+    case _ => throw new IllegalArgumentException(s"Expected DataFrame but got ${input}")
   }
 }
+
+case class DataFrameCall21(f: SerializableFunction[(DataFrame, DataFrame), DataFrame]) extends GenericFunctionCall {
+  override def transform(input: Any): Any = input match {
+    case r: (DataFrame, DataFrame) => f(r)
+    case _ => throw new IllegalArgumentException(s"Expected (DataFrame,DataFrame) but got ${input}")
+  }
+}
+
+

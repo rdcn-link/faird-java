@@ -18,14 +18,15 @@ import scala.collection.mutable
  * @Date 2025/8/18 16:30
  * @Modified By:
  */
-class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends DftpClient(host, port, useTLS) {
+class DacpClient(host: String, port: Int, useTLS: Boolean = false) extends DftpClient(host, port, useTLS) {
 
   override val prefixSchema: String = "dacp"
+
   def listDataSetNames(): Seq[String] = getDataSetInfoMap.keys.toSeq
 
   def listDataFrameNames(dsName: String): Seq[String] = {
     val url = getDataSetInfoMap.get(dsName).getOrElse(return Seq.empty)._3.url
-    get(url).collect().map(row=>row.getAs[String](0))
+    get(url).collect().map(row => row.getAs[String](0))
   }
 
   override def put(dataFrame: DataFrame, setDataBatchLen: Int = 100): String = {
@@ -61,8 +62,9 @@ class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends Dftp
 
   def getStatistics(dataFrameName: String): DataFrameStatistics = {
     val jo = new JSONObject(getDataFrameInfoMap.get(dataFrameName).map(_._4).getOrElse(""))
-    new DataFrameStatistics{
+    new DataFrameStatistics {
       override def rowCount: Long = jo.getLong("rowCount")
+
       override def byteSize: Long = jo.getLong("byteSize")
     }
   }
@@ -88,13 +90,14 @@ class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends Dftp
   private val dacpUrlPrefix: String = s"$prefixSchema://$host:$port"
 
   //dataSetName -> (metaData, dataSetInfo, dataFrames)
-  def  getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
+  def getDataSetInfoMap: Map[String, (String, String, DFRef)] = {
     val result = mutable.Map[String, (String, String, DFRef)]()
-    get(dacpUrlPrefix+"/listDataSets").mapIterator(rows => rows.foreach(row => {
+    get(dacpUrlPrefix + "/listDataSets").mapIterator(rows => rows.foreach(row => {
       result.put(row.getAs[String](0), (row.getAs[String](1), row.getAs[String](2), row.getAs[DFRef](3)))
     }))
     result.toMap
   }
+
   //dataFrameName -> (size,document,schema,statistic,dataFrame)
   def getDataFrameInfoMap: Map[String, (Long, String, String, String, DFRef)] = {
     val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
@@ -105,33 +108,36 @@ class FairdClient(host: String, port: Int, useTLS: Boolean = false) extends Dftp
     })
     result.toMap
   }
+
   //hostName -> (hostInfo, resourceInfo)
   def getHostInfoMap(): Map[String, (String, String)] = {
     val result = mutable.Map[String, (String, String)]()
-    get(dacpUrlPrefix+"/listHostInfo").mapIterator(iter => iter.foreach(row => {
-      result.put(row.getAs[String](0),(row.getAs[String](1), row.getAs[String](2)))
+    get(dacpUrlPrefix + "/listHostInfo").mapIterator(iter => iter.foreach(row => {
+      result.put(row.getAs[String](0), (row.getAs[String](1), row.getAs[String](2)))
     }))
     result.toMap
   }
 }
 
-object FairdClient {
+object DacpClient {
   val protocolSchema = "dacp"
   private val urlValidator = UrlValidator(protocolSchema)
-  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
+
+  def connect(url: String, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>
-        val client = new FairdClient(parsed._1, parsed._2.getOrElse(3101))
+        val client = new DacpClient(parsed._1, parsed._2.getOrElse(3101))
         client.login(credentials)
         client
       case Left(err) =>
         throw new IllegalArgumentException(s"Invalid DACP URL: $err")
     }
   }
-  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): FairdClient = {
+
+  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
     urlValidator.validate(url) match {
       case Right(parsed) =>
-        val client = new FairdClient(parsed._1, parsed._2.getOrElse(3101), true)
+        val client = new DacpClient(parsed._1, parsed._2.getOrElse(3101), true)
         client.login(credentials)
         client
       case Left(err) =>

@@ -6,7 +6,7 @@
  */
 package link.rdcn.server
 
-import link.rdcn.dftree.JepInterpreterManager
+import link.rdcn.optree.JepInterpreterManager
 import org.junit.jupiter.api.Test
 
 class JepInterpreterManagerTest {

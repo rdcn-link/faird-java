@@ -6,4 +6,4 @@ package link.rdcn.user
  * @Data 2025/7/1 15:13
  * @Modified By:
  */
-case class TokenAuth(token: String)
+case class TokenAuth(token: String) extends Credentials

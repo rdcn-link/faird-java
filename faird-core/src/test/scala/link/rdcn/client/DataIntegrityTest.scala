@@ -49,7 +49,7 @@ class DataIntegrityTest extends TestProvider {
   @ParameterizedTest
   @ValueSource(ints = Array(2))
   def readBinaryTest(num: Int): Unit = {
-    val absolutePath = Paths.get(binDir,s"binary_data_$num.bin")
+    val absolutePath = Paths.get(binDir, s"binary_data_$num.bin")
     val attrs = Files.readAttributes(absolutePath, classOf[BasicFileAttributes])
     val file = absolutePath.toFile
     val expectedRow: Row = {
@@ -71,7 +71,7 @@ class DataIntegrityTest extends TestProvider {
     val expectedLastAccessTime = expectedRow.getAs[Long](5)
 
     val df = dc.getByPath("/bin")
-    df.filter(row=>row._1.asInstanceOf[String]==s"binary_data_$num.bin").foreach(
+    df.filter(row => row._1.asInstanceOf[String] == s"binary_data_$num.bin").foreach(
       row => {
         println(row)
         val name = row.getAs[String](0)
@@ -84,7 +84,8 @@ class DataIntegrityTest extends TestProvider {
         val path: Path = Paths.get("src", "test", "demo", "data", "output", name)
         blob.offerStream(inputStream => {
           val outputStream = new FileOutputStream(path.toFile)
-          IOUtils.copy(inputStream, outputStream)})
+          IOUtils.copy(inputStream, outputStream)
+        })
         assertEquals(expectedName, name)
         assertEquals(expectedSize, size)
         assertEquals(expectedFileType, fileType)
@@ -93,7 +94,7 @@ class DataIntegrityTest extends TestProvider {
         assertEquals(expectedLastAccessTime, lastAccessTime)
       }
     )
-    assertTrue(isFolderContentsMatch(Paths.get(baseDir,"bin").toString,outputDir), "Binary file mismatch")
+    assertTrue(isFolderContentsMatch(Paths.get(baseDir, "bin").toString, outputDir), "Binary file mismatch")
   }
 
 }

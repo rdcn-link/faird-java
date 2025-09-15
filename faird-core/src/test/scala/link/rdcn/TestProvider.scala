@@ -9,7 +9,7 @@ package link.rdcn
 import link.rdcn.ErrorCode.{INVALID_CREDENTIALS, USER_NOT_FOUND, USER_NOT_LOGGED_IN}
 import link.rdcn.TestBase._
 import link.rdcn.ConfigKeys._
-import link.rdcn.client.dacp.FairdClient
+import link.rdcn.client.dacp.DacpClient
 import link.rdcn.received.DataReceiver
 import link.rdcn.server.dacp.DacpServer
 import link.rdcn.server.dftp.BlobRegistry
@@ -49,8 +49,6 @@ object TestProvider {
 
   class TestAuthenticatedUser(userName: String, token: String) extends AuthenticatedUser {
     def getUserName: String = userName
-
-    override def token: String = ???
   }
 
   val authprovider = new AuthProvider {
@@ -82,7 +80,7 @@ object TestProvider {
       }
     }
 
-    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: java.util.List[DataOperationType]): Boolean = {
+    override def checkPermission(user: AuthenticatedUser, dataFrameName: String, opList: List[DataOperationType]): Boolean = {
       val userName = user.asInstanceOf[TestAuthenticatedUser].getUserName
       if (userName == anonymousUsername)
         throw new AuthorizationException(USER_NOT_LOGGED_IN)
@@ -110,7 +108,7 @@ object TestProvider {
   }
 
   private var fairdServer: Option[DacpServer] = None
-  var dc: FairdClient = _
+  var dc: DacpClient = _
   val configCache = ConfigLoader.fairdConfig
   var expectedHostInfo: Map[String, String] = _
 
@@ -126,14 +124,13 @@ object TestProvider {
   def stop(): Unit = {
     stopServer()
     BlobRegistry.cleanUp()
-    DataUtils.closeAllFileSources()
     TestDataGenerator.cleanupTestData(baseDir)
   }
 
   def getServer: DacpServer = synchronized {
     if (fairdServer.isEmpty) {
       ConfigLoader.init(Paths.get(getResourcePath("")).toString)
-      val s = new DacpServer(dataProvider,  dataReceiver, authprovider)
+      val s = new DacpServer(dataProvider, dataReceiver, authprovider)
       s.start(ConfigLoader.fairdConfig)
       //      println(s"Server (Location): Listening on port ${s.getPort}")
       fairdServer = Some(s)
@@ -159,7 +156,7 @@ object TestProvider {
   }
 
   def connectClient: Unit = synchronized {
-    dc = FairdClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
+    dc = DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
   }
 
   def stopServer(): Unit = synchronized {

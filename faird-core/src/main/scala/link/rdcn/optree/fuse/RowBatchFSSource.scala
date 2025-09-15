@@ -1,10 +1,9 @@
-package link.rdcn.dftree.fuse
+package link.rdcn.optree.fuse
 
 import link.rdcn.struct.{DataFrame, Row}
 import link.rdcn.util.ClosableIterator
 import jnr.constants.platform.Errno
 import jnr.ffi.Pointer
-import ru.serce.jnrfuse.ErrorCodes
 
 /**
  * @Author renhao
@@ -21,14 +20,14 @@ class RowBatchFSSource(dataFrame: DataFrame, cacheSize: Int = 1024 * 1024 * 1024
   private var eofReached = false
 
   def read(buf: Pointer, size: Long, offset: Long): Int = synchronized {
-    if(eofReached) {
-      return  -Errno.EIO.intValue()
+    if (eofReached) {
+      return -Errno.EIO.intValue()
     }
     val maxToRead = size.toInt
 
     if (offset < cacheStartOffset) {
       // 数据被覆盖，无法访问
-      return  -Errno.EIO.intValue()
+      return -Errno.EIO.intValue()
     }
 
     val out = new Array[Byte](maxToRead)

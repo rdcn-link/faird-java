@@ -16,14 +16,20 @@ import scala.collection.immutable
 sealed trait DataOperationType extends EnumEntry
 
 object DataOperationType extends Enum[DataOperationType] {
-   val values: immutable.IndexedSeq[DataOperationType] = findValues
+  val values: immutable.IndexedSeq[DataOperationType] = findValues
 
   case object Map extends DataOperationType
+
   case object Filter extends DataOperationType
+
   case object Select extends DataOperationType
+
   case object Reduce extends DataOperationType
+
   case object Join extends DataOperationType
+
   case object GroupBy extends DataOperationType
+
   case object Sort extends DataOperationType
 
 

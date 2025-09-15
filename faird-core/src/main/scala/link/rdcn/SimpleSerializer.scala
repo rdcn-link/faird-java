@@ -6,6 +6,7 @@ package link.rdcn
  * @Data 2025/6/10 18:28
  * @Modified By:
  */
+
 import java.io._
 
 object SimpleSerializer {

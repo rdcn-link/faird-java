@@ -14,7 +14,7 @@ trait Blob extends FairdValue {
   override def toString: String = s"Blob Value"
 }
 
-object Blob{
+object Blob {
   def fromFile(file: File): Blob = {
     new Blob {
       override def offerStream[T](consume: java.io.InputStream => T): T = {
