@@ -250,7 +250,6 @@ class DftpServer {
         val authenticatedUser = authenticatedUserMap.get(context.peerIdentity())
         val keyPermission: Option[Boolean] = authenticatedUser match {
           case keyAuthenticatedUser: KeyAuthenticatedUser => Some(keyAuthenticatedUser.checkPermission())
-//          case authenticatedUser: AuthenticatedUser => Some(authenticatedUser.checkPermission())
           case _ => None
         }
         sourceList.find(dataFrameName => {

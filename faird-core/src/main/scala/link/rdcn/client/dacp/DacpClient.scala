@@ -6,7 +6,7 @@ import link.rdcn.provider.{DataFrameDocument, DataFrameStatistics}
 import link.rdcn.struct.{DFRef, DataFrame}
 import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
-import org.json.{JSONArray, JSONException, JSONObject}
+import org.json.{JSONArray, JSONObject}
 
 import java.io.StringReader
 import scala.collection.JavaConverters.asScalaIteratorConverter
