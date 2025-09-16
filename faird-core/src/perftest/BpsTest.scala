@@ -6,7 +6,7 @@
  */
 package link.rdcn
 
-import link.rdcn.client.dacp.FairdClient
+import link.rdcn.client.dacp.DacpClient
 import link.rdcn.struct.{Blob, DataFrame, Row}
 import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
@@ -18,21 +18,62 @@ object BpsTest {
 
   //测试数据文件夹
   val prefix = "/home/faird/faird-core/src/test/demo/data/"
-  val dc: FairdClient = FairdClient.connect("dacp://10.0.87.114:3101", UsernamePassword("admin@instdb.cn", "admin001"))
-  val step = 1000000
+  val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+  val step = 1000
+  val csvPath = "/csv/data_7.csv"
+  val jsonPath = "/json/million_lines.json"
+  val binPath = "/bin"
+  val structuredPath = "/structured/million_lines.json"
+  val dirListPath = "/dir/images"
+  val dirPath = "/blob"
 
   def main(args: Array[String]): Unit = {
-    val csvPath = "/csv/data_7.csv"
-    val jsonPath = "/json/million_lines.json"
-    val binPath = "/bin"
-        time(testBin,binPath)
-        time(testJson,jsonPath)
-        time(testJsonSelect,jsonPath)
-        time(testCsv,csvPath)
-        testRowJson(jsonPath,step)
-        testRowCsv(csvPath,step)
-        testRowSelectCsv(csvPath,step)
-        testRowSelectJson(jsonPath,step)
+
+    //    testRowFileList(dirListPath)
+    //    testRowFileList(dirPath)
+    //        time(testBin,binPath)
+    //        time(testJson,jsonPath)
+    //        time(testJsonSelect,jsonPath)
+    //        time(testCsv,csvPath)
+    //        testRowJson(jsonPath,step)
+    //        testRowCsv(csvPath,step)
+    //        testRowSelectCsv(csvPath,step)
+    //        testRowSelectJson(jsonPath,step)
+    //    testRowStructured(structuredPath)
+    //    testRowSelectStructured(structuredPath)
+  }
+
+  def testUpload(): Unit = {
+
+  }
+
+  def testUploadRowStructured(name: String): Unit = {
+    val dfStructured: DataFrame = dc.getByPath(name)
+    timeIterator(dfStructured, step, () => _)
+  }
+
+  def testRowFileList(name: String): Unit = {
+    val dfStructured: DataFrame = dc.getByPath(name)
+    timeIterator(dfStructured, step, row => {
+      val name: String = row._1.asInstanceOf[String]
+      val blob: Blob = row.get(6).asInstanceOf[Blob]
+      val path: Path = Paths.get("faird-core","src", "test", "demo", "data", "output", name)
+      blob.offerStream(inputStream => {
+        val outputStream = new FileOutputStream(path.toFile)
+        IOUtils.copy(inputStream, outputStream)
+        outputStream.close()
+      })
+    })
+  }
+
+  def testRowStructured(name: String): Unit = {
+    val dfStructured: DataFrame = dc.getByPath(name)
+    timeIterator(dfStructured, step, () => _)
+  }
+
+  def testRowSelectStructured(name: String): Unit = {
+    val dfStructured: DataFrame = dc.getByPath(name)
+    timeIterator(dfStructured.select("id","status","timestamp"), step, () => _)
   }
 
   def testCsv(name: String): Unit = {

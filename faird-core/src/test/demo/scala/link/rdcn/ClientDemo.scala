@@ -30,77 +30,77 @@ object ClientDemo {
     // 匿名连接FairdClient
 //    val dcAnonymous: FairdClient = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 
-//    //获得所有的数据集名称
-//    println("--------------打印数据集列表--------------")
-//    val dataSetNames: Seq[String] = dc.listDataSetNames()
-//    dataSetNames.foreach(println)
-//
-//    //获得指定数据集的所有的数据帧名称
-//    println("--------------打印数据集 csv 所有数据帧名称--------------")
-//    val frameNames: Seq[String] = dc.listDataFrameNames("csv")
-//    frameNames.foreach(println)
-//
-//    //获得指定数据集的元数据信息
-//    println("--------------打印数据集 csv 的元数据信息--------------")
-//    val metaData: Model = dc.getDataSetMetaData("csv")
-//    metaData.write(System.out, "TURTLE")
-//
-//    //获得host基本信息
-//    println("--------------打印host基本信息--------------")
-//    val hostInfo: Map[String, String] = dc.getHostInfo
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_NAME))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_TITLE))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_PORT))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_POSITION))
-//    println(hostInfo(ConfigKeys.FAIRD_HOST_DOMAIN))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
-//    println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
-//
-//
-//    //获得服务器资源信息
-//    println("--------------打印服务器资源信息--------------")
-//    val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
-//    println(serverResourceInfo(ResourceKeys.CPU_CORES))
-//    println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
-//    println(serverResourceInfo(ResourceKeys.JVM_MAX_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_FREE_MB))
-//    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_USED_MB))
-//
-//
-//    //打开非结构化数据的文件列表数据帧
+    //获得所有的数据集名称
+    println("--------------打印数据集列表--------------")
+    val dataSetNames: Seq[String] = dc.listDataSetNames()
+    dataSetNames.foreach(println)
+
+    //获得指定数据集的所有的数据帧名称
+    println("--------------打印数据集 csv 所有数据帧名称--------------")
+    val frameNames: Seq[String] = dc.listDataFrameNames("csv")
+    frameNames.foreach(println)
+
+    //获得指定数据集的元数据信息
+    println("--------------打印数据集 csv 的元数据信息--------------")
+    val metaData: Model = dc.getDataSetMetaData("csv")
+    metaData.write(System.out, "TURTLE")
+
+    //获得host基本信息
+    println("--------------打印host基本信息--------------")
+    val hostInfo: Map[String, String] = dc.getHostInfo
+    println(hostInfo(ConfigKeys.FAIRD_HOST_NAME))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_TITLE))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_PORT))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_POSITION))
+    println(hostInfo(ConfigKeys.FAIRD_HOST_DOMAIN))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_ENABLED))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_CERT_PATH))
+    println(hostInfo(ConfigKeys.FAIRD_TLS_KEY_PATH))
+
+
+    //获得服务器资源信息
+    println("--------------打印服务器资源信息--------------")
+    val serverResourceInfo: Map[String, String] = dc.getServerResourceInfo
+    println(serverResourceInfo(ResourceKeys.CPU_CORES))
+    println(serverResourceInfo(ResourceKeys.CPU_USAGE_PERCENT))
+    println(serverResourceInfo(ResourceKeys.JVM_MAX_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_USED_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_FREE_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.JVM_TOTAL_MEMORY_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_TOTAL_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_FREE_MB))
+    println(serverResourceInfo(ResourceKeys.SYSTEM_MEMORY_USED_MB))
+
+
+    //打开非结构化数据的文件列表数据帧
     val dfBin: DataFrame = dc.getByPath("/bin")
 
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
     println("--------------打印数据帧Document--------------")
-//    val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
-//    dc.get("dacp://localhost:3101/listDataFrames/json").mapIterator(iter => iter.foreach(row => {
-//      result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
-//    }))
-//    val dataFrameDocument: DataFrameDocument = dc.getDocument("/bin")
-//    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
-//    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
-//    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
-//    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
-//    println(schemaURL)
-//    println(columnURL)
-//    println(columnAlias)
-//    println(columnTitle)
-//    println(dfBin.schema)
+    val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
+    dc.get("dacp://localhost:3101/listDataFrames/json").mapIterator(iter => iter.foreach(row => {
+      result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
+    }))
+    val dataFrameDocument: DataFrameDocument = dc.getDocument("/bin")
+    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
+    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
+    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
+    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
+    println(schemaURL)
+    println(columnURL)
+    println(columnAlias)
+    println(columnTitle)
+    println(dfBin.schema)
 
     //获得数据帧大小
     println("--------------打印数据帧行数和大小--------------")
-//    val dataFrameStatistics: DataFrameStatistics = dc.getStatistics("/bin")
-//    val dataFrameRowCount: Long = dataFrameStatistics.rowCount
-//    val dataFrameSize: Long = dataFrameStatistics.byteSize
-//    println(dataFrameRowCount)
-//    println(dataFrameSize)
+    val dataFrameStatistics: DataFrameStatistics = dc.getStatistics("/bin")
+    val dataFrameRowCount: Long = dataFrameStatistics.rowCount
+    val dataFrameSize: Long = dataFrameStatistics.byteSize
+    println(dataFrameRowCount)
+    println(dataFrameSize)
 
     //client api demo, operation demo, blob demo,dag demo
     //    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值
