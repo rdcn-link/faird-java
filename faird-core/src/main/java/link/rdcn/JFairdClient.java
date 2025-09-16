@@ -17,6 +17,7 @@ import org.apache.jena.rdf.model.Model;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -83,7 +84,7 @@ public class JFairdClient {
     }
 
     public static JFairdClient connectTLS(String url, Credentials credentials) {
-        return new JFairdClient(DacpClient.connectTLS(url, credentials));
+        return new JFairdClient(DacpClient.connectTLS(url, new File("C:/Users/ASUS/Documents/Projects/PycharmProjects/Faird/Faird/faird-core/target/test-classes/tls/faird"), credentials));
     }
 
     public static <T> java.util.List<T> convertToJavaList(Seq<T> scalaSeq) {

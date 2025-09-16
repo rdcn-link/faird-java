@@ -18,6 +18,8 @@ object ClientMultiLanguageCodeDemo {
   def main(args: Array[String]): Unit = {
     // 连接Faird服务
     val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+//    val dc: DacpClient = DacpClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+
 
     //构建数据源节点
     val sourceNode: FlowNode = FlowNode.source("/csv/data_1.csv")

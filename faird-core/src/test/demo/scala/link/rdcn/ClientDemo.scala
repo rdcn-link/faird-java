@@ -9,7 +9,7 @@ import link.rdcn.user.UsernamePassword
 import org.apache.commons.io.IOUtils
 import org.apache.jena.rdf.model.Model
 
-import java.io.FileOutputStream
+import java.io.{File, FileOutputStream}
 import java.nio.file.{Path, Paths}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -24,11 +24,11 @@ object ClientDemo {
 
   def main(args: Array[String]): Unit = {
     // 通过用户名密码非加密连接FairdClient
-    //     val dc: FairdClient = FairdClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
+//    val dc: DacpClient = DacpClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"));
     // 通过用户名密码tls加密连接FairdClient
-    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101",new File("C:/Users/ASUS/Documents/Projects/PycharmProjects/Faird/Faird/faird-core/target/test-classes/tls/faird"), UsernamePassword("admin@instdb.cn", "admin001"))
     // 匿名连接FairdClient
-//    val dcAnonymous: FairdClient = FairdClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
+//    val dcAnonymous: DacpClient = DacpClient.connect("dacp://localhost:3101", Credentials.ANONYMOUS());
 
     //获得所有的数据集名称
     println("--------------打印数据集列表--------------")
@@ -78,29 +78,29 @@ object ClientDemo {
     //接口
     //获得数据帧的Document，包含由Provider定义的SchemaURI等信息
     //用户可以控制没有信息时输出的字段
-    println("--------------打印数据帧Document--------------")
-    val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
-    dc.get("dacp://localhost:3101/listDataFrames/json").mapIterator(iter => iter.foreach(row => {
-      result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
-    }))
-    val dataFrameDocument: DataFrameDocument = dc.getDocument("/bin")
-    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
-    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
-    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
-    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
-    println(schemaURL)
-    println(columnURL)
-    println(columnAlias)
-    println(columnTitle)
-    println(dfBin.schema)
-
-    //获得数据帧大小
-    println("--------------打印数据帧行数和大小--------------")
-    val dataFrameStatistics: DataFrameStatistics = dc.getStatistics("/bin")
-    val dataFrameRowCount: Long = dataFrameStatistics.rowCount
-    val dataFrameSize: Long = dataFrameStatistics.byteSize
-    println(dataFrameRowCount)
-    println(dataFrameSize)
+//    println("--------------打印数据帧Document--------------")
+//    val result = mutable.Map[String, (Long, String, String, String, DFRef)]()
+//    dc.get("dacp://localhost:3101/listDataFrames/json").mapIterator(iter => iter.foreach(row => {
+//      result.put(row.getAs[String](0), (row.getAs[Long](1), row.getAs[String](2), row.getAs[String](3), row.getAs[String](4), row.getAs[DFRef](5)))
+//    }))
+//    val dataFrameDocument: DataFrameDocument = dc.getDocument("/bin")
+//    val schemaURL: String = dataFrameDocument.getSchemaURL().getOrElse("schemaURL not found")
+//    val columnURL: String = dataFrameDocument.getColumnURL("file_name").getOrElse("columnURL not found")
+//    val columnAlias: String = dataFrameDocument.getColumnAlias("file_name").getOrElse("columnAlias not found")
+//    val columnTitle: String = dataFrameDocument.getColumnTitle("file_name").getOrElse("columnTitle not found")
+//    println(schemaURL)
+//    println(columnURL)
+//    println(columnAlias)
+//    println(columnTitle)
+//    println(dfBin.schema)
+//
+//    //获得数据帧大小
+//    println("--------------打印数据帧行数和大小--------------")
+//    val dataFrameStatistics: DataFrameStatistics = dc.getStatistics("/bin")
+//    val dataFrameRowCount: Long = dataFrameStatistics.rowCount
+//    val dataFrameSize: Long = dataFrameStatistics.byteSize
+//    println(dataFrameRowCount)
+//    println(dataFrameSize)
 
     //client api demo, operation demo, blob demo,dag demo
     //    可以对数据帧进行操作 比如foreach 每行数据为一个Row对象，可以通过Tuple风格访问每一列的值

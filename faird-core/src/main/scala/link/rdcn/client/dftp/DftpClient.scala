@@ -9,7 +9,7 @@ import link.rdcn.struct._
 import link.rdcn.user.Credentials
 import link.rdcn.util.{ClientUtils, ClosableIterator, CodecUtils, IteratorInputStream, ServerUtils}
 import org.apache.arrow.flight.auth.ClientAuthHandler
-import org.apache.arrow.flight.{Action, FlightClient, FlightDescriptor, Location, PutResult, SyncPutListener, Ticket}
+import org.apache.arrow.flight.{Action, FlightClient, FlightDescriptor, Location, SyncPutListener, Ticket}
 import org.apache.arrow.vector.{VectorLoader, VectorSchemaRoot}
 import org.apache.arrow.memory.{BufferAllocator, RootAllocator}
 import org.json.JSONObject
@@ -205,7 +205,6 @@ class DftpClient(host: String, port: Int, useTLS: Boolean = false) {
       val confPathURI = this.getClass.getProtectionDomain().getCodeSource().getLocation().toURI
       val fis = new InputStreamReader(new FileInputStream(Paths.get(confPathURI).resolve("user.conf").toString), "UTF-8")
       try props.load(fis) finally fis.close()
-      System.setProperty("javax.net.ssl.trustStore", Paths.get(props.getProperty("tls.path")).toString())
       Location.forGrpcTls(host, port)
     } else
       Location.forGrpcInsecure(host, port)
@@ -244,7 +243,7 @@ object DftpClient {
     }
   }
 
-  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): DftpClient = {
+  def connectTLS(url: String,credentials: Credentials = Credentials.ANONYMOUS): DftpClient = {
     UrlValidator.extractBase(url) match {
       case Some(parsed) =>
         val client = new DftpClient(parsed._2, parsed._3, true)

@@ -8,7 +8,7 @@ import link.rdcn.user.Credentials
 import org.apache.jena.rdf.model.{Model, ModelFactory}
 import org.json.{JSONArray, JSONObject}
 
-import java.io.StringReader
+import java.io.{File, StringReader}
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
 
@@ -135,7 +135,8 @@ object DacpClient {
     }
   }
 
-  def connectTLS(url: String, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
+  def connectTLS(url: String, file: File, credentials: Credentials = Credentials.ANONYMOUS): DacpClient = {
+    System.setProperty("javax.net.ssl.trustStore", file.getAbsolutePath)
     urlValidator.validate(url) match {
       case Right(parsed) =>
         val client = new DacpClient(parsed._1, parsed._2.getOrElse(3101), true)

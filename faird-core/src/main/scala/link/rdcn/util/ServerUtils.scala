@@ -248,6 +248,7 @@ object ServerUtils {
         currentRoot.getFieldVectors.asScala.map { vector =>
           vector.getObject(rowIndex) match {
             case t: org.apache.arrow.vector.util.Text => t.toString
+            case t: VarBinaryVector => if(vector.getField.getMetadata.isEmpty) t
             case other => other
           }
         }

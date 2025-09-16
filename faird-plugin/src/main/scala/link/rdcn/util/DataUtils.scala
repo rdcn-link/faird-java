@@ -369,7 +369,7 @@ object DataUtils extends Logging {
         if (read == -1) {
           finished = true
           // 返回实际读到的长度
-          return if (bytesRead == 0) Iterator.empty.next() else buffer.take(bytesRead)
+          return if (bytesRead == 0) Array.empty else buffer.take(bytesRead)
         }
         bytesRead += read
       }
