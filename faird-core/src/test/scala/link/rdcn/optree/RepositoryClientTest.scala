@@ -34,7 +34,7 @@ class RepositoryClientTest {
   @Test
   def uploadPackageTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val jarPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "java", "faird-plugin-impl-1.0-20250707.jar").toString
+    val jarPath: String = new File(Paths.get(ConfigLoader.fairdConfig.fairdHome,"lib","java").toString).listFiles().head.getAbsolutePath
     val functionId = "aaa.bbb.id2"
     val responseBody = operatorClient.uploadPackage(jarPath, functionId, "JAVA_JAR", "Java Application", "main")
     assertTrue(Await.result(responseBody, 30.seconds).contains("success"), "Upload failed")

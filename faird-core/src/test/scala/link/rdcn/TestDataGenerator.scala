@@ -69,13 +69,10 @@ object TestDataGenerator {
 
       try {
         writer = new BufferedWriter(new FileWriter(filePath), 1024 * 1024) // 1MB 缓冲区
-        writer.write("id,value,value_2,value_3,value_\n") // 写入表头
+        writer.write("id,value\n") // 写入表头
 
         for (row <- 1 to rows) {
-          writer.append(row.toString).append(',').append(math.random.toString)
-            .append(',').append(math.random.toString)
-            .append(',').append(math.random.toString)
-            .append(',').append(math.random.toString).append('\n')
+          writer.append(row.toString).append(',').append(math.random.toString).append('\n')
           if (row % 1000000 == 0) writer.flush() // 每百万行刷一次
         }
 

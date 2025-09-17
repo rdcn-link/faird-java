@@ -27,6 +27,12 @@ import scala.io.Source
 class TestDemoProvider(baseDirString: String = demoBaseDir, subDirString: String = "data") {
   ConfigLoader.init(Paths.get(getResourcePath("tls")).toString)
 
+  val prefix = "dacp://" + ConfigLoader.fairdConfig.hostPosition + ":" + ConfigLoader.fairdConfig.hostPort
+  val permissions = Map(
+    adminUsername -> Set("/csv/data_1.csv", "/bin",
+      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv", "/excel/data.xlsx").map(path => prefix + path)
+  )
+
   val baseDir = getOutputDir(baseDirString, subDirString)
   // 生成的临时目录结构
   val binDir = getOutputDir(baseDirString, Seq(subDirString, "bin").mkString(File.separator))

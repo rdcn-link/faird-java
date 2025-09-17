@@ -225,19 +225,17 @@ case class TransformerNode(functionWrapper: FunctionWrapper, inputOperations: Op
       case repositoryOperator: RepositoryOperator =>
         val in = inputs.head.execute(ctx)
         val id = repositoryOperator.functionID
-        val downloadFuture = operatorClient.downloadPackage(repositoryOperator.functionID, operatorDir)
+        val downloadFuture = operatorClient.downloadPackage(id, operatorDir)
         Await.result(downloadFuture, 30.seconds)
         val infoFuture = operatorClient.getOperatorInfo(id)
         val info = Await.result(infoFuture, 30.seconds)
-        val fileName = info.get("fileName").toString
+        val fileName = info.get("packageName").toString
         info.get("type") match {
           case LangType.CPP_BIN.name =>
-            CppBin(id).applyToInput(in).asInstanceOf[DataFrame]
+            CppBin(fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.JAVA_JAR.name =>
             JavaJar(id, fileName).applyToInput(in).asInstanceOf[DataFrame]
           case LangType.PYTHON_BIN.name =>
-            val downloadFuture = operatorClient.downloadPackage(id, operatorDir)
-            Await.result(downloadFuture, 30.seconds)
             val whlPath = Paths.get(operatorDir, fileName).toString()
             val jo = new JSONObject()
             Await.result(Future {

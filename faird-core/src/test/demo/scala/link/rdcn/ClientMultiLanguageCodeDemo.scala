@@ -13,11 +13,13 @@ import link.rdcn.client.recipe._
 import link.rdcn.struct.{DataFrame, ExecutionResult, Row}
 import link.rdcn.user.UsernamePassword
 
+import java.io.File
+
 object ClientMultiLanguageCodeDemo {
 
   def main(args: Array[String]): Unit = {
     // 连接Faird服务
-    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
+    val dc: DacpClient = DacpClient.connectTLS("dacp://localhost:3101",new File("C:/Users/ASUS/Documents/Projects/PycharmProjects/Faird/Faird/faird-core/target/test-classes/tls/faird"), UsernamePassword("admin@instdb.cn", "admin001"))
 //    val dc: DacpClient = DacpClient.connect("dacp://localhost:3101", UsernamePassword("admin@instdb.cn", "admin001"))
 
 

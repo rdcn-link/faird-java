@@ -136,7 +136,7 @@ class RepositoryClient(host: String = "localhost", port: Int = 8088) {
     val info = Await.result(infoFuture, 30.seconds)
 
     val downloadUrl = s"$baseUrl/downloadPackage?id=$functionId"
-    val outputFilePath = Paths.get(targetPath, info.get("fileName").asInstanceOf[String]).toString // 下载文件保存路径
+    val outputFilePath = Paths.get(targetPath, info.get("packageName").asInstanceOf[String]).toString // 下载文件保存路径
 
     // 创建 HTTP GET 请求
     val request = HttpRequest(

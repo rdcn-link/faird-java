@@ -11,8 +11,8 @@ import org.codehaus.janino.SimpleCompiler
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
 
-import java.io.{BufferedReader, FileInputStream, InputStreamReader}
-import java.nio.file.Paths
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
+import java.nio.file.{Files, Paths}
 import java.util.Base64
 import scala.collection.JavaConverters._
 
@@ -27,6 +27,7 @@ class FunctionWrapperTest {
   @Test
   def getJepTest(): Unit = {
     val jep = JepInterpreterManager.getInterpreter
+    jep.close()
   }
 
   @Test
@@ -35,7 +36,7 @@ class FunctionWrapperTest {
       """
         |import java.util.*;
         |import link.rdcn.util.*;
-        |import link.rdcn.client.dag.Transformer11;
+        |import link.rdcn.client.recipe.Transformer11;
         |import link.rdcn.struct.*;
         |
         |public class DynamicUDF implements Transformer11 {
@@ -44,7 +45,7 @@ class FunctionWrapperTest {
         |    }
         |    @Override
         |    public link.rdcn.struct.DataFrame transform(final link.rdcn.struct.DataFrame dataFrame) {
-        |            final scala.collection.Iterator<Row> iter = ((LocalDataFrame)dataFrame).stream();
+        |            final scala.collection.Iterator<Row> iter = ((DefaultDataFrame)dataFrame).stream();
         |            final scala.collection.Iterator<Row> rows =  new scala.collection.Iterator<Row>() {
         |            public boolean hasNext() {
         |                return iter.hasNext();
@@ -64,7 +65,7 @@ class FunctionWrapperTest {
     val clazz = compiler.getBytecodes.asScala.toMap
     val jo = new JSONObject()
     jo.put("type", LangType.JAVA_CODE.name)
-    jo.put("clazz", Base64.getEncoder.encodeToString(SimpleSerializer.serialize(new java.util.HashMap[String, Array[Byte]](clazz.asJava))))
+    jo.put("javaCodeString", Base64.getEncoder.encodeToString(SimpleSerializer.serialize(new java.util.HashMap[String, Array[Byte]](clazz.asJava))))
     val javaCode = FunctionWrapper(jo).asInstanceOf[JavaCode]
     val rows = DefaultDataFrame(StructType.empty.add("id", IntType).add("value", IntType), ClosableIterator(Seq(Row.fromSeq(Seq(1, 2))).iterator)())
     val newDataFrame = javaCode.applyToInput(rows.stream).asInstanceOf[DataFrame]
@@ -86,7 +87,7 @@ class FunctionWrapperTest {
     jo.put("whlPath", whlPath)
     val pythonBin = FunctionWrapper(jo).asInstanceOf[PythonBin]
     val rows = Seq(Row.fromSeq(Seq(1, 2))).iterator
-    val jep = JepInterpreterManager.getJepInterpreter("id1", whlPath)
+    val jep = JepInterpreterManager.getJepInterpreter("link-0.1-py3-none-any.whl", whlPath)
     val newRow = pythonBin.applyToInput(rows, Some(jep)).asInstanceOf[Iterator[Row]].next()
     assert(newRow._1 == 0.33)
     assert(newRow._2 == 0.67)
@@ -95,10 +96,11 @@ class FunctionWrapperTest {
   @Test
   def javaJarTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
+    val javaJarFileName: String = new File(Paths.get(ConfigLoader.fairdConfig.fairdHome,"lib","java").toString).listFiles().head.getName
     val jo = new JSONObject()
     jo.put("type", LangType.JAVA_JAR.name)
     jo.put("functionID", "aaa.bbb.id2")
-    jo.put("fileName", "faird-plugin-impl-1.0-20250707.jar")
+    jo.put("fileName", javaJarFileName)
     val javaJar = FunctionWrapper(jo).asInstanceOf[JavaJar]
     val rows = Seq(Row.fromSeq(Seq(1, 2))).iterator
     val dataFrame = DefaultDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), ClosableIterator(rows)())
@@ -116,7 +118,7 @@ class FunctionWrapperTest {
     val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", "cpp_processor.exe").toString
     val jo = new JSONObject()
     jo.put("type", LangType.CPP_BIN.name)
-    jo.put("functionID", "cpp_processor.exe")
+    jo.put("functionID", "aaa.bbb.id4")
     val cppBin = FunctionWrapper(jo).asInstanceOf[CppBin]
     val rows = Seq(Row.fromSeq(Seq(1, 2))).iterator
     val dataFrame = DefaultDataFrame(StructType.empty.add("col_1", ValueType.IntType).add("col_2", ValueType.IntType), ClosableIterator(rows)())

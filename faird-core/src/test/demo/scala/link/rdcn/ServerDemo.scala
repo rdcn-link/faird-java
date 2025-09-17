@@ -6,7 +6,6 @@
  */
 package link.rdcn
 
-import link.rdcn.TestBase.getResourcePath
 import link.rdcn.received.DataReceiver
 import link.rdcn.server.dacp.DacpServer
 import link.rdcn.struct.DataFrame
@@ -25,13 +24,19 @@ object ServerDemo {
      */
     val server = new DacpServer(provider.dataProvider,new DataReceiver {
       /** Called once before receiving any rows */
-      override def start(): Unit = ???
+      override def start(): Unit = {
+
+      }
 
       /** Called for each received batch of rows */
-      override def receiveRow(dataFrame: DataFrame): Unit = ???
+      override def receiveRow(dataFrame: DataFrame): Unit = {
+
+      }
 
       /** Called after all batches are received successfully */
-      override def finish(): Unit = ???
+      override def finish(): Unit = {
+
+      }
     }, provider.authProvider)
 
     server.start(ConfigLoader.fairdConfig)

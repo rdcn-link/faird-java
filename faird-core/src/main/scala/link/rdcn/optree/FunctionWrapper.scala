@@ -188,9 +188,7 @@ object FunctionWrapper {
     }
 
     override def applyToInput(input: Any, interpOpt: Option[Jep] = None): Any = {
-      val downloadFuture = operatorClient.downloadPackage(functionID, operatorDir)
-      Await.result(downloadFuture, 30.seconds)
-      val jarPath = Paths.get(operatorDir, fileName).toString()
+      val jarPath = Paths.get(operatorDir, functionID).toString()
       val jarFile = new java.io.File(jarPath)
       val urls = Array(jarFile.toURI.toURL)
       val parentLoader = getClass.getClassLoader
@@ -211,7 +209,7 @@ object FunctionWrapper {
       .put("functionID", functionID)
 
     override def applyToInput(input: Any, interpOpt: Option[Jep]): Any = {
-      val cppPath = Paths.get(ConfigLoader.fairdConfig.fairdHome, "lib", "cpp", functionID).toString()
+      val cppPath = Paths.get(operatorDir, functionID).toString()
       val pb = new ProcessBuilder(cppPath)
       val process = pb.start()
       val writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))

@@ -59,8 +59,22 @@ object JepInterpreterManager extends Logging {
       val env = Option(ConfigLoader.fairdConfig.pythonHome).map("PATH" -> _)
         .getOrElse("PATH" -> sys.env.getOrElse("PATH", ""))
       val cmd = Seq(getPythonExecutablePath(env._2), "-m", "pip", "install", "--upgrade", "--target", sitePackagePath, whlPath)
-      val output = Process(cmd, None, env).!!
-      logger.debug(output)
+//      val output = Process(cmd, None, env).!!
+      val pyLogger = ProcessLogger(
+        out => println(s"Standard output: $out"),
+        err => System.err.println(s"Standard error: $err")
+      )
+
+      // 使用 ! 操作符来执行命令，返回退出码而不是抛出异常
+      val exitCode = Process(cmd, None, env).! (pyLogger)
+
+      // 检查退出码
+      if (exitCode != 0) {
+        // 在这里处理失败，可以根据 logger 的输出分析具体原因
+        throw new RuntimeException(s"Pip installation failed with exit code $exitCode. See logs for details.")
+      }
+
+      logger.debug(s"Python exitCode: $exitCode")
       logger.debug(s"Python dependency from '$functionId' has been successfully installed to '$sitePackagePath'.")
       val config = new JepConfig
       config.addIncludePaths(sitePackagePath).setClassEnquirer(new JavaUtilOnlyClassEnquirer)

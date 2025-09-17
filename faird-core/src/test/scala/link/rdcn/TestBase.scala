@@ -38,12 +38,6 @@ object TestBase {
 
   val demoBaseDir = Paths.get("/faird-core", "src", "test", "demo").toString
 
-  //权限
-  val permissions = Map(
-    adminUsername -> Set("/csv/data_1.csv", "/bin",
-      "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv", "/excel/data.xlsx")
-  )
-
   def genModel: Model = {
     ModelFactory.createDefaultModel()
   }
