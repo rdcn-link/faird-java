@@ -29,12 +29,14 @@ object RepositoryClientTest {
 }
 
 class RepositoryClientTest {
+  ConfigLoader.init(getResourcePath(""))
+  val jarFile: File = new File(Paths.get(ConfigLoader.fairdConfig.fairdHome,"lib","java").toString).listFiles().head
+  val jarPath: String = jarFile.getAbsolutePath
+  val jarName: String = jarFile.getName
 
 
   @Test
   def uploadPackageTest(): Unit = {
-    ConfigLoader.init(getResourcePath(""))
-    val jarPath: String = new File(Paths.get(ConfigLoader.fairdConfig.fairdHome,"lib","java").toString).listFiles().head.getAbsolutePath
     val functionId = "aaa.bbb.id2"
     val responseBody = operatorClient.uploadPackage(jarPath, functionId, "JAVA_JAR", "Java Application", "main")
     assertTrue(Await.result(responseBody, 30.seconds).contains("success"), "Upload failed")
@@ -43,13 +45,13 @@ class RepositoryClientTest {
   @Test
   def getOperatorInfoTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val functionId = "my-java-app-2"
+    val functionId = "aaa.bbb.id2"
     val downloadFuture = operatorClient.getOperatorInfo(functionId)
     // 阻塞等待 Future 完成
     val jsonInfo = Await.result(downloadFuture, 30.seconds)
-    assertEquals("my-java-app-2", jsonInfo.getString("id"))
-    assertEquals("faird-plugin-1.0-20250707.jar", jsonInfo.getString("fileName"))
-    assertEquals("jar", jsonInfo.getString("type"))
+    assertEquals(functionId, jsonInfo.getString("id"))
+    assertEquals(jarName, jsonInfo.getString("packageName"))
+    assertEquals("JAVA_JAR", jsonInfo.getString("type"))
     assertEquals("Java Application", jsonInfo.getString("desc"))
     assertEquals("main", jsonInfo.getString("functionName"))
   }
@@ -57,11 +59,11 @@ class RepositoryClientTest {
   @Test
   def downloadPackageTest(): Unit = {
     ConfigLoader.init(getResourcePath(""))
-    val functionId = "my-java-app-2"
+    val functionId = "aaa.bbb.id1"
     val downloadFuture = operatorClient.downloadPackage(functionId, operatorDir)
     // 阻塞等待 Future 完成
     Await.result(downloadFuture, 30.seconds)
-    val downloadedFile = new File(Paths.get(operatorDir, functionId + ".jar").toString)
+    val downloadedFile = new File(Paths.get(operatorDir, functionId).toString)
     assertTrue(downloadedFile.exists(), s"File $downloadedFile not exist")
     assertTrue(downloadedFile.length() > 0, "Empty File!")
   }

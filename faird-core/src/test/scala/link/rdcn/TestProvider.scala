@@ -33,7 +33,7 @@ object TestProvider {
 
   val prefix = "dacp://" + ConfigLoader.fairdConfig.hostPosition + ":" + ConfigLoader.fairdConfig.hostPort
   val permissions = Map(
-    adminUsername -> Set("/csv/data_1.csv", "/bin",
+    adminUsername -> Set("/listDataFrames/bin","/listDataFrames/csv","/listHostInfo","/listDataSets","/csv/data_1.csv", "/bin",
       "/csv/data_2.csv", "/csv/data_1.csv", "/csv/invalid.csv", "/excel/data.xlsx").map(path => prefix + path)
   )
 

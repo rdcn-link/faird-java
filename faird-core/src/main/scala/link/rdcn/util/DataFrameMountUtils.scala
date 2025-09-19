@@ -4,6 +4,7 @@ import link.rdcn.Logging
 import link.rdcn.optree.fuse.{RowBatchFS, RowBatchFSSource}
 import link.rdcn.struct.DefaultDataFrame
 
+import java.io.File
 import java.nio.file.{Files, Path}
 
 object DataFrameMountUtils extends Logging {
@@ -16,7 +17,15 @@ object DataFrameMountUtils extends Logging {
     val fs = new RowBatchFS(batchSource)
 
     //创建临时挂载目录（确保该目录存在且为空）
-    val mountDir = Files.createTempDirectory("fuse_mount_test")
+//    val mountDir = Files.createTempDirectory("fuse_mount_test")
+    val baseTempDir = new File(System.getProperty("java.io.tmpdir"))
+    val mountDir = Files.createTempDirectory(baseTempDir.toPath, "fuse_mount_test")
+
+    // 在创建目录后，可以添加一个额外的检查和清理逻辑
+    if (mountDir.toFile.listFiles().nonEmpty) {
+      logger.warn(s"Mount directory $mountDir is not empty. Cleaning it...")
+      mountDir.toFile.listFiles().foreach(_.delete())
+    }
     logger.info(s"Mount directory: $mountDir")
 
     //用线程挂载，避免阻塞主线程
@@ -51,6 +60,7 @@ object DataFrameMountUtils extends Logging {
 
     // 删除临时目录
     mountDir.toFile.deleteOnExit()
+
   }
 
   private def waitForMountReady(mountPath: Path, timeoutSeconds: Int = 3): Unit = {

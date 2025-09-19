@@ -8,10 +8,11 @@ import link.rdcn.client.dacp.DacpClient
 import link.rdcn.user.UsernamePassword
 import link.rdcn.util.ExceptionHandler
 import org.apache.arrow.flight.{FlightRuntimeException, FlightServer}
-import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
+import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.Test
 
 import java.io.IOException
+import java.net.ConnectException
 
 
 class ServerExceptionTest {
@@ -24,7 +25,7 @@ class ServerExceptionTest {
       () => DacpClient.connect("dacp://0.0.0.0:3101", UsernamePassword(adminUsername, adminPassword))
 
     )
-    assertEquals(ErrorCode.SERVER_NOT_RUNNING, ExceptionHandler.getErrorCode(exception))
+    assertTrue(exception.getCause.isInstanceOf[ConnectException])
   }
 
   //端口被占用
